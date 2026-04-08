@@ -118,3 +118,10 @@ class JobFailure:
     worker_id: str
     error_code: str
     message: str
+
+
+@dataclass(frozen=True)
+class WorkerHeartbeat:
+    worker_id: str
+    healthy: bool
+    current_load: int = 0

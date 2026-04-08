@@ -31,6 +31,18 @@ curl http://127.0.0.1:8000/api/tags
 curl -Method Post http://127.0.0.1:8000/api/chat -ContentType "application/json" -Body '{"model":"llama3.1:8b","messages":[{"role":"user","content":"hello"}],"stream":false}'
 ```
 
+## Worker protocol endpoints
+
+The current scaffold includes these worker-facing HTTP routes:
+
+- `POST /worker/register`
+- `POST /worker/heartbeat`
+- `POST /worker/jobs/claim`
+- `POST /worker/jobs/{job_id}/result`
+- `POST /worker/jobs/{job_id}/fail`
+
+They currently use simple JSON payloads and map directly onto the in-memory control plane.
+
 ## Running tests
 
 ```powershell

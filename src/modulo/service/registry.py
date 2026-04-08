@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from modulo.common.contracts import WorkerSnapshot
+from modulo.common.contracts import WorkerHeartbeat, WorkerModelState, WorkerSnapshot
 
 
 @dataclass
@@ -17,6 +17,33 @@ class InMemoryWorkerRegistry:
 
     def list_workers(self) -> list[WorkerSnapshot]:
         return list(self._workers.values())
+
+    def heartbeat(self, heartbeat: WorkerHeartbeat) -> WorkerSnapshot | None:
+        worker = self._workers.get(heartbeat.worker_id)
+        if worker is None:
+            return None
+
+        advertised_models = tuple(
+            WorkerModelState(
+                model_id=state.model_id,
+                runtime_identity=state.runtime_identity,
+                current_load=heartbeat.current_load,
+                recent_success_rate=state.recent_success_rate,
+                timeout_rate=state.timeout_rate,
+                confidence=state.confidence,
+            )
+            for state in worker.advertised_models
+        )
+        updated = WorkerSnapshot(
+            worker_id=worker.worker_id,
+            kind=worker.kind,
+            healthy=heartbeat.healthy,
+            max_concurrency=worker.max_concurrency,
+            advertised_models=advertised_models,
+            trust_notes=worker.trust_notes,
+        )
+        self._workers[worker.worker_id] = updated
+        return updated
 
     def health_summary(self) -> dict[str, int]:
         healthy = sum(1 for worker in self._workers.values() if worker.healthy)

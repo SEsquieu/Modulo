@@ -5,7 +5,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from modulo.common.contracts import WorkerKind, WorkerModelState, WorkerSnapshot
+from modulo.common.contracts import ChatRequest, JobStatus, WorkerKind, WorkerModelState, WorkerSnapshot, ExecutionMode
 from modulo.service.execution import InMemoryWorkerRuntime
 from modulo.service.http import ModuloHTTPApp
 from modulo.service.router import TrustRouter
@@ -77,6 +77,97 @@ class ModuloHTTPAppTests(unittest.TestCase):
         )
         self.assertEqual(502, status)
         self.assertIn("No execution adapter", payload["error"])
+
+    def test_worker_register_endpoint_adds_worker(self) -> None:
+        status, payload = self.app.handle(
+            "POST",
+            "/worker/register",
+            json.dumps(
+                {
+                    "worker_id": "cloud-1",
+                    "kind": "cloud",
+                    "max_concurrency": 2,
+                    "models": ["llama3.1:8b"],
+                }
+            ).encode("utf-8"),
+        )
+        self.assertEqual(200, status)
+        self.assertEqual("registered", payload["status"])
+        self.assertIsNotNone(self.service.registry.get("cloud-1"))
+
+    def test_worker_heartbeat_updates_health_and_load(self) -> None:
+        status, payload = self.app.handle(
+            "POST",
+            "/worker/heartbeat",
+            json.dumps(
+                {
+                    "worker_id": "network-1",
+                    "healthy": False,
+                    "current_load": 1,
+                }
+            ).encode("utf-8"),
+        )
+        self.assertEqual(200, status)
+        self.assertFalse(payload["healthy"])
+
+        worker = self.service.registry.get("network-1")
+        self.assertIsNotNone(worker)
+        self.assertFalse(worker.healthy)
+        self.assertEqual(1, worker.advertised_models[0].current_load)
+
+    def test_worker_claim_result_flow(self) -> None:
+        job = self.service.submit_chat(
+            ChatRequest(model_id="llama3.1:8b", execution_mode=ExecutionMode.NETWORK)
+        )
+        claim_status, claim_payload = self.app.handle(
+            "POST",
+            "/worker/jobs/claim",
+            json.dumps({"worker_id": "network-1"}).encode("utf-8"),
+        )
+        self.assertEqual(200, claim_status)
+        self.assertEqual(job.job_id, claim_payload["job"]["job_id"])
+
+        result_status, result_payload = self.app.handle(
+            "POST",
+            f"/worker/jobs/{job.job_id}/result",
+            json.dumps({"worker_id": "network-1", "response_text": "worker result"}).encode("utf-8"),
+        )
+        self.assertEqual(200, result_status)
+        self.assertEqual("completed", result_payload["status"])
+
+        completed_job = self.service.get_job(job.job_id)
+        self.assertIsNotNone(completed_job)
+        self.assertEqual(JobStatus.COMPLETED, completed_job.status)
+        self.assertEqual("worker result", completed_job.response_text)
+
+    def test_worker_claim_fail_flow(self) -> None:
+        job = self.service.submit_chat(
+            ChatRequest(model_id="llama3.1:8b", execution_mode=ExecutionMode.NETWORK)
+        )
+        self.app.handle(
+            "POST",
+            "/worker/jobs/claim",
+            json.dumps({"worker_id": "network-1"}).encode("utf-8"),
+        )
+
+        fail_status, fail_payload = self.app.handle(
+            "POST",
+            f"/worker/jobs/{job.job_id}/fail",
+            json.dumps(
+                {
+                    "worker_id": "network-1",
+                    "error_code": "EXEC_TIMEOUT",
+                    "message": "Execution timed out",
+                }
+            ).encode("utf-8"),
+        )
+        self.assertEqual(200, fail_status)
+        self.assertEqual("failed", fail_payload["status"])
+
+        failed_job = self.service.get_job(job.job_id)
+        self.assertIsNotNone(failed_job)
+        self.assertEqual(JobStatus.FAILED, failed_job.status)
+        self.assertIn("EXEC_TIMEOUT", failed_job.failure_reason)
 
 
 if __name__ == "__main__":

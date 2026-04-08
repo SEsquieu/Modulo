@@ -9,6 +9,7 @@ from modulo.common.contracts import (
     JobRecord,
     JobResult,
     RouteDecision,
+    WorkerHeartbeat,
     WorkerSnapshot,
 )
 from modulo.service.jobs import InMemoryJobQueue
@@ -24,6 +25,9 @@ class InMemoryModuloService:
 
     def register_worker(self, worker: WorkerSnapshot) -> None:
         self.registry.register(worker)
+
+    def heartbeat_worker(self, heartbeat: WorkerHeartbeat) -> WorkerSnapshot | None:
+        return self.registry.heartbeat(heartbeat)
 
     def route_chat(self, request: ChatRequest) -> RouteDecision:
         return self.router.route(request=request, workers=self.registry.list_workers())
