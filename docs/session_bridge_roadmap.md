@@ -53,6 +53,14 @@ Exit criteria:
 - the client can fetch buyer-visible platform data without enabling hosting
 - the bridge can return placeholder platform state truthfully through the client surface
 
+Status: completed
+
+Summary:
+
+- added a local prototype session bridge that fetches platform-facing state from the in-process control plane
+- the client now receives truthful prototype platform status before hosting is enabled
+- network-advertised models now appear through the session bridge after hosting registers a worker
+
 ### Slice 3: Buyer-facing network model discovery
 
 Goal:

@@ -5,8 +5,11 @@ from dataclasses import dataclass, field
 from modulo.client.app import (
     ActivityEntry,
     ActivityVisibilityStatus,
+    ClientSessionBridge,
     ClientStatus,
     ModuloClientSupervisor,
+    PlatformModelListing,
+    PlatformSessionStatus,
     SmokeTestResult,
 )
 from modulo.client.ollama_discovery import OllamaDiscovery
@@ -14,6 +17,7 @@ from modulo.client.hosting_readiness import OllamaHostingRuntimeProbe
 from modulo.cloud.http import ModuloHTTPApp
 from modulo.cloud.router import TrustRouter
 from modulo.cloud.runtime import InMemoryModuloService
+from modulo.common.catalog import SUPPORTED_MODELS
 from modulo.common.contracts import ChatMessage, ChatRequest, ExecutionMode, JobStatus, WorkerBridgeConfig
 from modulo.worker.executors import StubExecutor
 from modulo.worker.runtime import InMemoryWorkerRuntime, WorkerBridgeRuntime, WorkerExecutor
@@ -29,6 +33,66 @@ class PrototypeRoundTripResult:
     user_message: str
     response_text: str
     client_status: ClientStatus
+
+
+@dataclass(frozen=True)
+class LocalPrototypeSessionBridge(ClientSessionBridge):
+    service: InMemoryModuloService
+
+    def fetch_platform_status(self) -> PlatformSessionStatus:
+        workers = self.service.registry.list_workers()
+        healthy_network_workers = [
+            worker for worker in workers if worker.healthy and worker.kind.value == "network"
+        ]
+
+        network_models: dict[str, PlatformModelListing] = {}
+        for worker in healthy_network_workers:
+            for advertised_model in worker.advertised_models:
+                canonical = SUPPORTED_MODELS.get(advertised_model.model_id)
+                display_name = (
+                    canonical.display_name if canonical is not None else advertised_model.model_id
+                )
+                network_models.setdefault(
+                    advertised_model.model_id,
+                    PlatformModelListing(
+                        model_id=advertised_model.model_id,
+                        display_name=display_name,
+                        source="network",
+                        summary=f"Advertised by healthy network worker {worker.worker_id}.",
+                    ),
+                )
+
+        cloud_models = tuple(
+            PlatformModelListing(
+                model_id=model.model_id,
+                display_name=model.display_name,
+                source="cloud",
+                summary="Prototype-safe placeholder trusted cloud catalog.",
+            )
+            for model in SUPPORTED_MODELS.values()
+        )
+
+        if network_models:
+            network_summary = (
+                f"{len(network_models)} network model(s) are currently advertised by healthy workers."
+            )
+        else:
+            network_summary = "No network models are currently advertised in the local prototype."
+
+        health = self.service.health_summary()
+        details = (
+            f"Healthy workers: {health['healthy_workers']} / {health['total_workers']}. "
+            "Cloud catalog is still a prototype-safe placeholder."
+        )
+        return PlatformSessionStatus(
+            connected=True,
+            summary="Platform session bridge is connected to the local prototype control plane.",
+            details=details,
+            network_models=tuple(network_models.values()),
+            cloud_models=cloud_models,
+            credits_summary="Prototype credits are not implemented yet.",
+            buyer_routing_summary=network_summary,
+        )
 
 
 @dataclass
@@ -67,6 +131,7 @@ class LocalPrototypeHarness:
         )
         self.client = ModuloClientSupervisor(
             worker_bridge=bridge,
+            session_bridge=LocalPrototypeSessionBridge(service=self.service),
             ollama_discovery=self.ollama_discovery or OllamaDiscovery(),
             hosting_runtime_probe=self.hosting_runtime_probe or OllamaHostingRuntimeProbe(),
             smoke_test_runner=self,

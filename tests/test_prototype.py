@@ -56,6 +56,28 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertTrue(onboarding.smoke_test_ok)
         self.assertEqual("", onboarding.smoke_test_error)
 
+    def test_session_bridge_fetches_platform_state_without_hosting(self) -> None:
+        harness = LocalPrototypeHarness()
+
+        status = harness.client.get_status()
+
+        self.assertTrue(status.platform.connected)
+        self.assertIn("local prototype control plane", status.platform.summary)
+        self.assertEqual((), status.platform.network_models)
+        self.assertTrue(status.platform.cloud_models)
+        self.assertIn("No network models", status.platform.buyer_routing_summary)
+
+    def test_session_bridge_reflects_network_models_after_hosting_registers(self) -> None:
+        harness = LocalPrototypeHarness()
+
+        harness.boot()
+        status = harness.client.get_status()
+
+        self.assertTrue(status.platform.connected)
+        self.assertEqual(1, len(status.platform.network_models))
+        self.assertEqual("network", status.platform.network_models[0].source)
+        self.assertIn("currently advertised", status.platform.buyer_routing_summary)
+
     def test_client_smoke_test_reports_failure_when_executor_fails(self) -> None:
         harness = LocalPrototypeHarness(executor=FailingExecutor())
 

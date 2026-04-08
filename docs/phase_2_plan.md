@@ -78,6 +78,7 @@ Summary:
 
 - added the first client-owned session bridge contract and platform state model
 - the client can now carry platform session state separately from worker state
+- added a prototype-safe platform fetch path so the client can read platform state without enabling hosting
 
 Roadmap:
 
