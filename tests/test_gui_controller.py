@@ -59,6 +59,19 @@ class InstalledGuiOpenClawDiscovery:
         )
 
 
+class BrokenGuiOpenClawDiscovery:
+    def discover(self) -> OpenClawDiscoveryStatus:
+        return OpenClawDiscoveryStatus(
+            installed=True,
+            config_present=True,
+            configured_for_modulo=False,
+            state="installed_unconfigured",
+            summary="OpenClaw config was found, but it could not be read cleanly.",
+            details="Config path: C:\\Users\\test\\.openclaw\\openclaw.json\nRead error: Expecting property name",
+            error="Expecting property name enclosed in double quotes",
+        )
+
+
 class GuiAppControllerTests(unittest.TestCase):
     def setUp(self) -> None:
         self.controller = GuiAppController(
@@ -87,6 +100,9 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertIn("not configured", state.openclaw_summary.lower())
         self.assertIn("not changing local OpenClaw", state.openclaw_details)
         self.assertIn("Safe prototype mode", state.openclaw_safety_note)
+        self.assertEqual("SETUP NEEDED", state.openclaw_guidance_badge)
+        self.assertIn("install openclaw first", state.openclaw_guidance_summary.lower())
+        self.assertTrue(state.openclaw_next_steps)
         self.assertIn("not installed", state.openclaw_plan_summary.lower())
         self.assertIn("No network models", state.buyer_platform_summary)
         self.assertIn("local-only", state.buyer_account_summary)
@@ -142,6 +158,8 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertTrue(started.worker_healthy)
         self.assertEqual("Review OpenClaw Setup", started.openclaw_action_label)
         self.assertEqual("CONFIGURED", started.openclaw_status_badge)
+        self.assertEqual("READY", started.openclaw_guidance_badge)
+        self.assertIn("buyer routing is staged", started.openclaw_guidance_summary.lower())
         self.assertIn("configured", started.openclaw_summary.lower())
         self.assertIn("without editing local OpenClaw files", started.openclaw_details)
         self.assertTrue(started.buyer_network_models)
@@ -177,8 +195,26 @@ class GuiAppControllerTests(unittest.TestCase):
         staged = self.controller.configure_openclaw()
 
         self.assertFalse(staged.openclaw_configured)
+        self.assertEqual("READY TO APPLY", staged.openclaw_guidance_badge)
+        self.assertIn("review the staged buyer-routing plan", staged.openclaw_guidance_summary.lower())
         self.assertIn("plan", staged.openclaw_plan_summary.lower())
         self.assertTrue(staged.openclaw_plan_changes)
+
+    def test_parse_error_state_surfaces_attention_guidance(self) -> None:
+        self.controller = GuiAppController(
+            harness=LocalPrototypeHarness(
+                openclaw_discovery=BrokenGuiOpenClawDiscovery(),
+                ollama_discovery=FakeGuiOllamaDiscovery(),
+                hosting_runtime_probe=FakeGuiHostingRuntimeProbe(),
+            )
+        )
+
+        state = self.controller.refresh()
+
+        self.assertEqual("ATTENTION", state.openclaw_guidance_badge)
+        self.assertIn("could not parse", state.openclaw_guidance_summary.lower())
+        self.assertTrue(any("fix the config parse/read issue" in step.lower() for step in state.openclaw_next_steps))
+        self.assertIn("Read error:", state.openclaw_details)
 
     def test_apply_openclaw_connection_marks_setup_as_configured(self) -> None:
         self.controller = GuiAppController(

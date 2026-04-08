@@ -56,6 +56,7 @@ class OpenClawConfigurationStatus:
         "Safe prototype mode: the OpenClaw action only updates Modulo's setup state."
     )
     connection_plan: OpenClawConnectionPlan = OpenClawConnectionPlan()
+    error: str = ""
 
 
 @dataclass(frozen=True)
@@ -353,6 +354,7 @@ class ModuloClientSupervisor:
                     "local OpenClaw files in this slice."
                 ),
                 connection_plan=connection_plan,
+                error=discovery.error,
             )
         if self.openclaw_configured:
             return OpenClawConfigurationStatus(

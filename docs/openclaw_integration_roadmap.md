@@ -68,12 +68,21 @@ Exit criteria:
 - the GUI shows real detected state
 - the GUI can present safe next steps and clear failure messaging
 
+Status: completed
+
+Summary:
+
+- added explicit OpenClaw guidance badges and next-step messaging to the Buyer tab
+- made parse/read failures surface as attention states instead of only passive details
+- kept the GUI legible by distinguishing setup-needed, review, ready-to-apply, ready, and attention states
+
 ## Completion note
 
 Add a short summary here when complete:
 
-- summary: the client can now stage and explain a buyer-routing OpenClaw plan before apply, and the GUI exposes the same review/apply flow explicitly.
+- summary: the Buyer tab now presents real OpenClaw state with clearer operator guidance, safe next steps, and explicit failure messaging alongside the staged review/apply flow.
 - proof added to repo:
   - `OpenClawConnectionPlan` and staged/apply methods in `src/modulo/client/app.py`
   - Buyer tab plan/apply state in `src/modulo/gui/controller.py` and `src/modulo/gui/window.py`
   - updated client and GUI tests covering staged review before apply
+  - guidance and attention-state coverage for parse/read failures in the GUI

@@ -90,6 +90,8 @@ class ModuloMainWindow(QMainWindow):
         self.openclaw_status_label.setStyleSheet("font-weight: 600;")
         self.openclaw_summary_label = QLabel()
         self.openclaw_summary_label.setWordWrap(True)
+        self.openclaw_guidance_label = QLabel()
+        self.openclaw_guidance_label.setWordWrap(True)
         self.openclaw_plan_summary_label = QLabel()
         self.openclaw_plan_summary_label.setWordWrap(True)
         self.openclaw_details_box = QPlainTextEdit()
@@ -185,6 +187,7 @@ class ModuloMainWindow(QMainWindow):
         buyer_layout = QVBoxLayout()
         buyer_layout.addWidget(self.openclaw_status_label)
         buyer_layout.addWidget(self.openclaw_summary_label)
+        buyer_layout.addWidget(self.openclaw_guidance_label)
         buyer_layout.addWidget(self.openclaw_plan_summary_label)
         buyer_layout.addWidget(self.buyer_model_notice_label)
         buyer_layout.addWidget(self.buyer_platform_summary_label)
@@ -339,6 +342,10 @@ class ModuloMainWindow(QMainWindow):
             f"Status: {state.openclaw_status_badge}"
         )
         self.openclaw_summary_label.setText(state.openclaw_summary)
+        next_steps = "\n".join(f"- {step}" for step in state.openclaw_next_steps)
+        self.openclaw_guidance_label.setText(
+            f"{state.openclaw_guidance_badge}: {state.openclaw_guidance_summary}\n{next_steps}"
+        )
         self.openclaw_plan_summary_label.setText(state.openclaw_plan_summary)
         self.buyer_model_notice_label.setText(
             "Buyer model selection is a separate step. OpenClaw routing only matters after a buyer "

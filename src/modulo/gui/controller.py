@@ -28,6 +28,9 @@ class GuiShellState:
     openclaw_summary: str = ""
     openclaw_details: str = ""
     openclaw_safety_note: str = ""
+    openclaw_guidance_badge: str = "INFO"
+    openclaw_guidance_summary: str = ""
+    openclaw_next_steps: tuple[str, ...] = ()
     openclaw_plan_summary: str = ""
     openclaw_plan_details: str = ""
     openclaw_plan_changes: tuple[str, ...] = ()
@@ -165,6 +168,9 @@ class GuiAppController:
             openclaw_summary=status.openclaw.summary,
             openclaw_details=status.openclaw.details,
             openclaw_safety_note=status.openclaw.safety_note,
+            openclaw_guidance_badge=self._openclaw_guidance_badge(status),
+            openclaw_guidance_summary=self._openclaw_guidance_summary(status),
+            openclaw_next_steps=self._openclaw_next_steps(status),
             openclaw_plan_summary=status.openclaw.connection_plan.summary,
             openclaw_plan_details=status.openclaw.connection_plan.details,
             openclaw_plan_changes=status.openclaw.connection_plan.change_lines,
@@ -365,6 +371,62 @@ class GuiAppController:
         if status.openclaw.installed:
             return "INSTALLED"
         return "NOT INSTALLED"
+
+    @staticmethod
+    def _openclaw_guidance_badge(status: ClientStatus) -> str:
+        if status.openclaw.error:
+            return "ATTENTION"
+        if status.openclaw.configured:
+            return "READY"
+        if status.openclaw.connection_plan.apply_ready:
+            return "READY TO APPLY"
+        if status.openclaw.installed:
+            return "REVIEW"
+        return "SETUP NEEDED"
+
+    @staticmethod
+    def _openclaw_guidance_summary(status: ClientStatus) -> str:
+        if status.openclaw.error:
+            return "Modulo found the OpenClaw config, but it could not parse it cleanly."
+        if status.openclaw.configured:
+            return "Buyer routing is staged in Modulo. Review the detected state or continue with buyer setup."
+        if status.openclaw.connection_plan.apply_ready:
+            return "Review the staged buyer-routing plan, then apply it when you are comfortable."
+        if status.openclaw.installed:
+            return "OpenClaw is present locally. Review the detected state before staging a routing plan."
+        return "Install OpenClaw first, then return here to stage the buyer-routing connection."
+
+    @staticmethod
+    def _openclaw_next_steps(status: ClientStatus) -> tuple[str, ...]:
+        if status.openclaw.error:
+            return (
+                "Fix the config parse/read issue shown below.",
+                "Refresh or reopen Modulo after correcting the local OpenClaw config.",
+                "Stage the buyer-routing plan again once the config reads cleanly.",
+            )
+        if status.openclaw.configured:
+            return (
+                "Review the detected provider and base URL for sanity.",
+                "Choose a buyer model once that selector is available.",
+                "Use Diagnostics to run a smoke test through the current prototype path.",
+            )
+        if status.openclaw.connection_plan.apply_ready:
+            return (
+                "Review the planned routing changes below.",
+                "Apply the staged plan when you are ready.",
+                "Return here afterward to confirm the detected state still looks correct.",
+            )
+        if status.openclaw.installed:
+            return (
+                "Review the detected OpenClaw config details below.",
+                "Stage a buyer-routing plan to preview what Modulo would change.",
+                "Do not hand-edit local files unless you intend to bypass the staged flow.",
+            )
+        return (
+            "Install OpenClaw on this machine.",
+            "Launch Modulo again so it can rediscover the local install.",
+            "Stage the buyer-routing plan once OpenClaw is present.",
+        )
 
     @staticmethod
     def _ollama_summary(status: ClientStatus) -> str:

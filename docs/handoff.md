@@ -7,8 +7,8 @@ This file is the quickest way to regain context when switching workstations.
 - backend phase-0 roadmap is completed
 - GUI phase-0 roadmap is completed
 - Phase 2 is active
-- current Phase 2 step: `Step 4: Real OpenClaw integration`
-- current mini-roadmap status: `Slice 2` of [openclaw_integration_roadmap.md](./openclaw_integration_roadmap.md) is completed
+- current Phase 2 step: `Step 5: Real local execution`
+- current mini-roadmap status: `OpenClaw integration mini-roadmap` is completed
 
 ## What exists today
 
@@ -98,12 +98,12 @@ Primary sequencing doc:
 
 Active implementation doc:
 
-- [openclaw_integration_roadmap.md](./openclaw_integration_roadmap.md)
+- [real_execution_roadmap.md](./real_execution_roadmap.md)
 
 Next intended slice:
 
-- `Slice 3: GUI connection experience`
-- goal: make the real OpenClaw integration flow legible in the GUI with clear next steps and failure messaging
+- `Slice 1: Real executor selection flow`
+- goal: let the local app choose the real executor path when the environment is ready
 
 ## Working preferences
 
@@ -119,6 +119,7 @@ Next intended slice:
 
 Recent meaningful commits:
 
+- `027b2fc` `Complete OpenClaw staged connection slice`
 - `62b2344` `Complete client session bridge layer`
 - `51cefa3` `Add OpenClaw discovery seam`
 
@@ -126,4 +127,4 @@ If resuming cold, start by reading:
 
 1. [handoff.md](./handoff.md)
 2. [phase_2_plan.md](./phase_2_plan.md)
-3. [openclaw_integration_roadmap.md](./openclaw_integration_roadmap.md)
+3. [real_execution_roadmap.md](./real_execution_roadmap.md)

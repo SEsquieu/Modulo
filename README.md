@@ -82,6 +82,7 @@ The GUI currently includes:
 
 - an onboarding-oriented home screen
 - a dedicated OpenClaw connection panel with explicit staged review/apply messaging
+- buyer guidance badges and next-step messaging for detected OpenClaw states and parse failures
 - a hosting setup panel that shows the selected curated model and local readiness guidance
 - hosting start, stop, and restart controls
 - a worker panel with live registration, health, activity, and error summaries
