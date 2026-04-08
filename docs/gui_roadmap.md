@@ -143,7 +143,7 @@ Summary:
 
 Proof added to repo:
 
-- explicit `OpenClawConnectionStatus` surfaced through the client status
+- explicit OpenClaw configuration status surfaced through the client status
 - dedicated OpenClaw section in the PySide shell with status, details, and safety note
 - controller tests covering connect, disconnect, and safe prototype messaging
 

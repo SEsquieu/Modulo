@@ -110,10 +110,8 @@ class ModuloMainWindow(QMainWindow):
         self.hosting_inventory_label = QLabel()
         self.hosting_inventory_label.setWordWrap(True)
 
-        self.connect_button = QPushButton("Connect OpenClaw")
-        self.connect_button.clicked.connect(
-            self._toggle_openclaw_connection
-        )
+        self.connect_button = QPushButton("Configure OpenClaw")
+        self.connect_button.clicked.connect(self._run_openclaw_action)
 
         self.start_button = QPushButton("Start Hosting")
         self.start_button.clicked.connect(
@@ -288,14 +286,8 @@ class ModuloMainWindow(QMainWindow):
         prompt = self.smoke_prompt_input.text().strip() or "GUI smoke test request"
         self._apply_state(self.controller.run_smoke_test(prompt))
 
-    def _toggle_openclaw_connection(self) -> None:
-        state = self.controller.refresh()
-        next_state = (
-            self.controller.disconnect_openclaw()
-            if state.openclaw_connected
-            else self.controller.connect_openclaw()
-        )
-        self._apply_state(next_state)
+    def _run_openclaw_action(self) -> None:
+        self._apply_state(self.controller.configure_openclaw())
 
     def _apply_selected_hosting_model(self) -> None:
         model_id = self.hosting_model_combo.currentData()
@@ -312,7 +304,7 @@ class ModuloMainWindow(QMainWindow):
             f"Modulo connection: {'Connected' if state.connected_to_modulo else 'Disconnected'}"
         )
         self.openclaw_label.setText(
-            f"OpenClaw: {'Connected' if state.openclaw_connected else 'Not connected'}"
+            f"OpenClaw: {'Configured' if state.openclaw_configured else 'Not configured'}"
         )
         self.hosting_label.setText(
             f"Hosting: {'Enabled' if state.hosting_enabled else 'Disabled'}"

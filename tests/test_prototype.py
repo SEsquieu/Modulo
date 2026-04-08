@@ -21,7 +21,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
 
         status = harness.boot()
 
-        self.assertTrue(status.openclaw_connected)
+        self.assertFalse(status.openclaw_configured)
         self.assertTrue(status.hosting_enabled)
         self.assertIsNotNone(status.worker)
         self.assertTrue(status.worker.registered_with_cloud)

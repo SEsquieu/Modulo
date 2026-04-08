@@ -24,8 +24,7 @@ Important current types:
 
 Important current client actions:
 
-- `connect_openclaw()`
-- `disconnect_openclaw()`
+- `configure_openclaw()`
 - `start_hosting()`
 - `stop_hosting()`
 - `restart_hosting()`
@@ -46,7 +45,7 @@ Purpose:
 Should display:
 
 - connected to Modulo or not
-- OpenClaw connected or not
+- OpenClaw configured or not
 - hosting enabled or not
 - worker healthy or unhealthy
 - last smoke-test result
@@ -54,7 +53,7 @@ Should display:
 
 Primary actions:
 
-- `Connect OpenClaw`
+- `Configure OpenClaw`
 - `Enable hosting`
 - `Disable hosting`
 - `Run smoke test`
@@ -128,7 +127,7 @@ Derived from:
 Fields the GUI needs:
 
 - `connected_to_modulo`
-- `openclaw_connected`
+- `openclaw_configured`
 - `hosting_enabled`
 - `worker_registered`
 - `worker_healthy`
@@ -174,8 +173,7 @@ The GUI should only need a small command surface at the start.
 
 ### Commands already supported
 
-- connect OpenClaw
-- disconnect OpenClaw
+- configure OpenClaw routing
 - start hosting
 - stop hosting
 - restart hosting
@@ -188,7 +186,7 @@ These are conceptually part of the GUI roadmap, but should not be treated as alr
 - sign in / sign out
 - choose network model from a real model catalog
 - configure worker model selection through the GUI
-- connect a real OpenClaw installation
+- configure a real OpenClaw installation to route through Modulo
 - show recent jobs/activity feed
 
 ## Missing seams before GUI bootstrap

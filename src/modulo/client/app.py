@@ -29,15 +29,15 @@ class SmokeTestResult:
 
 
 @dataclass(frozen=True)
-class OpenClawConnectionStatus:
-    connected: bool = False
+class OpenClawConfigurationStatus:
+    configured: bool = False
     mode: str = "prototype-safe"
-    summary: str = "OpenClaw is not connected yet."
+    summary: str = "OpenClaw is not configured to route through Modulo yet."
     details: str = (
         "Modulo is not changing local OpenClaw configuration in this prototype flow."
     )
     safety_note: str = (
-        "Safe prototype mode: the OpenClaw action only updates Modulo's in-app state."
+        "Safe prototype mode: the OpenClaw action only updates Modulo's setup state."
     )
 
 
@@ -96,9 +96,9 @@ class ActivityVisibilityStatus:
 @dataclass(frozen=True)
 class ClientStatus:
     connected_to_modulo: bool = False
-    openclaw_connected: bool = False
+    openclaw_configured: bool = False
     hosting_enabled: bool = False
-    openclaw: OpenClawConnectionStatus = OpenClawConnectionStatus()
+    openclaw: OpenClawConfigurationStatus = OpenClawConfigurationStatus()
     hosting_setup: HostingSetupStatus = HostingSetupStatus()
     activity: ActivityVisibilityStatus = ActivityVisibilityStatus()
     worker: WorkerStatusSnapshot | None = None
@@ -108,7 +108,7 @@ class ClientStatus:
 @dataclass(frozen=True)
 class OnboardingStatus:
     connected_to_modulo: bool
-    openclaw_connected: bool
+    openclaw_configured: bool
     hosting_enabled: bool
     worker_registered: bool
     worker_healthy: bool
@@ -136,7 +136,7 @@ class ClientHostingRuntimeProbe(Protocol):
 class ModuloClientSupervisor:
     worker_bridge: WorkerBridgeRuntime
     connected_to_modulo: bool = True
-    openclaw_connected: bool = False
+    openclaw_configured: bool = False
     ollama_discovery: OllamaDiscovery | None = None
     hosting_runtime_probe: ClientHostingRuntimeProbe = field(default_factory=OllamaHostingRuntimeProbe)
     smoke_test_runner: ClientSmokeTestRunner | None = None
@@ -175,12 +175,8 @@ class ModuloClientSupervisor:
         )
         return self.configure_worker(next_config)
 
-    def connect_openclaw(self) -> ClientStatus:
-        self.openclaw_connected = True
-        return self.get_status()
-
-    def disconnect_openclaw(self) -> ClientStatus:
-        self.openclaw_connected = False
+    def configure_openclaw(self) -> ClientStatus:
+        self.openclaw_configured = True
         return self.get_status()
 
     def apply_worker_command(self, command: WorkerSupervisorCommand) -> ClientStatus:
@@ -223,7 +219,7 @@ class ModuloClientSupervisor:
         smoke_test = status.smoke_test
         return OnboardingStatus(
             connected_to_modulo=status.connected_to_modulo,
-            openclaw_connected=status.openclaw_connected,
+            openclaw_configured=status.openclaw_configured,
             hosting_enabled=status.hosting_enabled,
             worker_registered=bool(worker and worker.registered_with_cloud),
             worker_healthy=bool(worker and worker.healthy),
@@ -236,7 +232,7 @@ class ModuloClientSupervisor:
         worker_status = self.worker_bridge.get_status()
         return ClientStatus(
             connected_to_modulo=self.connected_to_modulo,
-            openclaw_connected=self.openclaw_connected,
+            openclaw_configured=self.openclaw_configured,
             hosting_enabled=worker_status.desired_running,
             openclaw=self.get_openclaw_status(),
             hosting_setup=self.get_hosting_setup_status(),
@@ -245,17 +241,21 @@ class ModuloClientSupervisor:
             smoke_test=self._last_smoke_test,
         )
 
-    def get_openclaw_status(self) -> OpenClawConnectionStatus:
-        if self.openclaw_connected:
-            return OpenClawConnectionStatus(
-                connected=True,
-                summary="OpenClaw buyer path is marked connected in Modulo.",
+    def get_openclaw_status(self) -> OpenClawConfigurationStatus:
+        if self.openclaw_configured:
+            return OpenClawConfigurationStatus(
+                configured=True,
+                summary="OpenClaw is configured in Modulo to route through the OpenClaw platform.",
                 details=(
-                    "This prototype uses a safe in-app connection state so the GUI can model "
-                    "buyer onboarding without editing local OpenClaw files or settings."
+                    "This prototype uses a safe in-app setup state so the GUI can model "
+                    "routing configuration without editing local OpenClaw files or settings."
+                ),
+                safety_note=(
+                    "Safe prototype mode: this marks the buyer route as configured inside Modulo, "
+                    "but it does not wrap or rewrite a local OpenClaw install."
                 ),
             )
-        return OpenClawConnectionStatus()
+        return OpenClawConfigurationStatus()
 
     def get_hosting_setup_status(self) -> HostingSetupStatus:
         selected_model_id = self.worker_bridge.config.enabled_models[0] if self.worker_bridge.config.enabled_models else ""
@@ -506,6 +506,6 @@ class HostingPreflightStatusSummary:
 def describe_default_actions() -> list[str]:
     """Return the primary v1 user actions for the tray-first client."""
     return [
-        "Connect OpenClaw",
+        "Configure OpenClaw routing",
         "Enable hosting to earn",
     ]

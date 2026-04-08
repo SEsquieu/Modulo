@@ -74,7 +74,6 @@ class LocalPrototypeHarness:
         )
 
     def boot(self) -> ClientStatus:
-        self.client.connect_openclaw()
         return self.client.start_hosting()
 
     def shutdown(self) -> ClientStatus:

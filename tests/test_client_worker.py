@@ -182,14 +182,14 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
 
     def test_client_onboarding_status_reflects_worker_and_smoke_test_state(self) -> None:
         self.client.smoke_test_runner = FakeSmokeTestRunner()
-        self.client.connect_openclaw()
+        self.client.configure_openclaw()
         self.client.start_hosting()
         self.client.run_smoke_test("hello smoke")
 
         onboarding = self.client.get_onboarding_status()
 
         self.assertTrue(onboarding.connected_to_modulo)
-        self.assertTrue(onboarding.openclaw_connected)
+        self.assertTrue(onboarding.openclaw_configured)
         self.assertTrue(onboarding.hosting_enabled)
         self.assertTrue(onboarding.worker_registered)
         self.assertTrue(onboarding.worker_healthy)

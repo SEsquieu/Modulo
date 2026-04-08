@@ -44,17 +44,17 @@ class GuiAppControllerTests(unittest.TestCase):
         state = self.controller.refresh()
 
         self.assertTrue(state.connected_to_modulo)
-        self.assertFalse(state.openclaw_connected)
+        self.assertFalse(state.openclaw_configured)
         self.assertFalse(state.hosting_enabled)
         self.assertTrue(state.connect_action_enabled)
-        self.assertEqual("Connect OpenClaw", state.openclaw_action_label)
-        self.assertEqual("NOT CONNECTED", state.openclaw_status_badge)
+        self.assertEqual("Configure OpenClaw", state.openclaw_action_label)
+        self.assertEqual("NOT CONFIGURED", state.openclaw_status_badge)
         self.assertTrue(state.start_action_enabled)
         self.assertFalse(state.stop_action_enabled)
         self.assertTrue(state.smoke_action_enabled)
-        self.assertIn("Connect OpenClaw", state.home_subtitle)
-        self.assertIn("not connected", state.connection_summary.lower())
-        self.assertIn("not connected yet", state.openclaw_summary.lower())
+        self.assertIn("Configure OpenClaw", state.home_subtitle)
+        self.assertIn("not configured", state.connection_summary.lower())
+        self.assertIn("not configured", state.openclaw_summary.lower())
         self.assertIn("not changing local OpenClaw", state.openclaw_details)
         self.assertIn("Safe prototype mode", state.openclaw_safety_note)
         self.assertEqual("llama3.1:8b", state.hosting_selected_model_id)
@@ -88,16 +88,16 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertEqual("No smoke test run yet.", state.smoke_test_summary)
 
     def test_start_hosting_and_smoke_test_update_state(self) -> None:
-        self.controller.connect_openclaw()
+        self.controller.configure_openclaw()
         started = self.controller.start_hosting()
         smoked = self.controller.run_smoke_test("gui smoke")
 
         self.assertTrue(started.hosting_enabled)
         self.assertTrue(started.worker_registered)
         self.assertTrue(started.worker_healthy)
-        self.assertEqual("Disconnect OpenClaw", started.openclaw_action_label)
-        self.assertEqual("CONNECTED", started.openclaw_status_badge)
-        self.assertIn("buyer path is marked connected", started.openclaw_summary.lower())
+        self.assertEqual("Review OpenClaw Setup", started.openclaw_action_label)
+        self.assertEqual("CONFIGURED", started.openclaw_status_badge)
+        self.assertIn("configured", started.openclaw_summary.lower())
         self.assertIn("without editing local OpenClaw files", started.openclaw_details)
         self.assertFalse(started.start_action_enabled)
         self.assertTrue(started.stop_action_enabled)
@@ -118,13 +118,12 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertEqual("completed", smoked.last_job_status)
         self.assertIn("finished with status completed", smoked.worker_activity_summary)
 
-    def test_disconnect_openclaw_returns_to_not_connected_state(self) -> None:
-        self.controller.connect_openclaw()
-        disconnected = self.controller.disconnect_openclaw()
+    def test_configure_openclaw_marks_setup_as_configured(self) -> None:
+        configured = self.controller.configure_openclaw()
 
-        self.assertFalse(disconnected.openclaw_connected)
-        self.assertEqual("Connect OpenClaw", disconnected.openclaw_action_label)
-        self.assertEqual("NOT CONNECTED", disconnected.openclaw_status_badge)
+        self.assertTrue(configured.openclaw_configured)
+        self.assertEqual("Review OpenClaw Setup", configured.openclaw_action_label)
+        self.assertEqual("CONFIGURED", configured.openclaw_status_badge)
 
     def test_select_hosting_model_updates_setup_state(self) -> None:
         state = self.controller.select_hosting_model("llama3.1:8b")

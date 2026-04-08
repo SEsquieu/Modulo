@@ -8,7 +8,7 @@ It exists to turn the current prototype-safe OpenClaw flow into a truthful, docu
 
 - detect real OpenClaw presence and relevant configuration state
 - explain current buyer-path configuration truthfully
-- stage explicit connection behavior with safety messaging
+- stage explicit routing-configuration behavior with safety messaging
 - avoid surprise local config changes during development and testing
 
 ## Why this matters
@@ -34,7 +34,7 @@ Exit criteria:
 
 Goal:
 
-- add a documented plan/apply shape for OpenClaw connection behavior
+- add a documented plan/apply shape for OpenClaw routing configuration behavior
 
 Exit criteria:
 
