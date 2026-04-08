@@ -52,6 +52,7 @@ These rules should guide implementation order:
 - treat buyer continuity and warm-path UX as router concerns inside `cloud`, not `client` shortcuts
 
 The current slice order and completion summaries live in [roadmap.md](/Users/16096/Desktop/Projects/Modulo/docs/roadmap.md).
+The GUI-specific build path lives in [gui_roadmap.md](/Users/16096/Desktop/Projects/Modulo/docs/gui_roadmap.md).
 
 ## Development sequencing
 

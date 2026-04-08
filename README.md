@@ -39,6 +39,7 @@ This repo should grow through tight vertical slices that strengthen the roadmap-
 Roadmap reference:
 
 - [docs/roadmap.md](/Users/16096/Desktop/Projects/Modulo/docs/roadmap.md)
+- [docs/gui_roadmap.md](/Users/16096/Desktop/Projects/Modulo/docs/gui_roadmap.md)
 
 ## Running the demo server
 
