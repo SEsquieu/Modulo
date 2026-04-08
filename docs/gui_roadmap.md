@@ -41,7 +41,7 @@ Current GUI phase: `Phase 0` planning and thin-client surface definition.
 
 Current active GUI slice:
 
-- let the GUI start, stop, and restart hosting while showing worker activity and errors
+- expose the smoke-test path and basic diagnostics in a clear GUI flow
 
 Definition of progress for this phase:
 
@@ -98,6 +98,22 @@ Proof added to repo:
 - improved PySide home-screen layout and status-card presentation
 - richer controller summaries for connection, hosting, worker health, and smoke-test outcome
 - controller tests that validate the home-screen state summaries
+
+### GUI Slice 4: Hosting controls and worker panel
+
+Status: completed
+
+Summary:
+
+- turned the PySide shell into a real hosting control surface with start, stop, and restart actions wired to the existing client supervisor
+- expanded the worker panel to show registration, health, recent activity, last job state, and last error from the live worker status contract
+- kept all worker behavior in the existing client and worker layers so the GUI remains supervisory rather than operational
+
+Proof added to repo:
+
+- dedicated hosting-controls section in the PySide shell
+- richer worker panel backed by `WorkerStatusSnapshot` fields that already exist
+- controller tests validating action enablement and worker activity summaries
 
 ## Upcoming GUI slices
 

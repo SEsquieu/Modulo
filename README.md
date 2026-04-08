@@ -76,6 +76,13 @@ python -m modulo.gui_app
 
 This launches the barebones PySide6 desktop shell against the current live client/prototype state.
 
+The GUI currently includes:
+
+- an onboarding-oriented home screen
+- hosting start, stop, and restart controls
+- a worker panel with live registration, health, activity, and error summaries
+- a smoke-test action backed by the current prototype harness
+
 ## Current platform surface
 
 The current scaffold includes these worker-facing HTTP routes:

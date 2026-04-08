@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from modulo.client.app import ClientStatus, ModuloClientSupervisor, OnboardingStatus, SmokeTestResult
-from modulo.common.contracts import WorkerRuntimeState
+from modulo.common.contracts import WorkerRuntimeState, WorkerStatusSnapshot
 from modulo.prototype import LocalPrototypeHarness
 
 
@@ -22,12 +22,22 @@ class GuiShellState:
     worker_status_badge: str = ""
     primary_action_label: str = ""
     secondary_action_label: str = ""
+    connect_action_enabled: bool = True
+    start_action_enabled: bool = True
+    stop_action_enabled: bool = False
+    restart_action_enabled: bool = False
+    smoke_action_enabled: bool = False
+    worker_registration_text: str = ""
+    worker_health_summary: str = ""
+    worker_activity_summary: str = ""
     worker_id: str = ""
     worker_runtime_state: str = ""
     enabled_models_text: str = ""
     current_load: int = 0
     completed_jobs: int = 0
     failed_jobs: int = 0
+    last_job_id: str = ""
+    last_job_status: str = ""
     last_worker_error: str = ""
     smoke_test_ok: bool = False
     smoke_test_summary: str = "No smoke test run yet."
@@ -95,12 +105,22 @@ class GuiAppController:
             worker_status_badge="HEALTHY" if onboarding.worker_healthy else "UNHEALTHY",
             primary_action_label="Connect OpenClaw" if not onboarding.openclaw_connected else "Run Smoke Test",
             secondary_action_label="Enable Hosting" if not onboarding.hosting_enabled else "Disable Hosting",
+            connect_action_enabled=not onboarding.openclaw_connected,
+            start_action_enabled=not onboarding.hosting_enabled,
+            stop_action_enabled=onboarding.hosting_enabled,
+            restart_action_enabled=onboarding.hosting_enabled,
+            smoke_action_enabled=onboarding.openclaw_connected and onboarding.hosting_enabled,
+            worker_registration_text=self._worker_registration_text(onboarding),
+            worker_health_summary=self._worker_health_summary(onboarding),
+            worker_activity_summary=self._worker_activity_summary(worker),
             worker_id=worker.worker_id if worker else "",
             worker_runtime_state=worker.runtime_state.value if worker else WorkerRuntimeState.STOPPED.value,
             enabled_models_text=", ".join(worker.enabled_models) if worker and worker.enabled_models else "",
             current_load=worker.current_load if worker else 0,
             completed_jobs=worker.completed_jobs if worker else 0,
             failed_jobs=worker.failed_jobs if worker else 0,
+            last_job_id=worker.last_job_id if worker else "",
+            last_job_status=worker.last_job_status.value if worker and worker.last_job_status else "",
             last_worker_error=onboarding.last_worker_error,
             smoke_test_ok=onboarding.smoke_test_ok,
             smoke_test_summary=self._smoke_test_summary(smoke_test),
@@ -151,3 +171,35 @@ class GuiAppController:
         if onboarding.hosting_enabled:
             return "Hosting is enabled, but the worker needs attention."
         return "Hosting is disabled."
+
+    @staticmethod
+    def _worker_registration_text(onboarding: OnboardingStatus) -> str:
+        return (
+            "Registered with the Modulo cloud."
+            if onboarding.worker_registered
+            else "Not registered with the Modulo cloud yet."
+        )
+
+    @staticmethod
+    def _worker_health_summary(onboarding: OnboardingStatus) -> str:
+        if onboarding.worker_healthy:
+            return "Worker health looks good."
+        if onboarding.hosting_enabled:
+            return "Worker needs attention before hosting feels reliable."
+        return "Worker is idle because hosting is disabled."
+
+    @staticmethod
+    def _worker_activity_summary(worker: WorkerStatusSnapshot | None) -> str:
+        if worker is None:
+            return "No worker activity yet."
+        if worker.last_job_id and worker.last_job_status:
+            return (
+                f"Last job {worker.last_job_id} finished with status "
+                f"{worker.last_job_status.value}."
+            )
+        if worker.completed_jobs or worker.failed_jobs:
+            return (
+                f"{worker.completed_jobs} completed jobs and "
+                f"{worker.failed_jobs} failed jobs so far."
+            )
+        return "Worker is ready but has not processed a job yet."

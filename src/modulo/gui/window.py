@@ -46,9 +46,13 @@ class ModuloMainWindow(QMainWindow):
 
         self.worker_id_label = QLabel()
         self.worker_state_label = QLabel()
+        self.worker_registration_label = QLabel()
+        self.worker_health_summary_label = QLabel()
+        self.worker_activity_label = QLabel()
         self.worker_models_label = QLabel()
         self.worker_load_label = QLabel()
         self.worker_jobs_label = QLabel()
+        self.worker_last_job_label = QLabel()
         self.worker_error_label = QLabel()
 
         self.smoke_summary_label = QLabel()
@@ -56,20 +60,28 @@ class ModuloMainWindow(QMainWindow):
         self.smoke_details_box.setReadOnly(True)
         self.smoke_details_box.setMinimumHeight(120)
 
-        connect_button = QPushButton("Connect OpenClaw")
-        connect_button.clicked.connect(lambda: self._apply_state(self.controller.connect_openclaw()))
+        self.connect_button = QPushButton("Connect OpenClaw")
+        self.connect_button.clicked.connect(
+            lambda: self._apply_state(self.controller.connect_openclaw())
+        )
 
-        start_button = QPushButton("Start Hosting")
-        start_button.clicked.connect(lambda: self._apply_state(self.controller.start_hosting()))
+        self.start_button = QPushButton("Start Hosting")
+        self.start_button.clicked.connect(
+            lambda: self._apply_state(self.controller.start_hosting())
+        )
 
-        stop_button = QPushButton("Stop Hosting")
-        stop_button.clicked.connect(lambda: self._apply_state(self.controller.stop_hosting()))
+        self.stop_button = QPushButton("Stop Hosting")
+        self.stop_button.clicked.connect(lambda: self._apply_state(self.controller.stop_hosting()))
 
-        restart_button = QPushButton("Restart Hosting")
-        restart_button.clicked.connect(lambda: self._apply_state(self.controller.restart_hosting()))
+        self.restart_button = QPushButton("Restart Hosting")
+        self.restart_button.clicked.connect(
+            lambda: self._apply_state(self.controller.restart_hosting())
+        )
 
-        smoke_button = QPushButton("Run Smoke Test")
-        smoke_button.clicked.connect(lambda: self._apply_state(self.controller.run_smoke_test()))
+        self.smoke_button = QPushButton("Run Smoke Test")
+        self.smoke_button.clicked.connect(
+            lambda: self._apply_state(self.controller.run_smoke_test())
+        )
 
         home_box = QGroupBox("Home")
         home_layout = QGridLayout()
@@ -79,21 +91,29 @@ class ModuloMainWindow(QMainWindow):
         home_layout.addWidget(self.hosting_card, 2, 1)
         home_layout.addWidget(self.worker_card, 3, 0)
         home_layout.addWidget(self.smoke_card, 3, 1)
-        home_layout.addWidget(connect_button, 4, 0)
-        home_layout.addWidget(smoke_button, 4, 1)
-        home_layout.addWidget(start_button, 5, 0)
-        home_layout.addWidget(stop_button, 5, 1)
+        home_layout.addWidget(self.connect_button, 4, 0)
+        home_layout.addWidget(self.smoke_button, 4, 1)
         home_box.setLayout(home_layout)
+
+        hosting_box = QGroupBox("Hosting Controls")
+        hosting_layout = QGridLayout()
+        hosting_layout.addWidget(self.start_button, 0, 0)
+        hosting_layout.addWidget(self.stop_button, 0, 1)
+        hosting_layout.addWidget(self.restart_button, 1, 0, 1, 2)
+        hosting_box.setLayout(hosting_layout)
 
         worker_box = QGroupBox("Worker")
         worker_layout = QVBoxLayout()
         worker_layout.addWidget(self.worker_id_label)
         worker_layout.addWidget(self.worker_state_label)
+        worker_layout.addWidget(self.worker_registration_label)
+        worker_layout.addWidget(self.worker_health_summary_label)
+        worker_layout.addWidget(self.worker_activity_label)
         worker_layout.addWidget(self.worker_models_label)
         worker_layout.addWidget(self.worker_load_label)
         worker_layout.addWidget(self.worker_jobs_label)
+        worker_layout.addWidget(self.worker_last_job_label)
         worker_layout.addWidget(self.worker_error_label)
-        worker_layout.addWidget(restart_button)
         worker_box.setLayout(worker_layout)
 
         smoke_box = QGroupBox("Smoke Test")
@@ -105,6 +125,7 @@ class ModuloMainWindow(QMainWindow):
         root = QWidget()
         root_layout = QVBoxLayout()
         root_layout.addWidget(home_box)
+        root_layout.addWidget(hosting_box)
         root_layout.addWidget(worker_box)
         root_layout.addWidget(smoke_box)
         root.setLayout(root_layout)
@@ -165,19 +186,32 @@ class ModuloMainWindow(QMainWindow):
         self._set_card_text(self.hosting_card, state.hosting_summary)
         self._set_card_text(
             self.worker_card,
-            f"{state.worker_status_badge}\nRuntime: {state.worker_runtime_state}",
+            f"{state.worker_status_badge}\n{state.worker_health_summary}",
         )
         self._set_card_text(
             self.smoke_card,
             f"{state.smoke_status_badge}\n{state.smoke_test_summary}",
         )
 
+        self.connect_button.setEnabled(state.connect_action_enabled)
+        self.start_button.setEnabled(state.start_action_enabled)
+        self.stop_button.setEnabled(state.stop_action_enabled)
+        self.restart_button.setEnabled(state.restart_action_enabled)
+        self.smoke_button.setEnabled(state.smoke_action_enabled)
+
         self.worker_id_label.setText(f"Worker ID: {state.worker_id or 'Unavailable'}")
         self.worker_state_label.setText(f"Runtime state: {state.worker_runtime_state}")
+        self.worker_registration_label.setText(f"Registration: {state.worker_registration_text}")
+        self.worker_health_summary_label.setText(f"Health: {state.worker_health_summary}")
+        self.worker_activity_label.setText(f"Activity: {state.worker_activity_summary}")
         self.worker_models_label.setText(f"Enabled models: {state.enabled_models_text or 'None'}")
         self.worker_load_label.setText(f"Current load: {state.current_load}")
         self.worker_jobs_label.setText(
             f"Jobs: {state.completed_jobs} completed / {state.failed_jobs} failed"
+        )
+        self.worker_last_job_label.setText(
+            f"Last job: {state.last_job_id or 'None'}"
+            + (f" ({state.last_job_status})" if state.last_job_status else "")
         )
         self.worker_error_label.setText(
             f"Last worker error: {state.last_worker_error or 'None'}"
