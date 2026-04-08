@@ -12,9 +12,9 @@ from modulo.common.contracts import (
     WorkerHeartbeat,
     WorkerSnapshot,
 )
-from modulo.service.jobs import InMemoryJobQueue
-from modulo.service.registry import InMemoryWorkerRegistry
-from modulo.service.router import RoutingError, TrustRouter
+from modulo.cloud.jobs import InMemoryJobQueue
+from modulo.cloud.registry import InMemoryWorkerRegistry
+from modulo.cloud.router import RoutingError, TrustRouter
 
 
 @dataclass

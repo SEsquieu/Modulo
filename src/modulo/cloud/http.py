@@ -17,10 +17,10 @@ from modulo.common.contracts import (
     WorkerModelState,
     WorkerSnapshot,
 )
-from modulo.service.execution import InMemoryWorkerRuntime, WorkerExecutionError
-from modulo.service.jobs import JobQueueError
-from modulo.service.router import RoutingError
-from modulo.service.runtime import InMemoryModuloService
+from modulo.cloud.jobs import JobQueueError
+from modulo.cloud.router import RoutingError
+from modulo.cloud.runtime import InMemoryModuloService
+from modulo.worker.runtime import InMemoryWorkerRuntime, WorkerExecutionError
 
 
 @dataclass

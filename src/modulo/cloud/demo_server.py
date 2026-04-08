@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from modulo.common.contracts import WorkerKind, WorkerModelState, WorkerSnapshot
-from modulo.service.execution import InMemoryWorkerRuntime
-from modulo.service.http import build_http_server
-from modulo.service.router import TrustRouter
-from modulo.service.runtime import InMemoryModuloService
+from modulo.cloud.http import build_http_server
+from modulo.cloud.router import TrustRouter
+from modulo.cloud.runtime import InMemoryModuloService
+from modulo.worker.runtime import InMemoryWorkerRuntime
 
 
 def main() -> None:

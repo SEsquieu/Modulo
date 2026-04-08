@@ -109,4 +109,3 @@ class TrustRouter:
             + (1.0 - model_state.timeout_rate) * 0.10
             + headroom * 0.05
         )
-

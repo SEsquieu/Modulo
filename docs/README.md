@@ -6,9 +6,9 @@ Current source of truth:
 
 - [../modulo_v_1_design_doc.md](../modulo_v_1_design_doc.md): product and architecture direction for Modulo v1
 
-Suggested future additions:
+Recommended next docs to add:
 
-- architecture decision records
-- API contracts
-- onboarding notes
-- deployment and operations docs
+- `architecture.md`: repo map and runtime boundaries across client, worker, and cloud
+- `api.md`: Ollama-facing and worker-facing HTTP contracts
+- `onboarding.md`: buyer and worker flows from the tray client
+- `operations.md`: health, logging, and deployment expectations

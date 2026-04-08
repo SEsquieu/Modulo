@@ -6,10 +6,10 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from modulo.common.contracts import ChatRequest, JobStatus, WorkerKind, WorkerModelState, WorkerSnapshot, ExecutionMode
-from modulo.service.execution import InMemoryWorkerRuntime
-from modulo.service.http import ModuloHTTPApp
-from modulo.service.router import TrustRouter
-from modulo.service.runtime import InMemoryModuloService
+from modulo.cloud.http import ModuloHTTPApp
+from modulo.cloud.router import TrustRouter
+from modulo.cloud.runtime import InMemoryModuloService
+from modulo.worker.runtime import InMemoryWorkerRuntime
 
 
 class ModuloHTTPAppTests(unittest.TestCase):

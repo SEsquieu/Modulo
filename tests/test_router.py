@@ -15,9 +15,9 @@ from modulo.common.contracts import (
     WorkerModelState,
     WorkerSnapshot,
 )
-from modulo.service.jobs import JobQueueError
-from modulo.service.router import RoutingError, TrustRouter
-from modulo.service.runtime import InMemoryModuloService
+from modulo.cloud.jobs import JobQueueError
+from modulo.cloud.router import RoutingError, TrustRouter
+from modulo.cloud.runtime import InMemoryModuloService
 
 
 class TrustRouterTests(unittest.TestCase):
