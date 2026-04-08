@@ -94,9 +94,9 @@ class ModuloMainWindow(QMainWindow):
         self.ollama_inventory_summary_label.setWordWrap(True)
         self.hosting_setup_summary_label = QLabel()
         self.hosting_setup_summary_label.setWordWrap(True)
-        self.hosting_setup_details_box = QPlainTextEdit()
-        self.hosting_setup_details_box.setReadOnly(True)
-        self.hosting_setup_details_box.setMinimumHeight(90)
+        self.hosting_setup_details_label = QLabel()
+        self.hosting_setup_details_label.setWordWrap(True)
+        self.hosting_setup_details_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.hosting_inventory_label = QLabel()
         self.hosting_inventory_label.setWordWrap(True)
 
@@ -155,7 +155,7 @@ class ModuloMainWindow(QMainWindow):
         hosting_setup_layout.addWidget(self.ollama_inventory_summary_label)
         hosting_setup_layout.addWidget(self.hosting_setup_summary_label)
         hosting_setup_layout.addWidget(self.hosting_inventory_label)
-        hosting_setup_layout.addWidget(self.hosting_setup_details_box)
+        hosting_setup_layout.addWidget(self.hosting_setup_details_label)
         hosting_setup_box.setLayout(hosting_setup_layout)
 
         openclaw_box = QGroupBox("OpenClaw")
@@ -368,7 +368,7 @@ class ModuloMainWindow(QMainWindow):
             "Installed but not curated: "
             f"{unsupported_installed}"
         )
-        self.hosting_setup_details_box.setPlainText(state.hosting_setup_details)
+        self.hosting_setup_details_label.setText(state.hosting_setup_details)
 
         self.worker_id_label.setText(f"Worker ID: {state.worker_id or 'Unavailable'}")
         self.worker_state_label.setText(f"Runtime state: {state.worker_runtime_state}")
