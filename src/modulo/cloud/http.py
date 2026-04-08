@@ -96,9 +96,12 @@ class ModuloHTTPApp:
 
     def _handle_chat(self, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
         model_id = payload.get("model")
+        buyer_id = payload.get("buyer_id", "")
         raw_messages = payload.get("messages", [])
         if not isinstance(model_id, str) or not model_id:
             return HTTPStatus.BAD_REQUEST, {"error": "Missing required field: model"}
+        if not isinstance(buyer_id, str):
+            return HTTPStatus.BAD_REQUEST, {"error": "Invalid field: buyer_id"}
         if not isinstance(raw_messages, list):
             return HTTPStatus.BAD_REQUEST, {"error": "Invalid field: messages"}
 
@@ -115,6 +118,7 @@ class ModuloHTTPApp:
         request = ChatRequest(
             model_id=model_id,
             execution_mode=ExecutionMode.NETWORK,
+            buyer_id=buyer_id,
             messages=tuple(messages),
             stream=bool(payload.get("stream", False)),
             requires_tools=bool(payload.get("tools")),

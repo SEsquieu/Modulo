@@ -89,6 +89,7 @@ class ChatMessage:
 class ChatRequest:
     model_id: str
     execution_mode: ExecutionMode
+    buyer_id: str = ""
     messages: tuple[ChatMessage, ...] = field(default_factory=tuple)
     routing_policy: RoutingPolicy = RoutingPolicy.STRICT
     stream: bool = False

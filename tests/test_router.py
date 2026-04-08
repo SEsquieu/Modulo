@@ -272,6 +272,263 @@ class TrustRouterTests(unittest.TestCase):
         self.assertIsNotNone(unhealthy_worker)
         self.assertFalse(unhealthy_worker.healthy)
 
+    def test_same_buyer_prefers_leased_worker_over_new_higher_score(self) -> None:
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="network-1",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                        confidence=0.95,
+                    ),
+                ),
+            )
+        )
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="network-2",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                        confidence=0.80,
+                    ),
+                ),
+            )
+        )
+
+        first_job = self.service.submit_chat(
+            ChatRequest(
+                model_id="llama3.1:8b",
+                execution_mode=ExecutionMode.NETWORK,
+                buyer_id="buyer-1",
+            )
+        )
+        self.service.claim_job("network-1")
+        self.service.complete_job(
+            JobResult(
+                job_id=first_job.job_id,
+                worker_id="network-1",
+                response_text="first response",
+            )
+        )
+
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="network-1",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                        confidence=0.70,
+                    ),
+                ),
+            )
+        )
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="network-2",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                        confidence=0.99,
+                    ),
+                ),
+            )
+        )
+
+        same_buyer_decision = self.service.route_chat(
+            ChatRequest(
+                model_id="llama3.1:8b",
+                execution_mode=ExecutionMode.NETWORK,
+                buyer_id="buyer-1",
+            )
+        )
+        other_buyer_decision = self.service.route_chat(
+            ChatRequest(
+                model_id="llama3.1:8b",
+                execution_mode=ExecutionMode.NETWORK,
+                buyer_id="buyer-2",
+            )
+        )
+
+        self.assertEqual("network-1", same_buyer_decision.worker_id)
+        self.assertIn("leased worker", same_buyer_decision.reason)
+        self.assertEqual("network-2", other_buyer_decision.worker_id)
+
+    def test_lease_expires_after_inactivity(self) -> None:
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="network-1",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                        confidence=0.95,
+                    ),
+                ),
+            )
+        )
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="network-2",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                        confidence=0.80,
+                    ),
+                ),
+            )
+        )
+
+        first_job = self.service.submit_chat(
+            ChatRequest(
+                model_id="llama3.1:8b",
+                execution_mode=ExecutionMode.NETWORK,
+                buyer_id="buyer-lease",
+            )
+        )
+        self.service.claim_job("network-1")
+        self.service.complete_job(
+            JobResult(
+                job_id=first_job.job_id,
+                worker_id="network-1",
+                response_text="first response",
+            )
+        )
+
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="network-1",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                        confidence=0.70,
+                    ),
+                ),
+            )
+        )
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="network-2",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                        confidence=0.99,
+                    ),
+                ),
+            )
+        )
+
+        for index in range(4):
+            self.service.route_chat(
+                ChatRequest(
+                    model_id="llama3.1:8b",
+                    execution_mode=ExecutionMode.NETWORK,
+                    buyer_id=f"other-buyer-{index}",
+                )
+            )
+
+        expired_decision = self.service.route_chat(
+            ChatRequest(
+                model_id="llama3.1:8b",
+                execution_mode=ExecutionMode.NETWORK,
+                buyer_id="buyer-lease",
+            )
+        )
+
+        self.assertEqual("network-2", expired_decision.worker_id)
+
+    def test_failed_worker_breaks_buyer_lease_and_retry_rehomes_buyer(self) -> None:
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="network-1",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                        confidence=0.95,
+                    ),
+                ),
+            )
+        )
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="network-2",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                        confidence=0.90,
+                    ),
+                ),
+            )
+        )
+
+        job = self.service.submit_chat(
+            ChatRequest(
+                model_id="llama3.1:8b",
+                execution_mode=ExecutionMode.NETWORK,
+                buyer_id="buyer-rehome",
+            )
+        )
+        self.service.claim_job("network-1")
+
+        retried = self.service.fail_job(
+            JobFailure(
+                job_id=job.job_id,
+                worker_id="network-1",
+                error_code="EXEC_TIMEOUT",
+                message="Execution timed out",
+            )
+        )
+
+        next_decision = self.service.route_chat(
+            ChatRequest(
+                model_id="llama3.1:8b",
+                execution_mode=ExecutionMode.NETWORK,
+                buyer_id="buyer-rehome",
+            )
+        )
+
+        self.assertEqual("network-2", retried.assigned_worker_id)
+        self.assertEqual("network-2", next_decision.worker_id)
+
     def test_job_cannot_be_completed_by_wrong_worker(self) -> None:
         self.service.register_worker(
             WorkerSnapshot(

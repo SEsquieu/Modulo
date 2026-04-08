@@ -17,7 +17,7 @@ Current phase: `Phase 1` moving toward a working local prototype of the real `cl
 
 Current active slice:
 
-- add short-lived buyer-to-worker continuity behavior inside the router to reduce cold-start thrash
+- keep extending the prototype only through roadmap-aligned slices that preserve the client-worker-cloud boundaries
 
 Definition of progress for this phase:
 
@@ -156,26 +156,25 @@ Proof added to repo:
 - router tests covering retry-on-failure and timeout behavior
 - prototype/client tests covering unhealthy-worker reporting after execution failure
 
-## Upcoming slices
-
-These are ordered to keep the path coherent and consistent.
-
 ### Slice 8: Buyer continuity leases
 
-Goal:
+Status: completed
 
-- add short-lived buyer-to-worker continuity behavior inside the router to reduce cold-start thrash
+Summary:
 
-Why this slice matters:
+- added short-lived buyer-to-worker continuity leases inside the cloud service so repeat requests can prefer a recently warm worker
+- made leases soft by expiring them after inactivity and breaking them when workers become unhealthy or are rehomed
+- kept continuity fully inside the routing/control-plane path instead of pushing that logic into the client or worker
 
-- it improves prototype UX in a way that aligns directly with the product goal
-- it remains a router concern instead of leaking into client or worker shortcuts
+Proof added to repo:
 
-Exit criteria:
+- buyer identity on chat requests plus an in-memory lease manager in the cloud layer
+- lease-aware routing that prefers an eligible leased worker before falling back to trust-weighted selection
+- tests covering buyer continuity, lease expiry, and lease break/rehome behavior
 
-- router can prefer a recently warm worker for an active buyer session
-- leases break cleanly on timeout, health change, overload, or expiry
-- continuity improves UX without obscuring routing failures
+## Upcoming slices
+
+No additional slices are committed yet. New work should be added here only when it clearly strengthens the roadmap-critical demo path and preserves the current boundaries.
 
 ## Roadmap guardrails
 

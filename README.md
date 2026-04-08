@@ -97,6 +97,8 @@ High-value next routing behavior to add:
 - short-lived buyer-to-worker continuity leases to avoid repeated cold starts
 - lease break/timeout behavior driven by health, load, and execution failures
 
+The current prototype now includes short-lived buyer continuity leases in the cloud routing path so follow-up requests can prefer a recently warm eligible worker without moving routing logic into the client or worker.
+
 The client and worker packages are intentionally light right now. They exist to keep the repository shaped correctly for the eventual tray app UX and local bridge architecture while the routing/control-plane core is being proven first.
 
 ## Running tests

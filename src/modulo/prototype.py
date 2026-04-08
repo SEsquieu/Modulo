@@ -16,6 +16,8 @@ from modulo.worker.transport import InProcessWorkerHTTPTransport
 class PrototypeRoundTripResult:
     job_id: str
     model_id: str
+    buyer_id: str
+    assigned_worker_id: str
     user_message: str
     response_text: str
     client_status: ClientStatus
@@ -25,6 +27,7 @@ class PrototypeRoundTripResult:
 class LocalPrototypeHarness:
     model_id: str = "llama3.1:8b"
     worker_id: str = "local-prototype-worker"
+    buyer_id: str = "prototype-buyer"
     modulo_url: str = "http://127.0.0.1:8000"
     stub_response_text: str = "Hello from the Modulo local prototype worker."
     executor: WorkerExecutor | None = None
@@ -61,14 +64,16 @@ class LocalPrototypeHarness:
     def shutdown(self) -> ClientStatus:
         return self.client.stop_hosting()
 
-    def run_round_trip(self, user_message: str) -> PrototypeRoundTripResult:
+    def run_round_trip(self, user_message: str, *, buyer_id: str | None = None) -> PrototypeRoundTripResult:
         if not self.client.get_status().hosting_enabled:
             self.boot()
 
+        effective_buyer_id = buyer_id or self.buyer_id
         job = self.service.submit_chat(
             ChatRequest(
                 model_id=self.model_id,
                 execution_mode=ExecutionMode.NETWORK,
+                buyer_id=effective_buyer_id,
                 messages=(ChatMessage(role="user", content=user_message),),
             )
         )
@@ -80,6 +85,8 @@ class LocalPrototypeHarness:
         return PrototypeRoundTripResult(
             job_id=completed_job.job_id,
             model_id=completed_job.request.model_id,
+            buyer_id=effective_buyer_id,
+            assigned_worker_id=completed_job.assigned_worker_id,
             user_message=user_message,
             response_text=completed_job.response_text,
             client_status=status,
