@@ -19,6 +19,7 @@ That means:
 
 - local readiness is based on detected facts, not assumptions
 - hosting readiness is based on executable preflight checks
+- client-visible platform state is fetched through a dedicated session bridge
 - OpenClaw onboarding is explicit and truthful
 - real local execution can be exercised through the same path the GUI supervises
 - installability and operator trust improve only after the underlying integrations are real
@@ -69,7 +70,23 @@ Completion gate:
 
 - hosting readiness in the GUI is driven by real preflight checks instead of config alone
 
-### Step 3: Real OpenClaw integration
+### Step 3: Client session bridge
+
+Status: not started
+
+Roadmap:
+
+- [session_bridge_roadmap.md](/Users/16096/Desktop/Projects/Modulo/docs/session_bridge_roadmap.md)
+
+Why third:
+
+- buyer-visible network and cloud state should come from a client-owned control-plane layer before buyer routing or OpenClaw setup becomes real
+
+Completion gate:
+
+- the client has a dedicated session/control-plane bridge that can fetch platform truth independently of hosting
+
+### Step 4: Real OpenClaw integration
 
 Status: not started
 
@@ -77,15 +94,15 @@ Roadmap:
 
 - [openclaw_integration_roadmap.md](/Users/16096/Desktop/Projects/Modulo/docs/openclaw_integration_roadmap.md)
 
-Why third:
+Why fourth:
 
-- buyer onboarding should become real only after the app can speak honestly about local readiness
+- buyer onboarding should become real only after the app can speak honestly about local readiness and platform state
 
 Completion gate:
 
 - the GUI can detect and explain the real OpenClaw state and stage a documented connection flow safely
 
-### Step 4: Real local execution
+### Step 5: Real local execution
 
 Status: not started
 
@@ -93,15 +110,15 @@ Roadmap:
 
 - [real_execution_roadmap.md](/Users/16096/Desktop/Projects/Modulo/docs/real_execution_roadmap.md)
 
-Why fourth:
+Why fifth:
 
-- real execution is most valuable after the app can truthfully identify local models, readiness, and buyer configuration
+- real execution is most valuable after the app can truthfully identify local models, readiness, platform state, and buyer configuration
 
 Completion gate:
 
 - a real Ollama-backed execution path can be exercised end to end from the supervised client flow
 
-### Step 5: Productization checklist
+### Step 6: Productization checklist
 
 Status: not started
 

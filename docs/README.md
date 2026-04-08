@@ -11,6 +11,7 @@ Current source of truth:
 - [phase_2_plan.md](./phase_2_plan.md): sequenced next-phase integration plan after the initial backend and GUI roadmaps
 - [ollama_discovery_roadmap.md](./ollama_discovery_roadmap.md): mini roadmap for truthful local Ollama discovery
 - [hosting_readiness_roadmap.md](./hosting_readiness_roadmap.md): mini roadmap for real hosting preflight and readiness
+- [session_bridge_roadmap.md](./session_bridge_roadmap.md): mini roadmap for the always-on client control-plane/session bridge
 - [openclaw_integration_roadmap.md](./openclaw_integration_roadmap.md): mini roadmap for real OpenClaw detection and connection flow
 - [real_execution_roadmap.md](./real_execution_roadmap.md): mini roadmap for real Ollama-backed execution
 - [productization_checklist.md](./productization_checklist.md): compact gated checklist for packaging and trust polish
