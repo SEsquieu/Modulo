@@ -244,6 +244,20 @@ This state map suggests the first GUI stack should make these easy:
 
 That means the initial stack decision should optimize for desktop pragmatism, not for a broad web-app ecosystem by default.
 
+## Stack decision
+
+The GUI stack for Modulo is now explicitly:
+
+- `PySide6` for the desktop shell
+- a thin Python controller layer over the existing client surface
+- packaging later through the Windows desktop app path rather than through a separate web runtime
+
+This decision matches the current architecture because:
+
+- the client surface is already Python-native
+- the GUI can call the current supervision/onboarding surface directly
+- no extra JS, Rust, or browser runtime is needed to make the first physical app real
+
 ## Slice 1 completion note
 
 `GUI Slice 1` is complete when:

@@ -41,7 +41,7 @@ Current GUI phase: `Phase 0` planning and thin-client surface definition.
 
 Current active GUI slice:
 
-- stand up the thinnest possible physical GUI shell that launches locally and can display real client state
+- build the first onboarding home screen on top of the live PySide6 shell and current client state
 
 Definition of progress for this phase:
 
@@ -67,26 +67,25 @@ Proof added to repo:
 - explicit mapping from current Python client state to GUI view-model concerns
 - explicit event/command map for the first GUI shell
 
+### GUI Slice 2: Barebones local shell and app bootstrap
+
+Status: completed
+
+Summary:
+
+- committed the GUI stack to PySide6 for a thin cross-platform desktop shell that stays in Python
+- added a small GUI controller layer so the shell reads real client state without embedding runtime logic in widgets
+- stood up a minimal launchable desktop window that renders live client/worker/smoke-test state and can trigger existing client actions
+
+Proof added to repo:
+
+- PySide6 chosen explicitly as the GUI stack
+- `python -m modulo.gui_app` launch path plus a minimal controller-backed window
+- controller tests covering shell state refresh and core actions
+
 ## Upcoming GUI slices
 
 These are ordered to keep the GUI build coherent and consistent with the current architecture.
-
-### GUI Slice 2: Barebones local shell and app bootstrap
-
-Goal:
-
-- stand up the thinnest possible physical GUI shell that launches locally and can display real client state
-
-Why this slice matters:
-
-- it creates the installable app skeleton early
-- it lets future GUI slices build on a real shell instead of on screenshots or notebooks
-
-Exit criteria:
-
-- choose and document the first GUI stack explicitly
-- create an app shell that launches locally
-- render at least one real client status view from live app state
 
 ### GUI Slice 3: Onboarding home screen
 

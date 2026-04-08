@@ -67,6 +67,15 @@ This boots the in-process cloud control plane, starts a supervised worker throug
 
 The local prototype now also supports a client-facing smoke-test path through the same harness and worker/runtime seams.
 
+## Running the GUI shell
+
+```powershell
+python -m pip install -e .[gui]
+python -m modulo.gui_app
+```
+
+This launches the barebones PySide6 desktop shell against the current live client/prototype state.
+
 ## Current platform surface
 
 The current scaffold includes these worker-facing HTTP routes:
