@@ -40,13 +40,18 @@ class GuiShellState:
     last_job_status: str = ""
     last_worker_error: str = ""
     smoke_test_ok: bool = False
+    smoke_test_prompt: str = "GUI smoke test request"
     smoke_test_summary: str = "No smoke test run yet."
     smoke_test_details: str = ""
+    smoke_test_result_label: str = "Not run yet"
+    diagnostics_summary: str = ""
+    diagnostics_details: str = ""
 
 
 @dataclass
 class GuiAppController:
     harness: LocalPrototypeHarness
+    _last_smoke_test_prompt: str = "GUI smoke test request"
 
     def refresh(self) -> GuiShellState:
         return self._build_state(
@@ -80,6 +85,7 @@ class GuiAppController:
         return self.refresh()
 
     def run_smoke_test(self, user_message: str = "GUI smoke test request") -> GuiShellState:
+        self._last_smoke_test_prompt = user_message
         self.harness.client.run_smoke_test(user_message)
         return self.refresh()
 
@@ -123,8 +129,12 @@ class GuiAppController:
             last_job_status=worker.last_job_status.value if worker and worker.last_job_status else "",
             last_worker_error=onboarding.last_worker_error,
             smoke_test_ok=onboarding.smoke_test_ok,
+            smoke_test_prompt=self._last_smoke_test_prompt,
             smoke_test_summary=self._smoke_test_summary(smoke_test),
             smoke_test_details=self._smoke_test_details(smoke_test),
+            smoke_test_result_label=self._smoke_test_result_label(smoke_test),
+            diagnostics_summary=self._diagnostics_summary(onboarding, smoke_test),
+            diagnostics_details=self._diagnostics_details(onboarding, smoke_test),
         )
 
     @staticmethod
@@ -145,6 +155,12 @@ class GuiAppController:
                 f"Response: {smoke_test.response_text}"
             )
         return f"Prompt: {smoke_test.user_message}\nError: {smoke_test.error}"
+
+    @staticmethod
+    def _smoke_test_result_label(smoke_test: SmokeTestResult | None) -> str:
+        if smoke_test is None:
+            return "Not run yet"
+        return "Pass" if smoke_test.ok else "Fail"
 
     @staticmethod
     def _home_subtitle(onboarding: OnboardingStatus) -> str:
@@ -203,3 +219,33 @@ class GuiAppController:
                 f"{worker.failed_jobs} failed jobs so far."
             )
         return "Worker is ready but has not processed a job yet."
+
+    @staticmethod
+    def _diagnostics_summary(
+        onboarding: OnboardingStatus,
+        smoke_test: SmokeTestResult | None,
+    ) -> str:
+        if smoke_test is None:
+            return "Run a smoke test to capture a buyer-to-worker confidence check."
+        if smoke_test.ok:
+            return "Smoke test passed and the latest diagnostics look healthy."
+        if onboarding.last_worker_error:
+            return "Smoke test failed and the worker reported an error."
+        return "Smoke test failed before the worker produced a healthy result."
+
+    @staticmethod
+    def _diagnostics_details(
+        onboarding: OnboardingStatus,
+        smoke_test: SmokeTestResult | None,
+    ) -> str:
+        lines = [
+            f"Smoke test result: {GuiAppController._smoke_test_result_label(smoke_test)}",
+            f"Last worker error: {onboarding.last_worker_error or 'None'}",
+        ]
+        if smoke_test is not None:
+            lines.append(f"Prompt: {smoke_test.user_message}")
+            if smoke_test.ok:
+                lines.append(f"Response: {smoke_test.response_text}")
+            else:
+                lines.append(f"Smoke test error: {smoke_test.error or 'Unknown error'}")
+        return "\n".join(lines)

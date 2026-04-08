@@ -9,7 +9,9 @@ try:
         QFrame,
         QGridLayout,
         QGroupBox,
+        QHBoxLayout,
         QLabel,
+        QLineEdit,
         QMainWindow,
         QPushButton,
         QPlainTextEdit,
@@ -56,9 +58,17 @@ class ModuloMainWindow(QMainWindow):
         self.worker_error_label = QLabel()
 
         self.smoke_summary_label = QLabel()
+        self.smoke_result_label = QLabel()
+        self.smoke_prompt_input = QLineEdit()
+        self.smoke_prompt_input.setPlaceholderText("Enter a smoke-test prompt")
         self.smoke_details_box = QPlainTextEdit()
         self.smoke_details_box.setReadOnly(True)
         self.smoke_details_box.setMinimumHeight(120)
+        self.diagnostics_summary_label = QLabel()
+        self.diagnostics_summary_label.setWordWrap(True)
+        self.diagnostics_details_box = QPlainTextEdit()
+        self.diagnostics_details_box.setReadOnly(True)
+        self.diagnostics_details_box.setMinimumHeight(100)
 
         self.connect_button = QPushButton("Connect OpenClaw")
         self.connect_button.clicked.connect(
@@ -80,7 +90,7 @@ class ModuloMainWindow(QMainWindow):
 
         self.smoke_button = QPushButton("Run Smoke Test")
         self.smoke_button.clicked.connect(
-            lambda: self._apply_state(self.controller.run_smoke_test())
+            self._run_smoke_test_from_input
         )
 
         home_box = QGroupBox("Home")
@@ -118,8 +128,15 @@ class ModuloMainWindow(QMainWindow):
 
         smoke_box = QGroupBox("Smoke Test")
         smoke_layout = QVBoxLayout()
+        prompt_row = QHBoxLayout()
+        prompt_row.addWidget(QLabel("Prompt"))
+        prompt_row.addWidget(self.smoke_prompt_input)
+        smoke_layout.addLayout(prompt_row)
+        smoke_layout.addWidget(self.smoke_result_label)
         smoke_layout.addWidget(self.smoke_summary_label)
         smoke_layout.addWidget(self.smoke_details_box)
+        smoke_layout.addWidget(self.diagnostics_summary_label)
+        smoke_layout.addWidget(self.diagnostics_details_box)
         smoke_box.setLayout(smoke_layout)
 
         root = QWidget()
@@ -165,6 +182,10 @@ class ModuloMainWindow(QMainWindow):
 
     def _poll_state(self) -> None:
         self._apply_state(self.controller.poll_worker())
+
+    def _run_smoke_test_from_input(self) -> None:
+        prompt = self.smoke_prompt_input.text().strip() or "GUI smoke test request"
+        self._apply_state(self.controller.run_smoke_test(prompt))
 
     def _apply_state(self, state: GuiShellState) -> None:
         self.title_label.setText(state.home_title)
@@ -218,7 +239,12 @@ class ModuloMainWindow(QMainWindow):
         )
 
         self.smoke_summary_label.setText(state.smoke_test_summary)
+        self.smoke_result_label.setText(f"Result: {state.smoke_test_result_label}")
+        if self.smoke_prompt_input.text() != state.smoke_test_prompt:
+            self.smoke_prompt_input.setText(state.smoke_test_prompt)
         self.smoke_details_box.setPlainText(state.smoke_test_details)
+        self.diagnostics_summary_label.setText(state.diagnostics_summary)
+        self.diagnostics_details_box.setPlainText(state.diagnostics_details)
 
 
 def launch_gui(controller: GuiAppController | None = None) -> int:

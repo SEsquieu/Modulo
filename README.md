@@ -81,7 +81,7 @@ The GUI currently includes:
 - an onboarding-oriented home screen
 - hosting start, stop, and restart controls
 - a worker panel with live registration, health, activity, and error summaries
-- a smoke-test action backed by the current prototype harness
+- a prompt-driven smoke-test and diagnostics panel backed by the current prototype harness
 
 ## Current platform surface
 

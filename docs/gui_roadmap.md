@@ -41,7 +41,7 @@ Current GUI phase: `Phase 0` planning and thin-client surface definition.
 
 Current active GUI slice:
 
-- expose the smoke-test path and basic diagnostics in a clear GUI flow
+- implement the GUI path for connecting OpenClaw from the client-facing app
 
 Definition of progress for this phase:
 
@@ -115,43 +115,25 @@ Proof added to repo:
 - richer worker panel backed by `WorkerStatusSnapshot` fields that already exist
 - controller tests validating action enablement and worker activity summaries
 
+### GUI Slice 5: Smoke test and diagnostics panel
+
+Status: completed
+
+Summary:
+
+- turned the smoke-test area into a clearer diagnostics flow with prompt entry, explicit pass/fail labeling, and richer result details
+- added a combined diagnostics summary so smoke-test output and last worker error are visible together in one place
+- kept the GUI bound to the existing smoke-test runner and worker status surface rather than inventing a separate debugging path
+
+Proof added to repo:
+
+- prompt-driven smoke-test panel in the PySide shell
+- diagnostics summary and details backed by `SmokeTestResult` and `OnboardingStatus`
+- controller tests covering smoke-test prompt retention and diagnostics summaries
+
 ## Upcoming GUI slices
 
 These are ordered to keep the GUI build coherent and consistent with the current architecture.
-
-### GUI Slice 4: Hosting controls and worker panel
-
-Goal:
-
-- let the GUI start, stop, and restart hosting while showing worker activity and errors
-
-Why this slice matters:
-
-- it turns the GUI from a passive status screen into a real control surface
-- it proves the GUI is supervising the worker rather than replacing it
-
-Exit criteria:
-
-- GUI buttons trigger the existing hosting control path
-- worker state, last error, and recent activity are visible
-- no worker runtime logic is duplicated in the UI layer
-
-### GUI Slice 5: Smoke test and diagnostics panel
-
-Goal:
-
-- expose the smoke-test path and basic diagnostics in a clear GUI flow
-
-Why this slice matters:
-
-- smoke tests are one of the most important confidence tools for onboarding and support
-- this gives the GUI a truthful debugging surface without needing advanced operator tooling
-
-Exit criteria:
-
-- user can run a smoke test from the GUI
-- result state is clearly shown as pass/fail with useful text
-- last worker error and last smoke-test output are visible in one place
 
 ### GUI Slice 6: OpenClaw connection flow
 
