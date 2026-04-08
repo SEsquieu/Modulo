@@ -14,12 +14,25 @@ This repo currently codifies the recommended v1 decisions from the design doc:
 ## Layout
 
 - `src/modulo/common`: shared types, catalog, and v1 policy defaults
-- `src/modulo/service`: in-memory routing and service layer
+- `src/modulo/service`: in-memory routing, worker/job control plane, and HTTP transport
 - `tests`: unit tests for the v1 routing behavior
+
+## Running the demo server
+
+```powershell
+python -m pip install -e .
+python -m modulo.service.demo_server
+```
+
+Then try:
+
+```powershell
+curl http://127.0.0.1:8000/api/tags
+curl -Method Post http://127.0.0.1:8000/api/chat -ContentType "application/json" -Body '{"model":"llama3.1:8b","messages":[{"role":"user","content":"hello"}],"stream":false}'
+```
 
 ## Running tests
 
 ```powershell
 python -m unittest discover -s tests
 ```
-
