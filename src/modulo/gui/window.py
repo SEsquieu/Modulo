@@ -92,6 +92,14 @@ class ModuloMainWindow(QMainWindow):
         self.ollama_summary_label.setWordWrap(True)
         self.ollama_inventory_summary_label = QLabel()
         self.ollama_inventory_summary_label.setWordWrap(True)
+        self.hosting_readiness_label = QLabel()
+        self.hosting_readiness_label.setStyleSheet("font-weight: 600;")
+        self.hosting_preflight_summary_label = QLabel()
+        self.hosting_preflight_summary_label.setWordWrap(True)
+        self.hosting_preflight_reason_label = QLabel()
+        self.hosting_preflight_reason_label.setWordWrap(True)
+        self.hosting_preflight_checks_label = QLabel()
+        self.hosting_preflight_checks_label.setWordWrap(True)
         self.hosting_setup_summary_label = QLabel()
         self.hosting_setup_summary_label.setWordWrap(True)
         self.hosting_setup_details_label = QLabel()
@@ -153,6 +161,10 @@ class ModuloMainWindow(QMainWindow):
         hosting_setup_layout.addWidget(self.ollama_status_label)
         hosting_setup_layout.addWidget(self.ollama_summary_label)
         hosting_setup_layout.addWidget(self.ollama_inventory_summary_label)
+        hosting_setup_layout.addWidget(self.hosting_readiness_label)
+        hosting_setup_layout.addWidget(self.hosting_preflight_summary_label)
+        hosting_setup_layout.addWidget(self.hosting_preflight_reason_label)
+        hosting_setup_layout.addWidget(self.hosting_preflight_checks_label)
         hosting_setup_layout.addWidget(self.hosting_setup_summary_label)
         hosting_setup_layout.addWidget(self.hosting_inventory_label)
         hosting_setup_layout.addWidget(self.hosting_setup_details_label)
@@ -356,6 +368,12 @@ class ModuloMainWindow(QMainWindow):
         self.ollama_status_label.setText(f"Ollama: {state.ollama_status_badge}")
         self.ollama_summary_label.setText(state.ollama_summary)
         self.ollama_inventory_summary_label.setText(state.ollama_inventory_summary)
+        self.hosting_readiness_label.setText(f"Readiness: {state.hosting_readiness_badge}")
+        self.hosting_preflight_summary_label.setText(state.hosting_preflight_summary)
+        self.hosting_preflight_reason_label.setText(
+            f"Blocking reason: {state.hosting_preflight_reason or 'None'}"
+        )
+        self.hosting_preflight_checks_label.setText("\n".join(state.hosting_preflight_checks))
         self.hosting_setup_summary_label.setText(state.hosting_setup_summary)
         supported_installed = ", ".join(state.hosting_supported_installed_model_ids) or "None"
         supported_missing = ", ".join(state.hosting_supported_missing_model_ids) or "None"

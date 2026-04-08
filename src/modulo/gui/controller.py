@@ -37,6 +37,10 @@ class GuiShellState:
     ollama_status_badge: str = "UNAVAILABLE"
     ollama_summary: str = ""
     ollama_inventory_summary: str = ""
+    hosting_readiness_badge: str = "BLOCKED"
+    hosting_preflight_summary: str = ""
+    hosting_preflight_reason: str = ""
+    hosting_preflight_checks: tuple[str, ...] = ()
     hosting_setup_summary: str = ""
     hosting_setup_details: str = ""
     hosting_setup_action_enabled: bool = True
@@ -162,10 +166,16 @@ class GuiAppController:
             ),
             ollama_summary=self._ollama_summary(status),
             ollama_inventory_summary=self._ollama_inventory_summary(status),
+            hosting_readiness_badge=(
+                "READY" if status.hosting_setup.preflight.ok else "BLOCKED"
+            ),
+            hosting_preflight_summary=status.hosting_setup.preflight.summary,
+            hosting_preflight_reason=status.hosting_setup.preflight.failure_reason,
+            hosting_preflight_checks=self._hosting_preflight_checks(status),
             hosting_setup_summary=status.hosting_setup.readiness_summary,
             hosting_setup_details=status.hosting_setup.readiness_details,
             hosting_setup_action_enabled=bool(status.hosting_setup.available_model_ids),
-            start_action_enabled=not onboarding.hosting_enabled,
+            start_action_enabled=(not onboarding.hosting_enabled and status.hosting_setup.can_enable_hosting),
             stop_action_enabled=onboarding.hosting_enabled,
             restart_action_enabled=onboarding.hosting_enabled,
             smoke_action_enabled=onboarding.connected_to_modulo,
@@ -334,4 +344,13 @@ class GuiAppController:
             f"{supported_count} supported model(s) installed, "
             f"{missing_count} supported model(s) missing, "
             f"{unsupported_count} installed model(s) outside the curated catalog."
+        )
+
+    @staticmethod
+    def _hosting_preflight_checks(status: ClientStatus) -> tuple[str, ...]:
+        if not status.hosting_setup.preflight.checks:
+            return ("No hosting preflight checks available yet.",)
+        return tuple(
+            f"{'PASS' if check.ok else 'FAIL'}: {check.summary}"
+            for check in status.hosting_setup.preflight.checks
         )

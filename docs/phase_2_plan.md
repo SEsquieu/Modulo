@@ -49,7 +49,13 @@ Completion gate:
 
 ### Step 2: Real hosting readiness
 
-Status: in progress
+Status: completed
+
+Summary:
+
+- added a dedicated hosting preflight contract with explicit checks and blocking reasons
+- added a local runtime probe so readiness depends on both discovery and runtime resolution
+- surfaced readiness clearly in the GUI and gated hosting start on the real preflight result
 
 Roadmap:
 

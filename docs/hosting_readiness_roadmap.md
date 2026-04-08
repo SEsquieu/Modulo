@@ -53,14 +53,19 @@ Proof added to repo:
 
 ### Slice 3: GUI readiness flow
 
-Goal:
+Status: completed
 
-- surface real readiness in the hosting setup panel and hosting controls
+Summary:
 
-Exit criteria:
+- made hosting readiness explicit in the GUI with a readiness badge, blocking reason, and visible preflight checks
+- gated the Start Hosting action off the real preflight result instead of config-only state
+- kept the flow user-facing by surfacing readiness status before the user has to interpret detailed setup text
 
-- the GUI can show why hosting is or is not ready
-- the GUI no longer relies on config-only readiness language
+Proof added to repo:
+
+- explicit readiness state in the GUI controller
+- hosting setup panel now shows readiness badge, failure reason, and preflight checks
+- GUI tests covering blocked readiness and start-button gating
 
 ## Completion note
 

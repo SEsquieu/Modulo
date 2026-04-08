@@ -49,7 +49,7 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertTrue(state.connect_action_enabled)
         self.assertEqual("Connect OpenClaw", state.openclaw_action_label)
         self.assertEqual("NOT CONNECTED", state.openclaw_status_badge)
-        self.assertTrue(state.start_action_enabled)
+        self.assertFalse(state.start_action_enabled)
         self.assertFalse(state.stop_action_enabled)
         self.assertTrue(state.smoke_action_enabled)
         self.assertIn("Connect OpenClaw", state.home_subtitle)
@@ -66,6 +66,11 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertIn("Ollama is available locally", state.ollama_summary)
         self.assertIn("0 supported model(s) installed", state.ollama_inventory_summary)
         self.assertTrue(state.hosting_setup_action_enabled)
+        self.assertEqual("BLOCKED", state.hosting_readiness_badge)
+        self.assertIn("not installed locally", state.hosting_preflight_summary)
+        self.assertEqual("llama3.1:8b", state.hosting_preflight_reason)
+        self.assertIn("FAIL: The selected curated model is installed locally.", state.hosting_preflight_checks)
+        self.assertFalse(state.start_action_enabled)
         self.assertIn("not installed locally", state.hosting_setup_summary)
         self.assertIn("Supported but missing: llama3.1:8b", state.hosting_setup_details)
         self.assertIn("Hosting remains explicit and opt-in", state.hosting_setup_details)
@@ -125,6 +130,7 @@ class GuiAppControllerTests(unittest.TestCase):
         state = self.controller.select_hosting_model("llama3.1:8b")
 
         self.assertEqual("llama3.1:8b", state.hosting_selected_model_id)
+        self.assertEqual("BLOCKED", state.hosting_readiness_badge)
         self.assertIn("not installed locally", state.hosting_setup_summary)
 
 
