@@ -7,6 +7,7 @@ try:
     from PySide6.QtWidgets import (
         QApplication,
         QComboBox,
+        QFrame,
         QGroupBox,
         QHBoxLayout,
         QLabel,
