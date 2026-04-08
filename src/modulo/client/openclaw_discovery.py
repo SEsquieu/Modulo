@@ -63,7 +63,10 @@ class OpenClawDiscovery:
                 config_present=True,
                 state="installed_unconfigured",
                 summary="OpenClaw config was found, but it could not be read cleanly.",
-                details=f"Config path: {self.config_path}",
+                details=(
+                    f"Config path: {self.config_path}\n"
+                    f"Read error: {exc}"
+                ),
                 config_path=str(self.config_path),
                 error=str(exc),
             )

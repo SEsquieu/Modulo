@@ -96,6 +96,31 @@ class OpenClawDiscoveryTests(unittest.TestCase):
         self.assertEqual("configured", status.state)
         self.assertIn("configured to route through modulo", status.summary.lower())
 
+    def test_surfaces_parse_error_in_details_when_config_is_invalid(self) -> None:
+        config_path = Path("C:/fake/openclaw.json")
+        discovery = OpenClawDiscovery(
+            modulo_url="http://127.0.0.1:8000",
+            config_path=config_path,
+            detect_command=False,
+        )
+
+        with (
+            mock.patch.object(Path, "exists", return_value=True),
+            mock.patch.object(
+                Path,
+                "read_text",
+                return_value="{invalid json",
+            ),
+        ):
+            status = discovery.discover()
+
+        self.assertTrue(status.installed)
+        self.assertTrue(status.config_present)
+        self.assertIn("could not be read cleanly", status.summary)
+        self.assertIn("Config path:", status.details)
+        self.assertIn("Read error:", status.details)
+        self.assertTrue(status.error)
+
     def test_reads_primary_model_from_agents_defaults_shape(self) -> None:
         config_path = Path("C:/fake/openclaw.json")
         discovery = OpenClawDiscovery(
