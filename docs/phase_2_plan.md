@@ -49,7 +49,7 @@ Completion gate:
 
 ### Step 2: Real hosting readiness
 
-Status: not started
+Status: in progress
 
 Roadmap:
 

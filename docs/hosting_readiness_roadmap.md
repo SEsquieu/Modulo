@@ -21,14 +21,19 @@ It exists to turn hosting setup from a config choice into a truthful preflight-b
 
 ### Slice 1: Hosting preflight contract
 
-Goal:
+Status: completed
 
-- define a small preflight result surface for hosting readiness
+Summary:
 
-Exit criteria:
+- added a dedicated hosting preflight contract that reports pass/fail readiness, blocking reason, and individual checks
+- separated preflight failure reasons from general setup guidance and runtime execution errors
+- threaded the preflight result through the existing hosting setup state so later runtime checks can plug into the same surface
 
-- the client can report pass/fail readiness plus reasons
-- the contract separates setup guidance from execution failures
+Proof added to repo:
+
+- `HostingPreflightStatus` and `HostingPreflightCheck` in the client layer
+- hosting setup state now includes preflight outcome and blocking reason
+- client tests covering both passing and failing preflight states
 
 ### Slice 2: Worker and runtime checks
 

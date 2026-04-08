@@ -175,7 +175,29 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertEqual(("llama3.1:8b",), status.hosting_setup.supported_installed_model_ids)
         self.assertEqual((), status.hosting_setup.supported_missing_model_ids)
         self.assertEqual(("qwen3.5:4b",), status.hosting_setup.unsupported_installed_model_ids)
+        self.assertTrue(status.hosting_setup.preflight.ok)
+        self.assertEqual("", status.hosting_setup.preflight.failure_reason)
+        self.assertTrue(status.hosting_setup.can_enable_hosting)
         self.assertIn("Ollama is available", status.hosting_setup.readiness_details)
+
+    def test_hosting_preflight_fails_when_selected_model_is_missing(self) -> None:
+        class MissingModelDiscovery:
+            def discover(self) -> OllamaDiscoveryStatus:
+                return OllamaDiscoveryStatus(
+                    available=True,
+                    installed_model_ids=("qwen3.5:4b",),
+                    summary="Ollama is available with 1 local model.",
+                    details="missing selected model",
+                )
+
+        self.client.ollama_discovery = MissingModelDiscovery()
+
+        status = self.client.get_status()
+
+        self.assertFalse(status.hosting_setup.preflight.ok)
+        self.assertIn("not installed locally", status.hosting_setup.preflight.summary)
+        self.assertEqual("llama3.1:8b", status.hosting_setup.preflight.failure_reason)
+        self.assertFalse(status.hosting_setup.can_enable_hosting)
 
 
 if __name__ == "__main__":

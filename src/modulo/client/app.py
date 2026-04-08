@@ -36,6 +36,23 @@ class OpenClawConnectionStatus:
 
 
 @dataclass(frozen=True)
+class HostingPreflightCheck:
+    key: str
+    ok: bool
+    summary: str
+    detail: str = ""
+    blocking: bool = True
+
+
+@dataclass(frozen=True)
+class HostingPreflightStatus:
+    ok: bool = False
+    summary: str = "Hosting preflight has not run."
+    failure_reason: str = ""
+    checks: tuple[HostingPreflightCheck, ...] = ()
+
+
+@dataclass(frozen=True)
 class HostingSetupStatus:
     selected_model_id: str = ""
     available_model_ids: tuple[str, ...] = ()
@@ -45,6 +62,7 @@ class HostingSetupStatus:
     supported_missing_model_ids: tuple[str, ...] = ()
     unsupported_installed_model_ids: tuple[str, ...] = ()
     ollama_available: bool = False
+    preflight: HostingPreflightStatus = HostingPreflightStatus()
     readiness_summary: str = "Select a model to prepare hosting."
     readiness_details: str = ""
     can_enable_hosting: bool = False
@@ -234,10 +252,13 @@ class ModuloClientSupervisor:
         unsupported_installed_model_ids = tuple(
             model_id for model_id in installed_model_ids if model_id not in supported_model_ids
         )
-        readiness_summary = self._hosting_readiness_summary(
+        preflight = self._hosting_preflight_status(
             selected_model_id=selected_model_id,
             discovery=discovery,
             supported_installed_model_ids=supported_installed_model_ids,
+        )
+        readiness_summary = self._hosting_readiness_summary(
+            preflight=preflight,
         )
         return HostingSetupStatus(
             selected_model_id=selected_model_id,
@@ -248,37 +269,32 @@ class ModuloClientSupervisor:
             supported_missing_model_ids=supported_missing_model_ids,
             unsupported_installed_model_ids=unsupported_installed_model_ids,
             ollama_available=discovery.available,
+            preflight=preflight,
             readiness_summary=readiness_summary,
             readiness_details=self._hosting_readiness_details(
                 selected_model_id=selected_model_id,
                 discovery=discovery,
+                preflight=preflight,
                 supported_installed_model_ids=supported_installed_model_ids,
                 supported_missing_model_ids=supported_missing_model_ids,
                 unsupported_installed_model_ids=unsupported_installed_model_ids,
             ),
-            can_enable_hosting=bool(selected_model_id),
+            can_enable_hosting=preflight.ok,
         )
 
     @staticmethod
     def _hosting_readiness_summary(
         *,
-        selected_model_id: str,
-        discovery: OllamaDiscoveryStatus,
-        supported_installed_model_ids: tuple[str, ...],
+        preflight: HostingPreflightStatus,
     ) -> str:
-        if not selected_model_id:
-            return "Select a curated model to prepare hosting."
-        if not discovery.available:
-            return "Ollama is not available yet, so hosting is not ready."
-        if selected_model_id in supported_installed_model_ids:
-            return f"Ready to host with {selected_model_id}."
-        return f"{selected_model_id} is curated by Modulo but is not installed locally."
+        return preflight.summary
 
     @staticmethod
     def _hosting_readiness_details(
         *,
         selected_model_id: str,
         discovery: OllamaDiscoveryStatus,
+        preflight: HostingPreflightStatus,
         supported_installed_model_ids: tuple[str, ...],
         supported_missing_model_ids: tuple[str, ...],
         unsupported_installed_model_ids: tuple[str, ...],
@@ -303,14 +319,74 @@ class ModuloClientSupervisor:
             if unsupported_installed_model_ids
             else "None"
         )
+        check_lines = "\n".join(
+            f"- {'PASS' if check.ok else 'FAIL'} {check.summary}"
+            for check in preflight.checks
+        )
         return (
             f"Selected model: {model.display_name}\n"
             f"Runtime identity: {model.ollama_runtime_name}\n"
+            f"Preflight: {preflight.summary}\n"
+            f"Blocking reason: {preflight.failure_reason or 'None'}\n"
             f"Ollama discovery: {discovery.summary}\n"
             f"Supported and installed: {supported_installed_line}\n"
             f"Supported but missing: {supported_missing_line}\n"
             f"Installed but not curated: {unsupported_installed_line}\n"
+            f"Checks:\n{check_lines}\n"
             "Hosting remains explicit and opt-in. Use Start Hosting when you are ready."
+        )
+
+    @staticmethod
+    def _hosting_preflight_status(
+        *,
+        selected_model_id: str,
+        discovery: OllamaDiscoveryStatus,
+        supported_installed_model_ids: tuple[str, ...],
+    ) -> HostingPreflightStatus:
+        checks: list[HostingPreflightCheck] = []
+
+        has_model_selection = bool(selected_model_id)
+        checks.append(
+            HostingPreflightCheck(
+                key="model_selected",
+                ok=has_model_selection,
+                summary="A curated hosting model is selected.",
+                detail=selected_model_id or "No curated model selected.",
+            )
+        )
+
+        checks.append(
+            HostingPreflightCheck(
+                key="ollama_available",
+                ok=discovery.available,
+                summary="Ollama is available locally.",
+                detail=discovery.summary,
+            )
+        )
+
+        model_installed = selected_model_id in supported_installed_model_ids if selected_model_id else False
+        checks.append(
+            HostingPreflightCheck(
+                key="selected_model_installed",
+                ok=model_installed,
+                summary="The selected curated model is installed locally.",
+                detail=selected_model_id or "No selected model.",
+            )
+        )
+
+        failed_check = next((check for check in checks if not check.ok and check.blocking), None)
+        if failed_check is not None:
+            return HostingPreflightStatus(
+                ok=False,
+                summary=HostingPreflightStatusSummary.for_check(failed_check, selected_model_id),
+                failure_reason=failed_check.detail or failed_check.summary,
+                checks=tuple(checks),
+            )
+
+        return HostingPreflightStatus(
+            ok=True,
+            summary=f"Hosting preflight passed for {selected_model_id}.",
+            checks=tuple(checks),
         )
 
     def get_ollama_discovery_status(self) -> OllamaDiscoveryStatus:
@@ -326,6 +402,18 @@ class ModuloClientSupervisor:
         if self.activity_provider is None:
             return ActivityVisibilityStatus()
         return self.activity_provider.get_activity_visibility()
+
+
+class HostingPreflightStatusSummary:
+    @staticmethod
+    def for_check(check: HostingPreflightCheck, selected_model_id: str) -> str:
+        if check.key == "model_selected":
+            return "Select a curated model to prepare hosting."
+        if check.key == "ollama_available":
+            return "Ollama is not available yet, so hosting is not ready."
+        if check.key == "selected_model_installed":
+            return f"{selected_model_id} is curated by Modulo but is not installed locally."
+        return "Hosting preflight did not pass."
 
 
 def describe_default_actions() -> list[str]:
