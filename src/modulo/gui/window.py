@@ -95,11 +95,6 @@ class ModuloMainWindow(QMainWindow):
         self.hosting_preflight_summary_label.setWordWrap(True)
         self.hosting_preflight_reason_label = QLabel()
         self.hosting_preflight_reason_label.setWordWrap(True)
-        self.hosting_setup_summary_label = QLabel()
-        self.hosting_setup_summary_label.setWordWrap(True)
-        self.hosting_setup_details_label = QLabel()
-        self.hosting_setup_details_label.setWordWrap(True)
-        self.hosting_setup_details_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.hosting_inventory_label = QLabel()
         self.hosting_inventory_label.setWordWrap(True)
 
@@ -142,10 +137,8 @@ class ModuloMainWindow(QMainWindow):
         host_setup_layout.addWidget(self.ollama_inventory_summary_label)
         host_setup_layout.addWidget(self.hosting_readiness_label)
         host_setup_layout.addWidget(self.hosting_preflight_summary_label)
-        host_setup_layout.addWidget(self.hosting_setup_summary_label)
         host_setup_layout.addWidget(self.hosting_preflight_reason_label)
         host_setup_layout.addWidget(self.hosting_inventory_label)
-        host_setup_layout.addWidget(self.hosting_setup_details_label)
         host_setup_box.setLayout(host_setup_layout)
 
         worker_box = QGroupBox("Hosting")
@@ -345,21 +338,19 @@ class ModuloMainWindow(QMainWindow):
         self.hosting_readiness_label.setText(f"Readiness: {state.hosting_readiness_badge}")
         self.hosting_preflight_summary_label.setText(state.hosting_preflight_summary)
         self.hosting_preflight_reason_label.setText(
-            f"Blocking reason: {state.hosting_preflight_reason or 'None'}"
+            f"Why blocked: {state.hosting_preflight_reason}"
+            if state.hosting_preflight_reason
+            else ""
         )
-        self.hosting_setup_summary_label.setText(state.hosting_setup_summary)
-        supported_installed = ", ".join(state.hosting_supported_installed_model_ids) or "None"
-        supported_missing = ", ".join(state.hosting_supported_missing_model_ids) or "None"
-        unsupported_installed = ", ".join(state.hosting_unsupported_installed_model_ids) or "None"
+        supported_installed = len(state.hosting_supported_installed_model_ids)
+        supported_missing = len(state.hosting_supported_missing_model_ids)
+        unsupported_installed = len(state.hosting_unsupported_installed_model_ids)
         self.hosting_inventory_label.setText(
-            "Supported and installed: "
-            f"{supported_installed}\n"
-            "Supported but missing: "
-            f"{supported_missing}\n"
-            "Installed but not curated: "
-            f"{unsupported_installed}"
+            "Inventory: "
+            f"{supported_installed} supported installed, "
+            f"{supported_missing} supported missing, "
+            f"{unsupported_installed} installed outside the curated catalog."
         )
-        self.hosting_setup_details_label.setText(state.hosting_setup_details)
 
         self.worker_id_label.setText(f"Worker ID: {state.worker_id or 'Unavailable'}")
         self.worker_state_label.setText(f"Runtime state: {state.worker_runtime_state}")
