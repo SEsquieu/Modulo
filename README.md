@@ -27,6 +27,19 @@ This keeps the codebase aligned with the intended UX:
 - the `client` manages local worker behavior through the `worker` bridge
 - the hosted `cloud` layer owns routing, trust, and job coordination
 
+## Development posture
+
+This repo should grow through tight vertical slices that strengthen the roadmap-critical demo path.
+
+- build toward the one end-to-end proof, not side ideas in isolation
+- keep `client` thin and supervisory so `worker` remains the real runtime seam
+- only canonize new behavior when it clearly improves the core buyer-to-worker path
+- prefer clean continuity and shared contracts over duplicate logic or package drift
+
+Roadmap reference:
+
+- [docs/roadmap.md](/Users/16096/Desktop/Projects/Modulo/docs/roadmap.md)
+
 ## Running the demo server
 
 ```powershell
@@ -67,6 +80,11 @@ This repo currently proves a tight Phase 0/1 backend slice:
 - worker protocol endpoints for register, heartbeat, claim, complete, and fail
 - Ollama-shaped `/api/chat` and `/api/tags` transport
 - a seeded demo worker for local end-to-end testing
+
+High-value next routing behavior to add:
+
+- short-lived buyer-to-worker continuity leases to avoid repeated cold starts
+- lease break/timeout behavior driven by health, load, and execution failures
 
 The client and worker packages are intentionally light right now. They exist to keep the repository shaped correctly for the eventual tray app UX and local bridge architecture while the routing/control-plane core is being proven first.
 

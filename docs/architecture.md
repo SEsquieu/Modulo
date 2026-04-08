@@ -42,6 +42,17 @@ These rules should guide future development:
 - `client` should not contain routing logic.
 - `worker` should report facts; `cloud` should make routing decisions.
 
+## Slice discipline
+
+These rules should guide implementation order:
+
+- prioritize slices that move the end-to-end demo closer to real proof
+- keep `client` and `worker` aligned through shared contracts rather than duplicated behavior
+- avoid widening the surface area unless the new behavior clearly supports the roadmap
+- treat buyer continuity and warm-path UX as router concerns inside `cloud`, not `client` shortcuts
+
+The current slice order and completion summaries live in [roadmap.md](/Users/16096/Desktop/Projects/Modulo/docs/roadmap.md).
+
 ## Development sequencing
 
 The repo is intentionally backend-heavy right now because the routing and worker protocol need to be real before the tray client can be built around them confidently.
@@ -52,3 +63,5 @@ Near-term sequence:
 2. scaffold the real worker bridge against the worker HTTP endpoints
 3. expose smoke-test and onboarding-friendly APIs for the client
 4. build the tray-first client on top of those stable contracts
+
+As routing evolves, prefer continuity-preserving behavior such as short-lived buyer leases on healthy workers when that reduces cold-start thrash without hiding failures.

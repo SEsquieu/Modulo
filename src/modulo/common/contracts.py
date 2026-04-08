@@ -29,6 +29,20 @@ class JobStatus(str, Enum):
     FAILED = "failed"
 
 
+class WorkerRuntimeState(str, Enum):
+    STOPPED = "stopped"
+    STARTING = "starting"
+    IDLE = "idle"
+    BUSY = "busy"
+    ERROR = "error"
+
+
+class WorkerSupervisorCommand(str, Enum):
+    START = "start"
+    STOP = "stop"
+    RESTART = "restart"
+
+
 @dataclass(frozen=True)
 class CanonicalModel:
     model_id: str
@@ -125,3 +139,28 @@ class WorkerHeartbeat:
     worker_id: str
     healthy: bool
     current_load: int = 0
+
+
+@dataclass(frozen=True)
+class WorkerBridgeConfig:
+    modulo_url: str
+    worker_id: str
+    enabled_models: tuple[str, ...]
+    max_concurrency: int = 1
+    kind: WorkerKind = WorkerKind.NETWORK
+
+
+@dataclass(frozen=True)
+class WorkerStatusSnapshot:
+    worker_id: str
+    desired_running: bool = False
+    runtime_state: WorkerRuntimeState = WorkerRuntimeState.STOPPED
+    registered_with_cloud: bool = False
+    healthy: bool = False
+    current_load: int = 0
+    enabled_models: tuple[str, ...] = field(default_factory=tuple)
+    last_job_id: str = ""
+    last_job_status: JobStatus | None = None
+    last_error: str = ""
+    completed_jobs: int = 0
+    failed_jobs: int = 0

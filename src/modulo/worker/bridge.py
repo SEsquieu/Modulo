@@ -1,14 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
-
-@dataclass(frozen=True)
-class WorkerBridgeConfig:
-    modulo_url: str
-    worker_id: str
-    enabled_models: tuple[str, ...]
-    max_concurrency: int = 1
+from modulo.common.contracts import WorkerBridgeConfig
 
 
 def describe_worker_responsibilities() -> list[str]:

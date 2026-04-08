@@ -79,6 +79,16 @@ These principles should shape decisions even when the related features are defer
 4. **Treat first-party cloud as a trust anchor and fallback path.**
 5. **Design for graceful degradation, but do not surprise the user.**
 
+## Development principles
+
+These principles should shape implementation order, not just architecture:
+
+1. **Build vertical slices that prove the roadmap, not isolated ideas.**
+2. **Keep `client` and `worker` aligned through shared contracts and supervision boundaries.**
+3. **Prefer one real end-to-end path over multiple partial surfaces.**
+4. **Do not canonize ad hoc ideas unless they clearly improve the core proof path.**
+5. **Treat every slice as preparation for the one demo that proves v1.**
+
 ## Future extensibility targets
 
 Modulo should leave room for these later platform capabilities without forcing them into v1:
@@ -492,6 +502,35 @@ The future router should be able to weigh more than worker availability. It shou
 - cost posture such as `economy` vs `strict`
 
 This does **not** mean building capability abstraction in v1. It means keeping the architecture compatible with policy-driven routing later.
+
+## High-value routing continuity behavior
+
+High-value next-step behavior for the router:
+
+- preserve buyer continuity when a conversation is active
+- avoid cold-start thrash on follow-up requests
+- keep warm workers warm for short-lived active sessions
+- break continuity automatically when health, timeout, or load conditions require it
+
+The best abstraction for this is a **short-lived buyer lease** on a worker for a specific model.
+
+The intent is not to give buyers permanent worker ownership. The intent is to let the router prefer a recently warm, recently successful execution path long enough to protect UX.
+
+For v1 and early demos, this should be treated as a high-value routing behavior because it improves:
+
+- response continuity
+- perceived speed
+- cold-start avoidance
+- realism of the end-to-end proof
+
+The lease must stay **soft**:
+
+- reuse the leased worker while it remains healthy and under capacity
+- refresh the lease on activity
+- expire the lease after a short idle timeout
+- break the lease on repeated timeout, explicit failure, overload, or stale heartbeat
+
+This belongs in the `cloud` router and control plane, not in the client or worker bridge. Workers should report facts. The router should decide whether continuity is still worth preserving.
 
 ## Trusted fallback
 
@@ -1037,6 +1076,7 @@ If we want to start building quickly, these should be resolved first:
 - retries
 - health scoring
 - basic worker confidence
+- buyer-to-worker continuity via short-lived leases when it improves warm-path UX
 
 Do not move beyond phase 3 until onboarding is rock solid.
 
@@ -1091,6 +1131,9 @@ If that works reliably, onboarding is won.
 - design the router so `Local`, `Network`, and `Cloud` can share one policy framework later
 - keep fallback explicit and policy-driven rather than implicit and magical
 - treat exact model identity as a trust concern, not just a metadata field
+- choose slices that strengthen the roadmap-critical demo path instead of widening surface area
+- keep `client` thin and supervisory while `worker` owns execution behavior
+- prefer continuity-preserving router behavior over stateless request thrash when it materially improves UX
 
 ## Primary engineering objective
 

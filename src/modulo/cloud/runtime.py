@@ -57,3 +57,23 @@ class InMemoryModuloService:
         except RoutingError as exc:
             return False, str(exc)
         return True, decision.reason
+
+
+@dataclass(frozen=True)
+class InMemoryWorkerControlPlane:
+    service: InMemoryModuloService
+
+    def register_worker(self, worker: WorkerSnapshot) -> None:
+        self.service.register_worker(worker)
+
+    def heartbeat_worker(self, heartbeat: WorkerHeartbeat) -> WorkerSnapshot | None:
+        return self.service.heartbeat_worker(heartbeat)
+
+    def claim_job(self, worker_id: str) -> JobClaim | None:
+        return self.service.claim_job(worker_id)
+
+    def complete_job(self, result: JobResult) -> JobRecord:
+        return self.service.complete_job(result)
+
+    def fail_job(self, failure: JobFailure) -> JobRecord:
+        return self.service.fail_job(failure)
