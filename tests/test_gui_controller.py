@@ -49,7 +49,7 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertTrue(state.connect_action_enabled)
         self.assertEqual("Connect OpenClaw", state.openclaw_action_label)
         self.assertEqual("NOT CONNECTED", state.openclaw_status_badge)
-        self.assertFalse(state.start_action_enabled)
+        self.assertTrue(state.start_action_enabled)
         self.assertFalse(state.stop_action_enabled)
         self.assertTrue(state.smoke_action_enabled)
         self.assertIn("Connect OpenClaw", state.home_subtitle)
@@ -62,6 +62,7 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertEqual((), state.hosting_supported_installed_model_ids)
         self.assertEqual(("llama3.1:8b",), state.hosting_supported_missing_model_ids)
         self.assertEqual((), state.hosting_unsupported_installed_model_ids)
+        self.assertEqual("PROTOTYPE", state.hosting_mode_badge)
         self.assertEqual("AVAILABLE", state.ollama_status_badge)
         self.assertIn("Ollama is available locally", state.ollama_summary)
         self.assertIn("0 supported model(s) installed", state.ollama_inventory_summary)
@@ -70,10 +71,9 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertIn("not installed locally", state.hosting_preflight_summary)
         self.assertEqual("llama3.1:8b", state.hosting_preflight_reason)
         self.assertIn("FAIL: The selected curated model is installed locally.", state.hosting_preflight_checks)
-        self.assertFalse(state.start_action_enabled)
-        self.assertIn("not installed locally", state.hosting_setup_summary)
-        self.assertIn("Supported but missing: llama3.1:8b", state.hosting_setup_details)
-        self.assertIn("Hosting remains explicit and opt-in", state.hosting_setup_details)
+        self.assertTrue(state.start_action_enabled)
+        self.assertIn("Prototype hosting is available", state.hosting_setup_summary)
+        self.assertIn("Hosting mode: prototype-safe demo path.", state.hosting_setup_details)
         self.assertIn("Not registered", state.worker_registration_text)
         self.assertIn("idle", state.worker_health_summary.lower())
         self.assertIn("not processed a job", state.worker_activity_summary)
@@ -131,7 +131,7 @@ class GuiAppControllerTests(unittest.TestCase):
 
         self.assertEqual("llama3.1:8b", state.hosting_selected_model_id)
         self.assertEqual("BLOCKED", state.hosting_readiness_badge)
-        self.assertIn("not installed locally", state.hosting_setup_summary)
+        self.assertIn("Prototype hosting is available", state.hosting_setup_summary)
 
 
 if __name__ == "__main__":

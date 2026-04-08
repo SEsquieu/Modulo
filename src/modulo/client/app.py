@@ -15,6 +15,7 @@ from modulo.common.contracts import (
     WorkerStatusSnapshot,
     WorkerSupervisorCommand,
 )
+from modulo.worker.executors import StubExecutor
 from modulo.worker.runtime import WorkerBridgeRuntime
 
 
@@ -68,6 +69,8 @@ class HostingSetupStatus:
     unsupported_installed_model_ids: tuple[str, ...] = ()
     ollama_available: bool = False
     preflight: HostingPreflightStatus = HostingPreflightStatus()
+    prototype_hosting_available: bool = False
+    hosting_mode_label: str = "real"
     readiness_summary: str = "Select a model to prepare hosting."
     readiness_details: str = ""
     can_enable_hosting: bool = False
@@ -270,6 +273,7 @@ class ModuloClientSupervisor:
         unsupported_installed_model_ids = tuple(
             model_id for model_id in installed_model_ids if model_id not in supported_model_ids
         )
+        prototype_hosting_available = self._prototype_hosting_available()
         preflight = self._hosting_preflight_status(
             selected_model_id=selected_model_id,
             discovery=discovery,
@@ -278,6 +282,7 @@ class ModuloClientSupervisor:
         )
         readiness_summary = self._hosting_readiness_summary(
             preflight=preflight,
+            prototype_hosting_available=prototype_hosting_available,
         )
         return HostingSetupStatus(
             selected_model_id=selected_model_id,
@@ -289,23 +294,31 @@ class ModuloClientSupervisor:
             unsupported_installed_model_ids=unsupported_installed_model_ids,
             ollama_available=discovery.available,
             preflight=preflight,
+            prototype_hosting_available=prototype_hosting_available,
+            hosting_mode_label="prototype" if prototype_hosting_available else "real",
             readiness_summary=readiness_summary,
             readiness_details=self._hosting_readiness_details(
                 selected_model_id=selected_model_id,
                 discovery=discovery,
                 preflight=preflight,
+                prototype_hosting_available=prototype_hosting_available,
                 supported_installed_model_ids=supported_installed_model_ids,
                 supported_missing_model_ids=supported_missing_model_ids,
                 unsupported_installed_model_ids=unsupported_installed_model_ids,
             ),
-            can_enable_hosting=preflight.ok,
+            can_enable_hosting=(preflight.ok or prototype_hosting_available),
         )
 
     @staticmethod
     def _hosting_readiness_summary(
         *,
         preflight: HostingPreflightStatus,
+        prototype_hosting_available: bool,
     ) -> str:
+        if prototype_hosting_available and not preflight.ok:
+            return (
+                "Prototype hosting is available, but real local readiness is still blocked."
+            )
         return preflight.summary
 
     @staticmethod
@@ -314,6 +327,7 @@ class ModuloClientSupervisor:
         selected_model_id: str,
         discovery: OllamaDiscoveryStatus,
         preflight: HostingPreflightStatus,
+        prototype_hosting_available: bool,
         supported_installed_model_ids: tuple[str, ...],
         supported_missing_model_ids: tuple[str, ...],
         unsupported_installed_model_ids: tuple[str, ...],
@@ -338,21 +352,21 @@ class ModuloClientSupervisor:
             if unsupported_installed_model_ids
             else "None"
         )
-        check_lines = "\n".join(
-            f"- {'PASS' if check.ok else 'FAIL'} {check.summary}"
-            for check in preflight.checks
+        mode_line = (
+            "Hosting mode: prototype-safe demo path."
+            if prototype_hosting_available
+            else "Hosting mode: real local readiness required."
         )
         return (
             f"Selected model: {model.display_name}\n"
             f"Runtime identity: {model.ollama_runtime_name}\n"
-            f"Preflight: {preflight.summary}\n"
-            f"Blocking reason: {preflight.failure_reason or 'None'}\n"
-            f"Ollama discovery: {discovery.summary}\n"
             f"Supported and installed: {supported_installed_line}\n"
             f"Supported but missing: {supported_missing_line}\n"
             f"Installed but not curated: {unsupported_installed_line}\n"
-            f"Checks:\n{check_lines}\n"
-            "Hosting remains explicit and opt-in. Use Start Hosting when you are ready."
+            f"{mode_line}\n"
+            f"Readiness result: {preflight.summary}\n"
+            f"Blocking reason: {preflight.failure_reason or 'None'}\n"
+            f"Ollama discovery: {discovery.summary}"
         )
 
     @staticmethod
@@ -458,6 +472,9 @@ class ModuloClientSupervisor:
         self._cached_runtime_probe_model_id = model_id
         self._cached_runtime_probe_at = now
         return status
+
+    def _prototype_hosting_available(self) -> bool:
+        return isinstance(self.worker_bridge.executor, StubExecutor)
 
     def get_activity_visibility(self) -> ActivityVisibilityStatus:
         if self.activity_provider is None:

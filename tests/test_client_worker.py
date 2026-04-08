@@ -218,7 +218,7 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertTrue(status.hosting_setup.preflight.ok)
         self.assertEqual("", status.hosting_setup.preflight.failure_reason)
         self.assertTrue(status.hosting_setup.can_enable_hosting)
-        self.assertIn("PASS The local Ollama runtime can resolve", status.hosting_setup.readiness_details)
+        self.assertIn("Readiness result: Hosting preflight passed", status.hosting_setup.readiness_details)
         self.assertIn("Ollama is available", status.hosting_setup.readiness_details)
 
     def test_hosting_preflight_fails_when_selected_model_is_missing(self) -> None:
@@ -238,7 +238,8 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertFalse(status.hosting_setup.preflight.ok)
         self.assertIn("not installed locally", status.hosting_setup.preflight.summary)
         self.assertEqual("llama3.1:8b", status.hosting_setup.preflight.failure_reason)
-        self.assertFalse(status.hosting_setup.can_enable_hosting)
+        self.assertTrue(status.hosting_setup.prototype_hosting_available)
+        self.assertTrue(status.hosting_setup.can_enable_hosting)
 
     def test_hosting_preflight_fails_when_runtime_probe_cannot_resolve_model(self) -> None:
         class FailingRuntimeProbe:
