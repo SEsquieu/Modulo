@@ -79,6 +79,7 @@ This launches the barebones PySide6 desktop shell against the current live clien
 The GUI currently includes:
 
 - an onboarding-oriented home screen
+- a dedicated OpenClaw connection panel with explicit safe prototype messaging
 - hosting start, stop, and restart controls
 - a worker panel with live registration, health, activity, and error summaries
 - a prompt-driven smoke-test and diagnostics panel backed by the current prototype harness

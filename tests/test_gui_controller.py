@@ -18,11 +18,16 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertFalse(state.openclaw_connected)
         self.assertFalse(state.hosting_enabled)
         self.assertTrue(state.connect_action_enabled)
+        self.assertEqual("Connect OpenClaw", state.openclaw_action_label)
+        self.assertEqual("NOT CONNECTED", state.openclaw_status_badge)
         self.assertTrue(state.start_action_enabled)
         self.assertFalse(state.stop_action_enabled)
         self.assertTrue(state.smoke_action_enabled)
         self.assertIn("Connect OpenClaw", state.home_subtitle)
         self.assertIn("not connected", state.connection_summary.lower())
+        self.assertIn("not connected yet", state.openclaw_summary.lower())
+        self.assertIn("not changing local OpenClaw", state.openclaw_details)
+        self.assertIn("Safe prototype mode", state.openclaw_safety_note)
         self.assertIn("Not registered", state.worker_registration_text)
         self.assertIn("idle", state.worker_health_summary.lower())
         self.assertIn("not processed a job", state.worker_activity_summary)
@@ -42,6 +47,10 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertTrue(started.hosting_enabled)
         self.assertTrue(started.worker_registered)
         self.assertTrue(started.worker_healthy)
+        self.assertEqual("Disconnect OpenClaw", started.openclaw_action_label)
+        self.assertEqual("CONNECTED", started.openclaw_status_badge)
+        self.assertIn("buyer path is marked connected", started.openclaw_summary.lower())
+        self.assertIn("without editing local OpenClaw files", started.openclaw_details)
         self.assertFalse(started.start_action_enabled)
         self.assertTrue(started.stop_action_enabled)
         self.assertTrue(started.restart_action_enabled)
@@ -58,6 +67,14 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertTrue(smoked.last_job_id)
         self.assertEqual("completed", smoked.last_job_status)
         self.assertIn("finished with status completed", smoked.worker_activity_summary)
+
+    def test_disconnect_openclaw_returns_to_not_connected_state(self) -> None:
+        self.controller.connect_openclaw()
+        disconnected = self.controller.disconnect_openclaw()
+
+        self.assertFalse(disconnected.openclaw_connected)
+        self.assertEqual("Connect OpenClaw", disconnected.openclaw_action_label)
+        self.assertEqual("NOT CONNECTED", disconnected.openclaw_status_badge)
 
 
 if __name__ == "__main__":

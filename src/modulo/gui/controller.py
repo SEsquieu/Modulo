@@ -23,6 +23,11 @@ class GuiShellState:
     primary_action_label: str = ""
     secondary_action_label: str = ""
     connect_action_enabled: bool = True
+    openclaw_action_label: str = "Connect OpenClaw"
+    openclaw_status_badge: str = "NOT CONNECTED"
+    openclaw_summary: str = ""
+    openclaw_details: str = ""
+    openclaw_safety_note: str = ""
     start_action_enabled: bool = True
     stop_action_enabled: bool = False
     restart_action_enabled: bool = False
@@ -111,7 +116,16 @@ class GuiAppController:
             worker_status_badge="HEALTHY" if onboarding.worker_healthy else "UNHEALTHY",
             primary_action_label="Connect OpenClaw" if not onboarding.openclaw_connected else "Run Smoke Test",
             secondary_action_label="Enable Hosting" if not onboarding.hosting_enabled else "Disable Hosting",
-            connect_action_enabled=not onboarding.openclaw_connected,
+            connect_action_enabled=True,
+            openclaw_action_label=(
+                "Disconnect OpenClaw" if status.openclaw.connected else "Connect OpenClaw"
+            ),
+            openclaw_status_badge=(
+                "CONNECTED" if status.openclaw.connected else "NOT CONNECTED"
+            ),
+            openclaw_summary=status.openclaw.summary,
+            openclaw_details=status.openclaw.details,
+            openclaw_safety_note=status.openclaw.safety_note,
             start_action_enabled=not onboarding.hosting_enabled,
             stop_action_enabled=onboarding.hosting_enabled,
             restart_action_enabled=onboarding.hosting_enabled,
@@ -175,7 +189,7 @@ class GuiAppController:
     @staticmethod
     def _connection_summary(onboarding: OnboardingStatus) -> str:
         return (
-            "OpenClaw is connected to Modulo."
+            "OpenClaw buyer path is connected in Modulo."
             if onboarding.openclaw_connected
             else "OpenClaw is not connected yet."
         )

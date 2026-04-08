@@ -21,10 +21,24 @@ class SmokeTestResult:
 
 
 @dataclass(frozen=True)
+class OpenClawConnectionStatus:
+    connected: bool = False
+    mode: str = "prototype-safe"
+    summary: str = "OpenClaw is not connected yet."
+    details: str = (
+        "Modulo is not changing local OpenClaw configuration in this prototype flow."
+    )
+    safety_note: str = (
+        "Safe prototype mode: the OpenClaw action only updates Modulo's in-app state."
+    )
+
+
+@dataclass(frozen=True)
 class ClientStatus:
     connected_to_modulo: bool = False
     openclaw_connected: bool = False
     hosting_enabled: bool = False
+    openclaw: OpenClawConnectionStatus = OpenClawConnectionStatus()
     worker: WorkerStatusSnapshot | None = None
     smoke_test: SmokeTestResult | None = None
 
@@ -123,9 +137,22 @@ class ModuloClientSupervisor:
             connected_to_modulo=self.connected_to_modulo,
             openclaw_connected=self.openclaw_connected,
             hosting_enabled=worker_status.desired_running,
+            openclaw=self.get_openclaw_status(),
             worker=worker_status,
             smoke_test=self._last_smoke_test,
         )
+
+    def get_openclaw_status(self) -> OpenClawConnectionStatus:
+        if self.openclaw_connected:
+            return OpenClawConnectionStatus(
+                connected=True,
+                summary="OpenClaw buyer path is marked connected in Modulo.",
+                details=(
+                    "This prototype uses a safe in-app connection state so the GUI can model "
+                    "buyer onboarding without editing local OpenClaw files or settings."
+                ),
+            )
+        return OpenClawConnectionStatus()
 
 
 def describe_default_actions() -> list[str]:

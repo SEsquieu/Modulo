@@ -41,7 +41,7 @@ Current GUI phase: `Phase 0` planning and thin-client surface definition.
 
 Current active GUI slice:
 
-- implement the GUI path for connecting OpenClaw from the client-facing app
+- implement the GUI path for selecting a model, enabling hosting, and understanding local readiness
 
 Definition of progress for this phase:
 
@@ -131,28 +131,27 @@ Proof added to repo:
 - diagnostics summary and details backed by `SmokeTestResult` and `OnboardingStatus`
 - controller tests covering smoke-test prompt retention and diagnostics summaries
 
+### GUI Slice 6: OpenClaw connection flow
+
+Status: completed
+
+Summary:
+
+- added a dedicated OpenClaw panel with explicit connected or disconnected state, safe prototype messaging, and connect or disconnect controls
+- extended the client and GUI state surfaces so the app can explain what the current OpenClaw path is doing instead of treating it as a silent boolean
+- kept the flow honest that local OpenClaw configuration is not being edited yet while still giving the GUI a real onboarding-shaped action path
+
+Proof added to repo:
+
+- explicit `OpenClawConnectionStatus` surfaced through the client status
+- dedicated OpenClaw section in the PySide shell with status, details, and safety note
+- controller tests covering connect, disconnect, and safe prototype messaging
+
 ## Upcoming GUI slices
 
 These are ordered to keep the GUI build coherent and consistent with the current architecture.
 
 ### GUI Slice 6: OpenClaw connection flow
-
-Goal:
-
-- implement the GUI path for connecting OpenClaw from the client-facing app
-
-Why this slice matters:
-
-- this is core to the actual product promise
-- it moves the GUI from local supervision toward the true onboarding story
-
-Exit criteria:
-
-- GUI can guide the user through the OpenClaw connection path
-- success and failure states are visible and explicit
-- the flow uses real client behavior, not GUI-only placeholders, whenever possible
-
-### GUI Slice 7: Hosting setup flow
 
 Goal:
 

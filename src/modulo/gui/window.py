@@ -71,10 +71,17 @@ class ModuloMainWindow(QMainWindow):
         self.diagnostics_details_box = QPlainTextEdit()
         self.diagnostics_details_box.setReadOnly(True)
         self.diagnostics_details_box.setMinimumHeight(100)
+        self.openclaw_status_label = QLabel()
+        self.openclaw_status_label.setStyleSheet("font-weight: 600;")
+        self.openclaw_summary_label = QLabel()
+        self.openclaw_summary_label.setWordWrap(True)
+        self.openclaw_details_box = QPlainTextEdit()
+        self.openclaw_details_box.setReadOnly(True)
+        self.openclaw_details_box.setMinimumHeight(90)
 
         self.connect_button = QPushButton("Connect OpenClaw")
         self.connect_button.clicked.connect(
-            lambda: self._apply_state(self.controller.connect_openclaw())
+            self._toggle_openclaw_connection
         )
 
         self.start_button = QPushButton("Start Hosting")
@@ -116,6 +123,14 @@ class ModuloMainWindow(QMainWindow):
         hosting_layout.addWidget(self.restart_button, 1, 0, 1, 2)
         hosting_box.setLayout(hosting_layout)
 
+        openclaw_box = QGroupBox("OpenClaw")
+        openclaw_layout = QVBoxLayout()
+        openclaw_layout.addWidget(self.openclaw_status_label)
+        openclaw_layout.addWidget(self.openclaw_summary_label)
+        openclaw_layout.addWidget(self.openclaw_details_box)
+        openclaw_layout.addWidget(self.connect_button)
+        openclaw_box.setLayout(openclaw_layout)
+
         worker_box = QGroupBox("Worker")
         worker_layout = QVBoxLayout()
         worker_layout.addWidget(self.worker_id_label)
@@ -148,6 +163,7 @@ class ModuloMainWindow(QMainWindow):
         root_layout.setContentsMargins(12, 12, 12, 12)
         root_layout.setSpacing(12)
         root_layout.addWidget(home_box)
+        root_layout.addWidget(openclaw_box)
         root_layout.addWidget(hosting_box)
         root_layout.addWidget(worker_box)
         root_layout.addWidget(smoke_box)
@@ -211,6 +227,15 @@ class ModuloMainWindow(QMainWindow):
         prompt = self.smoke_prompt_input.text().strip() or "GUI smoke test request"
         self._apply_state(self.controller.run_smoke_test(prompt))
 
+    def _toggle_openclaw_connection(self) -> None:
+        state = self.controller.refresh()
+        next_state = (
+            self.controller.disconnect_openclaw()
+            if state.openclaw_connected
+            else self.controller.connect_openclaw()
+        )
+        self._apply_state(next_state)
+
     def _apply_state(self, state: GuiShellState) -> None:
         self.title_label.setText(state.home_title)
         self.subtitle_label.setText(state.home_subtitle)
@@ -238,11 +263,20 @@ class ModuloMainWindow(QMainWindow):
             f"{state.smoke_status_badge}\n{state.smoke_test_summary}",
         )
 
+        self.connect_button.setText(state.openclaw_action_label)
         self.connect_button.setEnabled(state.connect_action_enabled)
         self.start_button.setEnabled(state.start_action_enabled)
         self.stop_button.setEnabled(state.stop_action_enabled)
         self.restart_button.setEnabled(state.restart_action_enabled)
         self.smoke_button.setEnabled(state.smoke_action_enabled)
+
+        self.openclaw_status_label.setText(
+            f"Status: {state.openclaw_status_badge}"
+        )
+        self.openclaw_summary_label.setText(state.openclaw_summary)
+        self.openclaw_details_box.setPlainText(
+            f"{state.openclaw_details}\n\n{state.openclaw_safety_note}"
+        )
 
         self.worker_id_label.setText(f"Worker ID: {state.worker_id or 'Unavailable'}")
         self.worker_state_label.setText(f"Runtime state: {state.worker_runtime_state}")
