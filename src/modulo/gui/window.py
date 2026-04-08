@@ -7,8 +7,6 @@ try:
     from PySide6.QtWidgets import (
         QApplication,
         QComboBox,
-        QFrame,
-        QGridLayout,
         QGroupBox,
         QHBoxLayout,
         QLabel,
@@ -38,16 +36,9 @@ class ModuloMainWindow(QMainWindow):
         self.title_label.setStyleSheet("font-size: 24px; font-weight: 700;")
         self.subtitle_label = QLabel()
         self.subtitle_label.setWordWrap(True)
-
-        self.connection_card = self._build_status_card("Connection")
-        self.hosting_card = self._build_status_card("Hosting")
-        self.worker_card = self._build_status_card("Worker")
-        self.smoke_card = self._build_status_card("Smoke Test")
-
-        self.connected_label = QLabel()
-        self.openclaw_label = QLabel()
-        self.hosting_label = QLabel()
-        self.worker_health_label = QLabel()
+        self.status_strip = QLabel()
+        self.status_strip.setWordWrap(True)
+        self.status_strip.setStyleSheet("color: #a1a1aa; font-size: 13px;")
 
         self.worker_id_label = QLabel()
         self.worker_state_label = QLabel()
@@ -100,8 +91,6 @@ class ModuloMainWindow(QMainWindow):
         self.hosting_preflight_summary_label.setWordWrap(True)
         self.hosting_preflight_reason_label = QLabel()
         self.hosting_preflight_reason_label.setWordWrap(True)
-        self.hosting_preflight_checks_label = QLabel()
-        self.hosting_preflight_checks_label.setWordWrap(True)
         self.hosting_setup_summary_label = QLabel()
         self.hosting_setup_summary_label.setWordWrap(True)
         self.hosting_setup_details_label = QLabel()
@@ -131,61 +120,48 @@ class ModuloMainWindow(QMainWindow):
             self._run_smoke_test_from_input
         )
 
-        home_box = QGroupBox("Home")
-        home_layout = QGridLayout()
-        home_layout.setHorizontalSpacing(12)
-        home_layout.setVerticalSpacing(12)
-        home_layout.addWidget(self.title_label, 0, 0, 1, 2)
-        home_layout.addWidget(self.subtitle_label, 1, 0, 1, 2)
-        home_layout.addWidget(self.connection_card, 2, 0)
-        home_layout.addWidget(self.hosting_card, 2, 1)
-        home_layout.addWidget(self.worker_card, 3, 0)
-        home_layout.addWidget(self.smoke_card, 3, 1)
-        home_layout.addWidget(self.connect_button, 4, 0)
-        home_layout.addWidget(self.smoke_button, 4, 1)
-        home_box.setLayout(home_layout)
+        overview_box = QGroupBox("Overview")
+        overview_layout = QVBoxLayout()
+        action_row = QHBoxLayout()
+        action_row.addWidget(self.connect_button)
+        action_row.addWidget(self.start_button)
+        action_row.addWidget(self.stop_button)
+        action_row.addWidget(self.restart_button)
+        action_row.addWidget(self.smoke_button)
+        overview_layout.addWidget(self.title_label)
+        overview_layout.addWidget(self.subtitle_label)
+        overview_layout.addWidget(self.status_strip)
+        overview_layout.addLayout(action_row)
+        overview_box.setLayout(overview_layout)
 
-        hosting_box = QGroupBox("Hosting Controls")
-        hosting_layout = QGridLayout()
-        hosting_layout.addWidget(self.start_button, 0, 0)
-        hosting_layout.addWidget(self.stop_button, 0, 1)
-        hosting_layout.addWidget(self.restart_button, 1, 0, 1, 2)
-        hosting_box.setLayout(hosting_layout)
-
-        hosting_setup_box = QGroupBox("Hosting Setup")
-        hosting_setup_layout = QVBoxLayout()
+        setup_box = QGroupBox("Setup")
+        setup_layout = QVBoxLayout()
+        setup_layout.addWidget(self.openclaw_status_label)
+        setup_layout.addWidget(self.openclaw_summary_label)
+        setup_layout.addWidget(self.openclaw_details_box)
         hosting_setup_prompt_row = QHBoxLayout()
-        hosting_setup_prompt_row.addWidget(QLabel("Model"))
+        hosting_setup_prompt_row.addWidget(QLabel("Hosting model"))
         hosting_setup_prompt_row.addWidget(self.hosting_model_combo)
-        hosting_setup_layout.addLayout(hosting_setup_prompt_row)
-        hosting_setup_layout.addWidget(self.hosting_mode_label)
-        hosting_setup_layout.addWidget(self.ollama_status_label)
-        hosting_setup_layout.addWidget(self.ollama_summary_label)
-        hosting_setup_layout.addWidget(self.ollama_inventory_summary_label)
-        hosting_setup_layout.addWidget(self.hosting_readiness_label)
-        hosting_setup_layout.addWidget(self.hosting_preflight_summary_label)
-        hosting_setup_layout.addWidget(self.hosting_preflight_reason_label)
-        hosting_setup_layout.addWidget(self.hosting_preflight_checks_label)
-        hosting_setup_layout.addWidget(self.hosting_setup_summary_label)
-        hosting_setup_layout.addWidget(self.hosting_inventory_label)
-        hosting_setup_layout.addWidget(self.hosting_setup_details_label)
-        hosting_setup_box.setLayout(hosting_setup_layout)
+        setup_layout.addLayout(hosting_setup_prompt_row)
+        setup_layout.addWidget(self.hosting_mode_label)
+        setup_layout.addWidget(self.ollama_status_label)
+        setup_layout.addWidget(self.ollama_summary_label)
+        setup_layout.addWidget(self.ollama_inventory_summary_label)
+        setup_layout.addWidget(self.hosting_readiness_label)
+        setup_layout.addWidget(self.hosting_preflight_summary_label)
+        setup_layout.addWidget(self.hosting_setup_summary_label)
+        setup_layout.addWidget(self.hosting_preflight_reason_label)
+        setup_layout.addWidget(self.hosting_inventory_label)
+        setup_layout.addWidget(self.hosting_setup_details_label)
+        setup_box.setLayout(setup_layout)
 
-        openclaw_box = QGroupBox("OpenClaw")
-        openclaw_layout = QVBoxLayout()
-        openclaw_layout.addWidget(self.openclaw_status_label)
-        openclaw_layout.addWidget(self.openclaw_summary_label)
-        openclaw_layout.addWidget(self.openclaw_details_box)
-        openclaw_layout.addWidget(self.connect_button)
-        openclaw_box.setLayout(openclaw_layout)
-
-        worker_box = QGroupBox("Worker")
+        worker_box = QGroupBox("Hosting")
         worker_layout = QVBoxLayout()
-        worker_layout.addWidget(self.worker_id_label)
-        worker_layout.addWidget(self.worker_state_label)
         worker_layout.addWidget(self.worker_registration_label)
         worker_layout.addWidget(self.worker_health_summary_label)
         worker_layout.addWidget(self.worker_activity_label)
+        worker_layout.addWidget(self.worker_id_label)
+        worker_layout.addWidget(self.worker_state_label)
         worker_layout.addWidget(self.worker_models_label)
         worker_layout.addWidget(self.worker_load_label)
         worker_layout.addWidget(self.worker_jobs_label)
@@ -193,7 +169,7 @@ class ModuloMainWindow(QMainWindow):
         worker_layout.addWidget(self.worker_error_label)
         worker_box.setLayout(worker_layout)
 
-        smoke_box = QGroupBox("Smoke Test")
+        diagnostics_box = QGroupBox("Diagnostics")
         smoke_layout = QVBoxLayout()
         prompt_row = QHBoxLayout()
         prompt_row.addWidget(QLabel("Prompt"))
@@ -204,25 +180,18 @@ class ModuloMainWindow(QMainWindow):
         smoke_layout.addWidget(self.smoke_details_box)
         smoke_layout.addWidget(self.diagnostics_summary_label)
         smoke_layout.addWidget(self.diagnostics_details_box)
-        smoke_box.setLayout(smoke_layout)
-
-        activity_box = QGroupBox("Activity")
-        activity_layout = QVBoxLayout()
-        activity_layout.addWidget(self.continuity_summary_label)
-        activity_layout.addWidget(self.activity_box)
-        activity_box.setLayout(activity_layout)
+        smoke_layout.addWidget(self.continuity_summary_label)
+        smoke_layout.addWidget(self.activity_box)
+        diagnostics_box.setLayout(smoke_layout)
 
         root = QWidget()
         root_layout = QVBoxLayout()
         root_layout.setContentsMargins(12, 12, 12, 12)
         root_layout.setSpacing(12)
-        root_layout.addWidget(home_box)
-        root_layout.addWidget(openclaw_box)
-        root_layout.addWidget(hosting_setup_box)
-        root_layout.addWidget(hosting_box)
+        root_layout.addWidget(overview_box)
+        root_layout.addWidget(setup_box)
         root_layout.addWidget(worker_box)
-        root_layout.addWidget(smoke_box)
-        root_layout.addWidget(activity_box)
+        root_layout.addWidget(diagnostics_box)
         root_layout.addStretch(1)
         root.setLayout(root_layout)
 
@@ -242,25 +211,6 @@ class ModuloMainWindow(QMainWindow):
 
         self._apply_state(self.controller.refresh())
 
-    @staticmethod
-    def _build_status_card(title: str) -> QFrame:
-        frame = QFrame()
-        frame.setFrameShape(QFrame.StyledPanel)
-        frame.setStyleSheet(
-            "QFrame { border: 1px solid #3f3f46; border-radius: 10px; padding: 10px; background: #27272a; }"
-        )
-        layout = QVBoxLayout()
-        title_label = QLabel(title)
-        title_label.setStyleSheet("font-weight: 600; font-size: 14px; color: #f4f4f5;")
-        value_label = QLabel()
-        value_label.setObjectName("value")
-        value_label.setWordWrap(True)
-        value_label.setStyleSheet("font-size: 13px; color: #d4d4d8;")
-        layout.addWidget(title_label)
-        layout.addWidget(value_label)
-        frame.setLayout(layout)
-        return frame
-
     def _apply_window_sizing(self) -> None:
         screen = self.screen() or QApplication.primaryScreen()
         if screen is None:
@@ -269,12 +219,6 @@ class ModuloMainWindow(QMainWindow):
         target_width = min(920, max(720, available.width() - 120))
         target_height = min(760, max(520, available.height() - 120))
         self.resize(target_width, target_height)
-
-    @staticmethod
-    def _set_card_text(card: QFrame, text: str) -> None:
-        value_label = card.findChild(QLabel, "value")
-        if value_label is not None:
-            value_label.setText(text)
 
     def _poll_state(self) -> None:
         scrollbar = self.scroll_area.verticalScrollBar()
@@ -300,27 +244,16 @@ class ModuloMainWindow(QMainWindow):
         self.title_label.setText(state.home_title)
         self.subtitle_label.setText(state.home_subtitle)
 
-        self.connected_label.setText(
-            f"Modulo connection: {'Connected' if state.connected_to_modulo else 'Disconnected'}"
-        )
-        self.openclaw_label.setText(
-            f"OpenClaw: {'Configured' if state.openclaw_configured else 'Not configured'}"
-        )
-        self.hosting_label.setText(
-            f"Hosting: {'Enabled' if state.hosting_enabled else 'Disabled'}"
-        )
-        self.worker_health_label.setText(
-            f"Worker health: {'Healthy' if state.worker_healthy else 'Unhealthy'}"
-        )
-        self._set_card_text(self.connection_card, state.connection_summary)
-        self._set_card_text(self.hosting_card, state.hosting_summary)
-        self._set_card_text(
-            self.worker_card,
-            f"{state.worker_status_badge}\n{state.worker_health_summary}",
-        )
-        self._set_card_text(
-            self.smoke_card,
-            f"{state.smoke_status_badge}\n{state.smoke_test_summary}",
+        self.status_strip.setText(
+            " | ".join(
+                (
+                    f"Modulo {'online' if state.connected_to_modulo else 'offline'}",
+                    f"OpenClaw {'configured' if state.openclaw_configured else 'not configured'}",
+                    f"Hosting {'enabled' if state.hosting_enabled else 'disabled'}",
+                    f"Worker {state.worker_status_badge.lower()}",
+                    f"Smoke {state.smoke_status_badge.lower()}",
+                )
+            )
         )
 
         self.connect_button.setText(state.openclaw_action_label)
@@ -369,7 +302,6 @@ class ModuloMainWindow(QMainWindow):
         self.hosting_preflight_reason_label.setText(
             f"Blocking reason: {state.hosting_preflight_reason or 'None'}"
         )
-        self.hosting_preflight_checks_label.setText("\n".join(state.hosting_preflight_checks))
         self.hosting_setup_summary_label.setText(state.hosting_setup_summary)
         supported_installed = ", ".join(state.hosting_supported_installed_model_ids) or "None"
         supported_missing = ", ".join(state.hosting_supported_missing_model_ids) or "None"
