@@ -228,7 +228,6 @@ class ModuloMainWindow(QMainWindow):
         root_layout.addWidget(overview_box)
         root_layout.addWidget(self.tab_widget)
         root_layout.addStretch(1)
-        root_layout.addWidget(self.status_strip)
         root.setLayout(root_layout)
 
         self.scroll_area = QScrollArea()
@@ -236,7 +235,15 @@ class ModuloMainWindow(QMainWindow):
         self.scroll_area.setFrameShape(QFrame.NoFrame)
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.scroll_area.setWidget(root)
-        self.setCentralWidget(self.scroll_area)
+
+        container = QWidget()
+        container_layout = QVBoxLayout()
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.setSpacing(0)
+        container_layout.addWidget(self.scroll_area, 1)
+        container_layout.addWidget(self.status_strip, 0)
+        container.setLayout(container_layout)
+        self.setCentralWidget(container)
 
         self._apply_window_sizing()
 
