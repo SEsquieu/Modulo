@@ -49,6 +49,14 @@ Exit criteria:
 - the app can describe what would change before applying it
 - the flow remains explicit and opt-in
 
+Status: completed
+
+Summary:
+
+- added an explicit OpenClaw connection planning seam in the client layer
+- separated staged review from apply so the buyer flow no longer jumps straight from discovery to configured state
+- surfaced the staged plan and apply controls through the GUI while keeping the slice prototype-safe and non-mutating
+
 ### Slice 3: GUI connection experience
 
 Goal:
@@ -64,5 +72,8 @@ Exit criteria:
 
 Add a short summary here when complete:
 
-- summary:
+- summary: the client can now stage and explain a buyer-routing OpenClaw plan before apply, and the GUI exposes the same review/apply flow explicitly.
 - proof added to repo:
+  - `OpenClawConnectionPlan` and staged/apply methods in `src/modulo/client/app.py`
+  - Buyer tab plan/apply state in `src/modulo/gui/controller.py` and `src/modulo/gui/window.py`
+  - updated client and GUI tests covering staged review before apply

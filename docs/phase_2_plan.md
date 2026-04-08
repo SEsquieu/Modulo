@@ -100,6 +100,7 @@ Status: in progress
 Summary:
 
 - added the first real OpenClaw discovery seam so the client can read local install and config state safely
+- completed Slice 2 of the OpenClaw mini roadmap so the client can now stage and explain a routing plan before apply
 
 Roadmap:
 

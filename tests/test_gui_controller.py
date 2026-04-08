@@ -44,6 +44,21 @@ class FakeGuiOpenClawDiscovery:
         )
 
 
+class InstalledGuiOpenClawDiscovery:
+    def discover(self) -> OpenClawDiscoveryStatus:
+        return OpenClawDiscoveryStatus(
+            installed=True,
+            config_present=True,
+            configured_for_modulo=False,
+            state="installed_unconfigured",
+            summary="OpenClaw is installed, but the local config is not routing through Modulo.",
+            details="Config path: C:\\Users\\test\\.openclaw\\openclaw.json",
+            current_primary_model="ollama/llama3.1:8b",
+            current_provider="ollama",
+            current_base_url="http://127.0.0.1:11434",
+        )
+
+
 class GuiAppControllerTests(unittest.TestCase):
     def setUp(self) -> None:
         self.controller = GuiAppController(
@@ -63,6 +78,7 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertTrue(state.connect_action_enabled)
         self.assertEqual("Configure OpenClaw", state.openclaw_action_label)
         self.assertEqual("NOT INSTALLED", state.openclaw_status_badge)
+        self.assertFalse(state.openclaw_plan_apply_enabled)
         self.assertTrue(state.start_action_enabled)
         self.assertFalse(state.stop_action_enabled)
         self.assertTrue(state.smoke_action_enabled)
@@ -71,6 +87,7 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertIn("not configured", state.openclaw_summary.lower())
         self.assertIn("not changing local OpenClaw", state.openclaw_details)
         self.assertIn("Safe prototype mode", state.openclaw_safety_note)
+        self.assertIn("not installed", state.openclaw_plan_summary.lower())
         self.assertIn("No network models", state.buyer_platform_summary)
         self.assertIn("local-only", state.buyer_account_summary)
         self.assertIn("Prototype credits", state.buyer_credits_summary)
@@ -108,7 +125,15 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertEqual("No smoke test run yet.", state.smoke_test_summary)
 
     def test_start_hosting_and_smoke_test_update_state(self) -> None:
+        self.controller = GuiAppController(
+            harness=LocalPrototypeHarness(
+                openclaw_discovery=InstalledGuiOpenClawDiscovery(),
+                ollama_discovery=FakeGuiOllamaDiscovery(),
+                hosting_runtime_probe=FakeGuiHostingRuntimeProbe(),
+            )
+        )
         self.controller.configure_openclaw()
+        self.controller.apply_openclaw_connection()
         started = self.controller.start_hosting()
         smoked = self.controller.run_smoke_test("gui smoke")
 
@@ -141,8 +166,30 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertEqual("completed", smoked.last_job_status)
         self.assertIn("finished with status completed", smoked.worker_activity_summary)
 
-    def test_configure_openclaw_marks_setup_as_configured(self) -> None:
-        configured = self.controller.configure_openclaw()
+    def test_configure_openclaw_stages_plan_before_apply(self) -> None:
+        self.controller = GuiAppController(
+            harness=LocalPrototypeHarness(
+                openclaw_discovery=InstalledGuiOpenClawDiscovery(),
+                ollama_discovery=FakeGuiOllamaDiscovery(),
+                hosting_runtime_probe=FakeGuiHostingRuntimeProbe(),
+            )
+        )
+        staged = self.controller.configure_openclaw()
+
+        self.assertFalse(staged.openclaw_configured)
+        self.assertIn("plan", staged.openclaw_plan_summary.lower())
+        self.assertTrue(staged.openclaw_plan_changes)
+
+    def test_apply_openclaw_connection_marks_setup_as_configured(self) -> None:
+        self.controller = GuiAppController(
+            harness=LocalPrototypeHarness(
+                openclaw_discovery=InstalledGuiOpenClawDiscovery(),
+                ollama_discovery=FakeGuiOllamaDiscovery(),
+                hosting_runtime_probe=FakeGuiHostingRuntimeProbe(),
+            )
+        )
+        self.controller.configure_openclaw()
+        configured = self.controller.apply_openclaw_connection()
 
         self.assertTrue(configured.openclaw_configured)
         self.assertEqual("Review OpenClaw Setup", configured.openclaw_action_label)

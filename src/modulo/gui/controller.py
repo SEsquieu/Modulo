@@ -28,6 +28,11 @@ class GuiShellState:
     openclaw_summary: str = ""
     openclaw_details: str = ""
     openclaw_safety_note: str = ""
+    openclaw_plan_summary: str = ""
+    openclaw_plan_details: str = ""
+    openclaw_plan_changes: tuple[str, ...] = ()
+    openclaw_plan_apply_enabled: bool = False
+    openclaw_plan_apply_label: str = "Apply staged plan"
     buyer_platform_summary: str = ""
     buyer_account_summary: str = ""
     buyer_network_models: tuple[str, ...] = ()
@@ -96,7 +101,11 @@ class GuiAppController:
         )
 
     def configure_openclaw(self) -> GuiShellState:
-        self.harness.client.configure_openclaw()
+        self.harness.client.stage_openclaw_connection()
+        return self.refresh()
+
+    def apply_openclaw_connection(self) -> GuiShellState:
+        self.harness.client.apply_openclaw_connection_plan()
         return self.refresh()
 
     def select_hosting_model(self, model_id: str) -> GuiShellState:
@@ -156,6 +165,11 @@ class GuiAppController:
             openclaw_summary=status.openclaw.summary,
             openclaw_details=status.openclaw.details,
             openclaw_safety_note=status.openclaw.safety_note,
+            openclaw_plan_summary=status.openclaw.connection_plan.summary,
+            openclaw_plan_details=status.openclaw.connection_plan.details,
+            openclaw_plan_changes=status.openclaw.connection_plan.change_lines,
+            openclaw_plan_apply_enabled=status.openclaw.connection_plan.apply_ready,
+            openclaw_plan_apply_label=status.openclaw.connection_plan.apply_label,
             buyer_platform_summary=status.platform.buyer_routing_summary,
             buyer_account_summary=status.platform.account_summary,
             buyer_network_models=self._buyer_model_lines(status, source="network"),
@@ -246,7 +260,7 @@ class GuiAppController:
         return (
             "OpenClaw routing is configured in Modulo."
             if onboarding.openclaw_configured
-            else "OpenClaw is not configured yet."
+            else "OpenClaw is not configured yet. Review the staged plan before applying it."
         )
 
     @staticmethod

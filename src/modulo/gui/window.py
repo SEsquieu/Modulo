@@ -90,9 +90,14 @@ class ModuloMainWindow(QMainWindow):
         self.openclaw_status_label.setStyleSheet("font-weight: 600;")
         self.openclaw_summary_label = QLabel()
         self.openclaw_summary_label.setWordWrap(True)
+        self.openclaw_plan_summary_label = QLabel()
+        self.openclaw_plan_summary_label.setWordWrap(True)
         self.openclaw_details_box = QPlainTextEdit()
         self.openclaw_details_box.setReadOnly(True)
         self.openclaw_details_box.setMinimumHeight(90)
+        self.openclaw_plan_box = QPlainTextEdit()
+        self.openclaw_plan_box.setReadOnly(True)
+        self.openclaw_plan_box.setMinimumHeight(110)
         self.hosting_model_combo = QComboBox()
         self.hosting_model_combo.currentIndexChanged.connect(self._apply_selected_hosting_model)
         self.ollama_status_label = QLabel()
@@ -114,6 +119,8 @@ class ModuloMainWindow(QMainWindow):
 
         self.connect_button = QPushButton("Configure OpenClaw")
         self.connect_button.clicked.connect(self._run_openclaw_action)
+        self.apply_openclaw_button = QPushButton("Apply staged plan")
+        self.apply_openclaw_button.clicked.connect(self._apply_openclaw_plan)
 
         self.start_button = QPushButton("Start Hosting")
         self.start_button.clicked.connect(
@@ -178,6 +185,7 @@ class ModuloMainWindow(QMainWindow):
         buyer_layout = QVBoxLayout()
         buyer_layout.addWidget(self.openclaw_status_label)
         buyer_layout.addWidget(self.openclaw_summary_label)
+        buyer_layout.addWidget(self.openclaw_plan_summary_label)
         buyer_layout.addWidget(self.buyer_model_notice_label)
         buyer_layout.addWidget(self.buyer_platform_summary_label)
         buyer_layout.addWidget(self.buyer_account_summary_label)
@@ -188,7 +196,9 @@ class ModuloMainWindow(QMainWindow):
         buyer_layout.addWidget(QLabel("Cloud models"))
         buyer_layout.addWidget(self.buyer_cloud_models_box)
         buyer_layout.addWidget(self.openclaw_details_box)
+        buyer_layout.addWidget(self.openclaw_plan_box)
         buyer_layout.addWidget(self.connect_button)
+        buyer_layout.addWidget(self.apply_openclaw_button)
         buyer_box.setLayout(buyer_layout)
 
         diagnostics_box = QGroupBox("Diagnostics")
@@ -291,6 +301,9 @@ class ModuloMainWindow(QMainWindow):
     def _run_openclaw_action(self) -> None:
         self._apply_state(self.controller.configure_openclaw())
 
+    def _apply_openclaw_plan(self) -> None:
+        self._apply_state(self.controller.apply_openclaw_connection())
+
     def _apply_selected_hosting_model(self) -> None:
         model_id = self.hosting_model_combo.currentData()
         if isinstance(model_id, str) and model_id:
@@ -314,6 +327,8 @@ class ModuloMainWindow(QMainWindow):
 
         self.connect_button.setText(state.openclaw_action_label)
         self.connect_button.setEnabled(state.connect_action_enabled)
+        self.apply_openclaw_button.setText(state.openclaw_plan_apply_label)
+        self.apply_openclaw_button.setEnabled(state.openclaw_plan_apply_enabled)
         self.hosting_model_combo.setEnabled(state.hosting_setup_action_enabled)
         self.start_button.setEnabled(state.start_action_enabled)
         self.stop_button.setEnabled(state.stop_action_enabled)
@@ -324,6 +339,7 @@ class ModuloMainWindow(QMainWindow):
             f"Status: {state.openclaw_status_badge}"
         )
         self.openclaw_summary_label.setText(state.openclaw_summary)
+        self.openclaw_plan_summary_label.setText(state.openclaw_plan_summary)
         self.buyer_model_notice_label.setText(
             "Buyer model selection is a separate step. OpenClaw routing only matters after a buyer "
             "model has been chosen, and that selector is not implemented in the client yet."
@@ -336,6 +352,10 @@ class ModuloMainWindow(QMainWindow):
         self.buyer_cloud_models_box.setPlainText("\n".join(state.buyer_cloud_models))
         self.openclaw_details_box.setPlainText(
             f"{state.openclaw_details}\n\n{state.openclaw_safety_note}"
+        )
+        plan_lines = "\n".join(f"- {line}" for line in state.openclaw_plan_changes)
+        self.openclaw_plan_box.setPlainText(
+            f"{state.openclaw_plan_details}\n\nPlanned changes:\n{plan_lines or '- None'}"
         )
 
         combo_model_ids = tuple(

@@ -30,6 +30,18 @@ class SmokeTestResult:
 
 
 @dataclass(frozen=True)
+class OpenClawConnectionPlan:
+    available: bool = False
+    staged: bool = False
+    apply_ready: bool = False
+    state: str = "not_staged"
+    summary: str = "No OpenClaw connection plan has been staged yet."
+    details: str = "Review the local OpenClaw state before planning any changes."
+    change_lines: tuple[str, ...] = ()
+    apply_label: str = "Apply staged plan"
+
+
+@dataclass(frozen=True)
 class OpenClawConfigurationStatus:
     configured: bool = False
     installed: bool = False
@@ -43,6 +55,7 @@ class OpenClawConfigurationStatus:
     safety_note: str = (
         "Safe prototype mode: the OpenClaw action only updates Modulo's setup state."
     )
+    connection_plan: OpenClawConnectionPlan = OpenClawConnectionPlan()
 
 
 @dataclass(frozen=True)
@@ -190,6 +203,7 @@ class ModuloClientSupervisor:
     _cached_runtime_probe: HostingRuntimeProbeStatus | None = None
     _cached_runtime_probe_model_id: str = ""
     _cached_runtime_probe_at: float = 0.0
+    _staged_openclaw_plan: OpenClawConnectionPlan | None = None
 
     def configure_worker(self, config: WorkerBridgeConfig) -> ClientStatus:
         was_running = self.worker_bridge.get_status().desired_running
@@ -217,9 +231,23 @@ class ModuloClientSupervisor:
         )
         return self.configure_worker(next_config)
 
-    def configure_openclaw(self) -> ClientStatus:
-        self.openclaw_configured = True
+    def stage_openclaw_connection(self) -> ClientStatus:
+        self._staged_openclaw_plan = self._build_openclaw_connection_plan(
+            self.get_openclaw_discovery_status()
+        )
         return self.get_status()
+
+    def apply_openclaw_connection_plan(self) -> ClientStatus:
+        if self._staged_openclaw_plan is None:
+            self._staged_openclaw_plan = self._build_openclaw_connection_plan(
+                self.get_openclaw_discovery_status()
+            )
+        if self._staged_openclaw_plan.apply_ready:
+            self.openclaw_configured = True
+        return self.get_status()
+
+    def configure_openclaw(self) -> ClientStatus:
+        return self.stage_openclaw_connection()
 
     def apply_worker_command(self, command: WorkerSupervisorCommand) -> ClientStatus:
         if command is WorkerSupervisorCommand.START:
@@ -287,25 +315,44 @@ class ModuloClientSupervisor:
 
     def get_openclaw_status(self) -> OpenClawConfigurationStatus:
         discovery = self.get_openclaw_discovery_status()
+        connection_plan = self._staged_openclaw_plan or self._build_openclaw_connection_plan(discovery)
         if discovery.installed or discovery.config_present:
             details = discovery.details
             if self.openclaw_configured and not discovery.configured_for_modulo:
                 details = (
                     f"{details}\n\nA prototype-safe configuration intent is staged in Modulo, "
-                    "but the local OpenClaw config is not routing through Modulo yet."
+                    "but the local OpenClaw config is not routing through Modulo yet. "
+                    "This keeps the staged flow explicit without editing local OpenClaw files."
                 )
             return OpenClawConfigurationStatus(
-                configured=discovery.configured_for_modulo,
+                configured=(discovery.configured_for_modulo or self.openclaw_configured),
                 installed=discovery.installed,
                 config_present=discovery.config_present,
-                state=discovery.state,
-                mode="discovery",
-                summary=discovery.summary,
+                state=(
+                    "staged_apply"
+                    if self.openclaw_configured and not discovery.configured_for_modulo
+                    else discovery.state
+                ),
+                mode=(
+                    "staged_apply"
+                    if self.openclaw_configured and not discovery.configured_for_modulo
+                    else "discovery"
+                ),
+                summary=(
+                    "Modulo has staged and applied a prototype-safe OpenClaw routing configuration, but the local OpenClaw files are not yet configured by this slice."
+                    if self.openclaw_configured and not discovery.configured_for_modulo
+                    else discovery.summary
+                ),
                 details=details,
                 safety_note=(
-                    "Discovery mode: Modulo is reading local OpenClaw state but is not changing "
+                    "Staged apply mode: Modulo is still not changing local OpenClaw files in this "
+                    "slice, but the explicit routing plan has been reviewed and applied inside "
+                    "Modulo's buyer setup flow."
+                    if self.openclaw_configured and not discovery.configured_for_modulo
+                    else "Discovery mode: Modulo is reading local OpenClaw state but is not changing "
                     "local OpenClaw files in this slice."
                 ),
+                connection_plan=connection_plan,
             )
         if self.openclaw_configured:
             return OpenClawConfigurationStatus(
@@ -320,8 +367,9 @@ class ModuloClientSupervisor:
                     "Safe prototype mode: this marks the buyer route as configured inside Modulo, "
                     "but it does not wrap or rewrite a local OpenClaw install."
                 ),
+                connection_plan=connection_plan,
             )
-        return OpenClawConfigurationStatus()
+        return OpenClawConfigurationStatus(connection_plan=connection_plan)
 
     def get_openclaw_discovery_status(self) -> OpenClawDiscoveryStatus:
         now = time.monotonic()
@@ -575,6 +623,74 @@ class ModuloClientSupervisor:
         self._cached_runtime_probe = None
         self._cached_runtime_probe_model_id = ""
         self._cached_runtime_probe_at = 0.0
+
+    def _build_openclaw_connection_plan(
+        self,
+        discovery: OpenClawDiscoveryStatus,
+    ) -> OpenClawConnectionPlan:
+        if not discovery.installed:
+            return OpenClawConnectionPlan(
+                available=False,
+                staged=self._staged_openclaw_plan is not None,
+                apply_ready=False,
+                state="not_installed",
+                summary="OpenClaw is not installed, so there is no connection plan to apply yet.",
+                details=(
+                    "Install OpenClaw first. Once it is present locally, Modulo can stage a buyer "
+                    "routing plan and explain the intended changes before applying anything."
+                ),
+                change_lines=(
+                    "No local OpenClaw config changes would be made in the current state.",
+                ),
+                apply_label="Install OpenClaw first",
+            )
+
+        change_lines = [
+            "Set the OpenClaw Ollama provider base URL to the Modulo endpoint.",
+            "Keep routing scoped to the buyer-facing OpenClaw configuration flow.",
+            "Run the buyer-path smoke test after the change is applied.",
+        ]
+        if discovery.current_primary_model:
+            change_lines.append(
+                f"Preserve visibility of the current primary model: {discovery.current_primary_model}."
+            )
+
+        if discovery.configured_for_modulo:
+            return OpenClawConnectionPlan(
+                available=True,
+                staged=self._staged_openclaw_plan is not None,
+                apply_ready=False,
+                state="already_configured",
+                summary="OpenClaw already appears to be routing through Modulo.",
+                details=(
+                    "Modulo can still review the detected buyer-routing state, but there is no new "
+                    "routing change to apply right now."
+                ),
+                change_lines=tuple(change_lines),
+                apply_label="Already routing through Modulo",
+            )
+
+        if discovery.config_present:
+            details = (
+                "Modulo would update the detected local OpenClaw config so buyer traffic targets the "
+                "Modulo Ollama-compatible endpoint. This slice stages that plan explicitly but does "
+                "not mutate local files yet."
+            )
+        else:
+            details = (
+                "Modulo would create or initialize the local OpenClaw routing config against the "
+                "Modulo endpoint. This slice stages that plan explicitly but does not write files yet."
+            )
+
+        return OpenClawConnectionPlan(
+            available=True,
+            staged=self._staged_openclaw_plan is not None,
+            apply_ready=True,
+            state="ready_to_apply",
+            summary="A buyer-routing connection plan is ready for review before apply.",
+            details=details,
+            change_lines=tuple(change_lines),
+        )
 
 
 class HostingPreflightStatusSummary:

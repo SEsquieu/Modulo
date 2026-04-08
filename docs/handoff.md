@@ -8,7 +8,7 @@ This file is the quickest way to regain context when switching workstations.
 - GUI phase-0 roadmap is completed
 - Phase 2 is active
 - current Phase 2 step: `Step 4: Real OpenClaw integration`
-- current mini-roadmap status: `Slice 1` of [openclaw_integration_roadmap.md](./openclaw_integration_roadmap.md) is completed
+- current mini-roadmap status: `Slice 2` of [openclaw_integration_roadmap.md](./openclaw_integration_roadmap.md) is completed
 
 ## What exists today
 
@@ -102,8 +102,8 @@ Active implementation doc:
 
 Next intended slice:
 
-- `Slice 2: staged connection flow`
-- goal: explain what Modulo would change in OpenClaw before applying anything
+- `Slice 3: GUI connection experience`
+- goal: make the real OpenClaw integration flow legible in the GUI with clear next steps and failure messaging
 
 ## Working preferences
 
