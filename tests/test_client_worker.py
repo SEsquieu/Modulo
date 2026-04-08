@@ -9,6 +9,7 @@ from modulo.cloud.http import ModuloHTTPApp
 from modulo.cloud.router import TrustRouter
 from modulo.cloud.runtime import InMemoryModuloService
 from modulo.common.contracts import (
+    ChatMessage,
     ChatRequest,
     ExecutionMode,
     JobStatus,
@@ -54,7 +55,11 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
     def test_worker_cycle_completes_claimed_job_and_updates_client_status(self) -> None:
         self.client.start_hosting()
         job = self.service.submit_chat(
-            ChatRequest(model_id="llama3.1:8b", execution_mode=ExecutionMode.NETWORK)
+            ChatRequest(
+                model_id="llama3.1:8b",
+                execution_mode=ExecutionMode.NETWORK,
+                messages=(ChatMessage(role="user", content="hello bridge"),),
+            )
         )
 
         status = self.client.run_hosting_cycle()
@@ -67,6 +72,7 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertIsNotNone(completed_job)
         self.assertEqual(JobStatus.COMPLETED, completed_job.status)
         self.assertEqual("hello from worker-1", completed_job.response_text)
+        self.assertEqual("hello bridge", completed_job.request.messages[0].content)
 
     def test_worker_failure_surfaces_through_shared_status_contract(self) -> None:
         self.bridge = WorkerBridgeRuntime(
@@ -89,7 +95,11 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.client.start_hosting()
 
         job = self.service.submit_chat(
-            ChatRequest(model_id="llama3.1:8b", execution_mode=ExecutionMode.NETWORK)
+            ChatRequest(
+                model_id="llama3.1:8b",
+                execution_mode=ExecutionMode.NETWORK,
+                messages=(ChatMessage(role="user", content="hello failure"),),
+            )
         )
         status = self.client.run_hosting_cycle()
 

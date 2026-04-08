@@ -80,9 +80,16 @@ class WorkerSnapshot:
 
 
 @dataclass(frozen=True)
+class ChatMessage:
+    role: str
+    content: str
+
+
+@dataclass(frozen=True)
 class ChatRequest:
     model_id: str
     execution_mode: ExecutionMode
+    messages: tuple[ChatMessage, ...] = field(default_factory=tuple)
     routing_policy: RoutingPolicy = RoutingPolicy.STRICT
     stream: bool = False
     requires_tools: bool = False

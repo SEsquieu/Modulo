@@ -17,7 +17,7 @@ Current phase: `Phase 1` moving toward a working local prototype of the real `cl
 
 Current active slice:
 
-- add a real execution adapter seam while preserving the worker runtime and client supervision contracts
+- add one clear local prototype entry path that can bring up the cloud, supervise a worker, and prove a buyer request round trip
 
 Definition of progress for this phase:
 
@@ -92,26 +92,25 @@ Proof added to repo:
 - `WorkerBridgeRuntime` now depends on transport behavior instead of direct service access
 - integration tests now run the bridge through `ModuloHTTPApp` worker endpoints
 
+### Slice 4: Real execution adapter seam
+
+Status: completed
+
+Summary:
+
+- added a real Ollama-backed executor alongside the deterministic stub executor
+- carried chat messages through the cloud-to-worker claim path so real execution receives actual request content
+- kept the worker runtime and client supervision contracts stable while making execution backends swappable
+
+Proof added to repo:
+
+- `StubExecutor` and `OllamaExecutor` in the worker package
+- `ChatRequest` and worker claim transport now preserve message payloads
+- executor tests verify payload construction and error handling for the Ollama path
+
 ## Upcoming slices
 
 These are ordered to keep the path coherent and consistent.
-
-### Slice 4: Real execution adapter seam
-
-Goal:
-
-- keep the same worker runtime but support both a deterministic stub executor and a real Ollama-backed executor
-
-Why this slice matters:
-
-- it preserves fast demoability while moving execution closer to production behavior
-- it keeps execution complexity inside `worker`, where it belongs
-
-Exit criteria:
-
-- worker runtime can be configured with `StubExecutor` or `OllamaExecutor`
-- failure and success states still surface through the same shared status contract
-- the demo can run without rewriting client behavior
 
 ### Slice 5: Local prototype orchestration
 

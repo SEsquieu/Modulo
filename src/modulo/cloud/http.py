@@ -8,6 +8,7 @@ from typing import Any
 
 from modulo.common.catalog import SUPPORTED_MODELS
 from modulo.common.contracts import (
+    ChatMessage,
     ChatRequest,
     ExecutionMode,
     JobFailure,
@@ -20,7 +21,8 @@ from modulo.common.contracts import (
 from modulo.cloud.jobs import JobQueueError
 from modulo.cloud.router import RoutingError
 from modulo.cloud.runtime import InMemoryModuloService
-from modulo.worker.runtime import InMemoryWorkerRuntime, WorkerExecutionError
+from modulo.worker.errors import WorkerExecutionError
+from modulo.worker.runtime import InMemoryWorkerRuntime
 
 
 @dataclass
@@ -94,12 +96,26 @@ class ModuloHTTPApp:
 
     def _handle_chat(self, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
         model_id = payload.get("model")
+        raw_messages = payload.get("messages", [])
         if not isinstance(model_id, str) or not model_id:
             return HTTPStatus.BAD_REQUEST, {"error": "Missing required field: model"}
+        if not isinstance(raw_messages, list):
+            return HTTPStatus.BAD_REQUEST, {"error": "Invalid field: messages"}
+
+        messages: list[ChatMessage] = []
+        for item in raw_messages:
+            if not isinstance(item, dict):
+                return HTTPStatus.BAD_REQUEST, {"error": "Invalid field: messages"}
+            role = item.get("role")
+            content = item.get("content")
+            if not isinstance(role, str) or not isinstance(content, str):
+                return HTTPStatus.BAD_REQUEST, {"error": "Invalid field: messages"}
+            messages.append(ChatMessage(role=role, content=content))
 
         request = ChatRequest(
             model_id=model_id,
             execution_mode=ExecutionMode.NETWORK,
+            messages=tuple(messages),
             stream=bool(payload.get("stream", False)),
             requires_tools=bool(payload.get("tools")),
         )
@@ -206,6 +222,10 @@ class ModuloHTTPApp:
             "job": {
                 "job_id": claim.job_id,
                 "model": claim.request.model_id,
+                "messages": [
+                    {"role": message.role, "content": message.content}
+                    for message in claim.request.messages
+                ],
                 "stream": claim.request.stream,
                 "route": {
                     "worker_id": claim.route.worker_id,

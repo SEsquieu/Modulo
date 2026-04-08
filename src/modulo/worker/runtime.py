@@ -13,11 +13,9 @@ from modulo.common.contracts import (
     WorkerRuntimeState,
     WorkerStatusSnapshot,
 )
+from modulo.worker.errors import WorkerExecutionError
+from modulo.worker.executors import StubExecutor
 from modulo.worker.transport import WorkerTransportError
-
-
-class WorkerExecutionError(Exception):
-    """Raised when an in-memory worker runtime cannot execute a job."""
 
 
 class WorkerExecutor(Protocol):
@@ -42,19 +40,8 @@ class WorkerTransport(Protocol):
         """Record a failed job result."""
 
 
-@dataclass
-class InMemoryWorkerRuntime:
-    _responses: dict[str, str] = field(default_factory=dict)
-
-    def register_worker(self, worker_id: str, response_text: str) -> None:
-        self._responses[worker_id] = response_text
-
-    def execute(self, worker_id: str, request: ChatRequest) -> str:
-        del request
-        response = self._responses.get(worker_id)
-        if response is None:
-            raise WorkerExecutionError(f"No execution adapter registered for {worker_id}")
-        return response
+class InMemoryWorkerRuntime(StubExecutor):
+    """Backwards-compatible name for the deterministic stub executor."""
 
 
 @dataclass

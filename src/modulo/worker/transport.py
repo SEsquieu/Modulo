@@ -6,6 +6,7 @@ from http import HTTPStatus
 from typing import Protocol
 
 from modulo.common.contracts import (
+    ChatMessage,
     ChatRequest,
     ExecutionMode,
     JobClaim,
@@ -72,9 +73,22 @@ class InProcessWorkerHTTPTransport:
             return None
 
         model_id = job_payload.get("model")
+        raw_messages = job_payload.get("messages", [])
         stream = bool(job_payload.get("stream", False))
         if not isinstance(model_id, str):
             raise WorkerTransportError("Claim response missing job model")
+        if not isinstance(raw_messages, list):
+            raise WorkerTransportError("Claim response missing job messages")
+
+        messages: list[ChatMessage] = []
+        for item in raw_messages:
+            if not isinstance(item, dict):
+                raise WorkerTransportError("Claim response contains invalid job messages")
+            role = item.get("role")
+            content = item.get("content")
+            if not isinstance(role, str) or not isinstance(content, str):
+                raise WorkerTransportError("Claim response contains invalid job messages")
+            messages.append(ChatMessage(role=role, content=content))
 
         return JobClaim(
             job_id=job_payload["job_id"],
@@ -82,6 +96,7 @@ class InProcessWorkerHTTPTransport:
             request=ChatRequest(
                 model_id=model_id,
                 execution_mode=ExecutionMode.NETWORK,
+                messages=tuple(messages),
                 stream=stream,
             ),
             route=self._route_from_payload(job_payload.get("route", {}), model_id),
