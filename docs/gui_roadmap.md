@@ -41,7 +41,7 @@ Current GUI phase: `Phase 0` planning and thin-client surface definition.
 
 Current active GUI slice:
 
-- build the first onboarding home screen on top of the live PySide6 shell and current client state
+- let the GUI start, stop, and restart hosting while showing worker activity and errors
 
 Definition of progress for this phase:
 
@@ -83,26 +83,25 @@ Proof added to repo:
 - `python -m modulo.gui_app` launch path plus a minimal controller-backed window
 - controller tests covering shell state refresh and core actions
 
+### GUI Slice 3: Onboarding home screen
+
+Status: completed
+
+Summary:
+
+- reshaped the first PySide window into a clearer onboarding-oriented home screen instead of a raw diagnostic layout
+- centered the home screen on buyer/hosting readiness, worker health, and smoke-test status
+- kept the screen grounded in live controller state so it stays honest as the backend evolves
+
+Proof added to repo:
+
+- improved PySide home-screen layout and status-card presentation
+- richer controller summaries for connection, hosting, worker health, and smoke-test outcome
+- controller tests that validate the home-screen state summaries
+
 ## Upcoming GUI slices
 
 These are ordered to keep the GUI build coherent and consistent with the current architecture.
-
-### GUI Slice 3: Onboarding home screen
-
-Goal:
-
-- build the first home screen that shows connection, OpenClaw, hosting, worker health, and smoke-test state
-
-Why this slice matters:
-
-- this is the smallest honest version of the product
-- it gives users one place to understand what Modulo is doing right now
-
-Exit criteria:
-
-- the home screen reads from real client state
-- it clearly shows connected/disconnected and hosting enabled/disabled states
-- it surfaces worker health and last smoke-test result
 
 ### GUI Slice 4: Hosting controls and worker panel
 

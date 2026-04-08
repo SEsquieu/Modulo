@@ -17,6 +17,9 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertTrue(state.connected_to_modulo)
         self.assertFalse(state.openclaw_connected)
         self.assertFalse(state.hosting_enabled)
+        self.assertIn("Connect OpenClaw", state.home_subtitle)
+        self.assertIn("not connected", state.connection_summary.lower())
+        self.assertEqual("Enable Hosting", state.secondary_action_label)
         self.assertEqual("stopped", state.worker_runtime_state)
         self.assertEqual("No smoke test run yet.", state.smoke_test_summary)
 
@@ -28,7 +31,9 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertTrue(started.hosting_enabled)
         self.assertTrue(started.worker_registered)
         self.assertTrue(started.worker_healthy)
+        self.assertIn("Hosting is enabled", started.hosting_summary)
         self.assertTrue(smoked.smoke_test_ok)
+        self.assertEqual("PASS", smoked.smoke_status_badge)
         self.assertIn("Smoke test passed", smoked.smoke_test_summary)
         self.assertIn("gui smoke", smoked.smoke_test_details)
 

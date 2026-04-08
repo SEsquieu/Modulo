@@ -6,6 +6,7 @@ try:
     from PySide6.QtCore import QTimer
     from PySide6.QtWidgets import (
         QApplication,
+        QFrame,
         QGridLayout,
         QGroupBox,
         QLabel,
@@ -26,7 +27,17 @@ class ModuloMainWindow(QMainWindow):
         super().__init__()
         self.controller = controller
         self.setWindowTitle("Modulo")
-        self.resize(760, 520)
+        self.resize(900, 640)
+
+        self.title_label = QLabel()
+        self.title_label.setStyleSheet("font-size: 24px; font-weight: 700;")
+        self.subtitle_label = QLabel()
+        self.subtitle_label.setWordWrap(True)
+
+        self.connection_card = self._build_status_card("Connection")
+        self.hosting_card = self._build_status_card("Hosting")
+        self.worker_card = self._build_status_card("Worker")
+        self.smoke_card = self._build_status_card("Smoke Test")
 
         self.connected_label = QLabel()
         self.openclaw_label = QLabel()
@@ -43,6 +54,7 @@ class ModuloMainWindow(QMainWindow):
         self.smoke_summary_label = QLabel()
         self.smoke_details_box = QPlainTextEdit()
         self.smoke_details_box.setReadOnly(True)
+        self.smoke_details_box.setMinimumHeight(120)
 
         connect_button = QPushButton("Connect OpenClaw")
         connect_button.clicked.connect(lambda: self._apply_state(self.controller.connect_openclaw()))
@@ -61,14 +73,16 @@ class ModuloMainWindow(QMainWindow):
 
         home_box = QGroupBox("Home")
         home_layout = QGridLayout()
-        home_layout.addWidget(self.connected_label, 0, 0)
-        home_layout.addWidget(self.openclaw_label, 1, 0)
-        home_layout.addWidget(self.hosting_label, 2, 0)
-        home_layout.addWidget(self.worker_health_label, 3, 0)
-        home_layout.addWidget(connect_button, 0, 1)
-        home_layout.addWidget(start_button, 1, 1)
-        home_layout.addWidget(stop_button, 2, 1)
-        home_layout.addWidget(smoke_button, 3, 1)
+        home_layout.addWidget(self.title_label, 0, 0, 1, 2)
+        home_layout.addWidget(self.subtitle_label, 1, 0, 1, 2)
+        home_layout.addWidget(self.connection_card, 2, 0)
+        home_layout.addWidget(self.hosting_card, 2, 1)
+        home_layout.addWidget(self.worker_card, 3, 0)
+        home_layout.addWidget(self.smoke_card, 3, 1)
+        home_layout.addWidget(connect_button, 4, 0)
+        home_layout.addWidget(smoke_button, 4, 1)
+        home_layout.addWidget(start_button, 5, 0)
+        home_layout.addWidget(stop_button, 5, 1)
         home_box.setLayout(home_layout)
 
         worker_box = QGroupBox("Worker")
@@ -103,10 +117,38 @@ class ModuloMainWindow(QMainWindow):
 
         self._apply_state(self.controller.refresh())
 
+    @staticmethod
+    def _build_status_card(title: str) -> QFrame:
+        frame = QFrame()
+        frame.setFrameShape(QFrame.StyledPanel)
+        frame.setStyleSheet(
+            "QFrame { border: 1px solid #d4d4d8; border-radius: 8px; padding: 8px; background: #fafaf9; }"
+        )
+        layout = QVBoxLayout()
+        title_label = QLabel(title)
+        title_label.setStyleSheet("font-weight: 600; font-size: 14px;")
+        value_label = QLabel()
+        value_label.setObjectName("value")
+        value_label.setWordWrap(True)
+        value_label.setStyleSheet("font-size: 13px;")
+        layout.addWidget(title_label)
+        layout.addWidget(value_label)
+        frame.setLayout(layout)
+        return frame
+
+    @staticmethod
+    def _set_card_text(card: QFrame, text: str) -> None:
+        value_label = card.findChild(QLabel, "value")
+        if value_label is not None:
+            value_label.setText(text)
+
     def _poll_state(self) -> None:
         self._apply_state(self.controller.poll_worker())
 
     def _apply_state(self, state: GuiShellState) -> None:
+        self.title_label.setText(state.home_title)
+        self.subtitle_label.setText(state.home_subtitle)
+
         self.connected_label.setText(
             f"Modulo connection: {'Connected' if state.connected_to_modulo else 'Disconnected'}"
         )
@@ -118,6 +160,16 @@ class ModuloMainWindow(QMainWindow):
         )
         self.worker_health_label.setText(
             f"Worker health: {'Healthy' if state.worker_healthy else 'Unhealthy'}"
+        )
+        self._set_card_text(self.connection_card, state.connection_summary)
+        self._set_card_text(self.hosting_card, state.hosting_summary)
+        self._set_card_text(
+            self.worker_card,
+            f"{state.worker_status_badge}\nRuntime: {state.worker_runtime_state}",
+        )
+        self._set_card_text(
+            self.smoke_card,
+            f"{state.smoke_status_badge}\n{state.smoke_test_summary}",
         )
 
         self.worker_id_label.setText(f"Worker ID: {state.worker_id or 'Unavailable'}")

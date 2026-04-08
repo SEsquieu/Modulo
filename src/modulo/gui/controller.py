@@ -14,6 +14,14 @@ class GuiShellState:
     hosting_enabled: bool
     worker_registered: bool
     worker_healthy: bool
+    home_title: str = "Modulo"
+    home_subtitle: str = ""
+    connection_summary: str = ""
+    hosting_summary: str = ""
+    smoke_status_badge: str = ""
+    worker_status_badge: str = ""
+    primary_action_label: str = ""
+    secondary_action_label: str = ""
     worker_id: str = ""
     worker_runtime_state: str = ""
     enabled_models_text: str = ""
@@ -79,6 +87,14 @@ class GuiAppController:
             hosting_enabled=onboarding.hosting_enabled,
             worker_registered=onboarding.worker_registered,
             worker_healthy=onboarding.worker_healthy,
+            home_title="Modulo",
+            home_subtitle=self._home_subtitle(onboarding),
+            connection_summary=self._connection_summary(onboarding),
+            hosting_summary=self._hosting_summary(onboarding),
+            smoke_status_badge="PASS" if onboarding.smoke_test_ok else "PENDING",
+            worker_status_badge="HEALTHY" if onboarding.worker_healthy else "UNHEALTHY",
+            primary_action_label="Connect OpenClaw" if not onboarding.openclaw_connected else "Run Smoke Test",
+            secondary_action_label="Enable Hosting" if not onboarding.hosting_enabled else "Disable Hosting",
             worker_id=worker.worker_id if worker else "",
             worker_runtime_state=worker.runtime_state.value if worker else WorkerRuntimeState.STOPPED.value,
             enabled_models_text=", ".join(worker.enabled_models) if worker and worker.enabled_models else "",
@@ -109,3 +125,29 @@ class GuiAppController:
                 f"Response: {smoke_test.response_text}"
             )
         return f"Prompt: {smoke_test.user_message}\nError: {smoke_test.error}"
+
+    @staticmethod
+    def _home_subtitle(onboarding: OnboardingStatus) -> str:
+        if onboarding.openclaw_connected and onboarding.hosting_enabled:
+            return "Buyer and hosting paths are both active."
+        if onboarding.openclaw_connected:
+            return "Buyer path is active. Hosting can be enabled when you are ready."
+        if onboarding.hosting_enabled:
+            return "Hosting is active. OpenClaw is not connected yet."
+        return "Connect OpenClaw or enable hosting to begin using Modulo."
+
+    @staticmethod
+    def _connection_summary(onboarding: OnboardingStatus) -> str:
+        return (
+            "OpenClaw is connected to Modulo."
+            if onboarding.openclaw_connected
+            else "OpenClaw is not connected yet."
+        )
+
+    @staticmethod
+    def _hosting_summary(onboarding: OnboardingStatus) -> str:
+        if onboarding.hosting_enabled and onboarding.worker_healthy:
+            return "Hosting is enabled and the worker is healthy."
+        if onboarding.hosting_enabled:
+            return "Hosting is enabled, but the worker needs attention."
+        return "Hosting is disabled."
