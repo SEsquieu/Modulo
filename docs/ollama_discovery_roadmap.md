@@ -21,14 +21,19 @@ It exists to replace the current curated-only hosting list with a real view of w
 
 ### Slice 1: Local Ollama discovery seam
 
-Goal:
+Status: completed
 
-- add one explicit client-facing seam for probing Ollama availability and enumerating local models
+Summary:
 
-Exit criteria:
+- added a replaceable client-facing Ollama discovery seam that can probe local command availability and enumerate installed model ids
+- wired the default prototype path to use the new discovery seam so discovery state is available through the normal client status flow
+- kept discovery logic out of the GUI and exposed it through hosting setup state instead
 
-- the client has a discovery interface that can report Ollama availability and installed model ids
-- the implementation is replaceable and does not leak shell details into the GUI
+Proof added to repo:
+
+- `OllamaDiscovery` and `OllamaDiscoveryStatus` in the client layer
+- default prototype wiring through the client supervisor
+- discovery and client tests covering model parsing and hosting setup state
 
 ### Slice 2: Curated-versus-installed model view
 

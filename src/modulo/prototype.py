@@ -9,6 +9,7 @@ from modulo.client.app import (
     ModuloClientSupervisor,
     SmokeTestResult,
 )
+from modulo.client.ollama_discovery import OllamaDiscovery
 from modulo.cloud.http import ModuloHTTPApp
 from modulo.cloud.router import TrustRouter
 from modulo.cloud.runtime import InMemoryModuloService
@@ -63,6 +64,7 @@ class LocalPrototypeHarness:
         )
         self.client = ModuloClientSupervisor(
             worker_bridge=bridge,
+            ollama_discovery=OllamaDiscovery(),
             smoke_test_runner=self,
             activity_provider=self,
         )

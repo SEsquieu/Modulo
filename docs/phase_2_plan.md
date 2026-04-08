@@ -27,7 +27,7 @@ That means:
 
 ### Step 1: Local Ollama discovery
 
-Status: not started
+Status: in progress
 
 Roadmap:
 

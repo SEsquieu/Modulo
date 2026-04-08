@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from modulo.common.catalog import SUPPORTED_MODELS
+from modulo.client.ollama_discovery import OllamaDiscovery, OllamaDiscoveryStatus
 from modulo.common.contracts import (
     WorkerBridgeConfig,
     WorkerStatusSnapshot,
@@ -39,6 +40,8 @@ class HostingSetupStatus:
     selected_model_id: str = ""
     available_model_ids: tuple[str, ...] = ()
     available_model_labels: tuple[str, ...] = ()
+    installed_model_ids: tuple[str, ...] = ()
+    ollama_available: bool = False
     readiness_summary: str = "Select a model to prepare hosting."
     readiness_details: str = ""
     can_enable_hosting: bool = False
@@ -100,6 +103,7 @@ class ModuloClientSupervisor:
     worker_bridge: WorkerBridgeRuntime
     connected_to_modulo: bool = True
     openclaw_connected: bool = False
+    ollama_discovery: OllamaDiscovery | None = None
     smoke_test_runner: ClientSmokeTestRunner | None = None
     activity_provider: ClientActivityProvider | None = None
     _last_smoke_test: SmokeTestResult | None = None
@@ -213,6 +217,7 @@ class ModuloClientSupervisor:
 
     def get_hosting_setup_status(self) -> HostingSetupStatus:
         selected_model_id = self.worker_bridge.config.enabled_models[0] if self.worker_bridge.config.enabled_models else ""
+        discovery = self.get_ollama_discovery_status()
         available_models = tuple(SUPPORTED_MODELS.values())
         labels = tuple(f"{model.display_name} ({model.model_id})" for model in available_models)
         readiness_summary = self._hosting_readiness_summary(selected_model_id)
@@ -220,8 +225,10 @@ class ModuloClientSupervisor:
             selected_model_id=selected_model_id,
             available_model_ids=tuple(model.model_id for model in available_models),
             available_model_labels=labels,
+            installed_model_ids=discovery.installed_model_ids,
+            ollama_available=discovery.available,
             readiness_summary=readiness_summary,
-            readiness_details=self._hosting_readiness_details(selected_model_id),
+            readiness_details=self._hosting_readiness_details(selected_model_id, discovery),
             can_enable_hosting=bool(selected_model_id),
         )
 
@@ -232,17 +239,35 @@ class ModuloClientSupervisor:
         return f"Ready to host with {selected_model_id}."
 
     @staticmethod
-    def _hosting_readiness_details(selected_model_id: str) -> str:
+    def _hosting_readiness_details(
+        selected_model_id: str,
+        discovery: OllamaDiscoveryStatus,
+    ) -> str:
         if not selected_model_id:
             return "No model is selected for hosting yet."
         model = SUPPORTED_MODELS.get(selected_model_id)
         if model is None:
             return "The selected model is outside the curated v1 catalog."
+        discovery_line = (
+            f"Ollama discovery: {discovery.summary}"
+            if discovery.available or discovery.error
+            else "Ollama discovery has not run yet."
+        )
         return (
             f"Selected model: {model.display_name}\n"
             f"Runtime identity: {model.ollama_runtime_name}\n"
+            f"{discovery_line}\n"
             "Hosting remains explicit and opt-in. Use Start Hosting when you are ready."
         )
+
+    def get_ollama_discovery_status(self) -> OllamaDiscoveryStatus:
+        if self.ollama_discovery is None:
+            return OllamaDiscoveryStatus(
+                summary="Ollama discovery is not configured.",
+                details="Attach a discovery provider before using live local model detection.",
+                error="no discovery provider configured",
+            )
+        return self.ollama_discovery.discover()
 
     def get_activity_visibility(self) -> ActivityVisibilityStatus:
         if self.activity_provider is None:

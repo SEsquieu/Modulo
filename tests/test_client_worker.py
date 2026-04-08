@@ -5,6 +5,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from modulo.client.app import ModuloClientSupervisor
+from modulo.client.ollama_discovery import OllamaDiscoveryStatus
 from modulo.cloud.http import ModuloHTTPApp
 from modulo.cloud.router import TrustRouter
 from modulo.cloud.runtime import InMemoryModuloService
@@ -32,6 +33,16 @@ class FakeSmokeTestRunner:
         )
 
 
+class FakeOllamaDiscovery:
+    def discover(self) -> OllamaDiscoveryStatus:
+        return OllamaDiscoveryStatus(
+            available=True,
+            installed_model_ids=("llama3.1:8b",),
+            summary="Ollama is available with 1 local model.",
+            details="fake discovery",
+        )
+
+
 class ClientWorkerIntegrationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.service = InMemoryModuloService(router=TrustRouter())
@@ -54,7 +65,10 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
             transport=self.transport,
             executor=self.executor,
         )
-        self.client = ModuloClientSupervisor(worker_bridge=self.bridge)
+        self.client = ModuloClientSupervisor(
+            worker_bridge=self.bridge,
+            ollama_discovery=FakeOllamaDiscovery(),
+        )
 
     def test_client_can_start_hosting_without_drifting_from_worker_status(self) -> None:
         status = self.client.start_hosting()
@@ -152,6 +166,13 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertTrue(status.hosting_enabled)
         self.assertIsNotNone(status.hosting_setup)
         self.assertEqual("llama3.1:8b", status.hosting_setup.selected_model_id)
+
+    def test_hosting_setup_includes_ollama_discovery_state(self) -> None:
+        status = self.client.get_status()
+
+        self.assertTrue(status.hosting_setup.ollama_available)
+        self.assertEqual(("llama3.1:8b",), status.hosting_setup.installed_model_ids)
+        self.assertIn("Ollama is available", status.hosting_setup.readiness_details)
 
 
 if __name__ == "__main__":
