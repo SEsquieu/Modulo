@@ -117,7 +117,11 @@ Completion gate:
 
 ### Step 5: Real local execution
 
-Status: not started
+Status: in progress
+
+Summary:
+
+- completed Slice 1 of the real execution mini roadmap so the local app can now choose real versus stub execution based on runtime readiness
 
 Roadmap:
 

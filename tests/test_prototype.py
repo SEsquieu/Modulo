@@ -5,8 +5,10 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from modulo.common.contracts import JobStatus, WorkerRuntimeState
+from modulo.client.hosting_readiness import HostingRuntimeProbeStatus
 from modulo.client.openclaw_discovery import OpenClawDiscoveryStatus
 from modulo.worker.errors import WorkerExecutionError
+from modulo.worker.executors import OllamaExecutor, StubExecutor
 from modulo.prototype import LocalPrototypeHarness
 
 
@@ -28,7 +30,66 @@ class FakePrototypeOpenClawDiscovery:
         )
 
 
+class ReadyRuntimeProbe:
+    def probe(self, model_id: str) -> HostingRuntimeProbeStatus:
+        return HostingRuntimeProbeStatus(
+            reachable=True,
+            model_ready=True,
+            summary=f"Ollama runtime resolved {model_id} successfully.",
+            detail="ready runtime probe",
+        )
+
+
+class BlockedRuntimeProbe:
+    def probe(self, model_id: str) -> HostingRuntimeProbeStatus:
+        return HostingRuntimeProbeStatus(
+            reachable=False,
+            model_ready=False,
+            summary=f"Ollama runtime could not resolve {model_id}.",
+            detail="blocked runtime probe",
+            error="blocked runtime probe",
+        )
+
+
+class FakeOllamaHTTPClient:
+    def chat(self, base_url: str, payload: dict) -> dict:
+        del base_url, payload
+        return {"message": {"role": "assistant", "content": "hello from real ollama"}}
+
+
 class LocalPrototypeHarnessTests(unittest.TestCase):
+    def test_selects_real_executor_when_runtime_probe_is_ready(self) -> None:
+        harness = LocalPrototypeHarness(
+            openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            hosting_runtime_probe=ReadyRuntimeProbe(),
+            ollama_http_client=FakeOllamaHTTPClient(),
+        )
+
+        self.assertIsInstance(harness.client.worker_bridge.executor, OllamaExecutor)
+        self.assertEqual("real", harness.selected_executor_mode)
+        self.assertIn("resolved", harness.selected_executor_summary)
+
+    def test_falls_back_to_stub_executor_when_runtime_probe_is_blocked(self) -> None:
+        harness = LocalPrototypeHarness(
+            openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            hosting_runtime_probe=BlockedRuntimeProbe(),
+        )
+
+        self.assertIsInstance(harness.client.worker_bridge.executor, StubExecutor)
+        self.assertEqual("prototype", harness.selected_executor_mode)
+        self.assertIn("could not resolve", harness.selected_executor_summary)
+
+    def test_explicit_executor_override_is_preserved(self) -> None:
+        executor = FailingExecutor()
+        harness = LocalPrototypeHarness(
+            executor=executor,
+            openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            hosting_runtime_probe=ReadyRuntimeProbe(),
+        )
+
+        self.assertIs(harness.client.worker_bridge.executor, executor)
+        self.assertEqual("explicit", harness.selected_executor_mode)
+
     def test_boot_starts_hosting_and_registers_worker(self) -> None:
         harness = LocalPrototypeHarness(openclaw_discovery=FakePrototypeOpenClawDiscovery())
 

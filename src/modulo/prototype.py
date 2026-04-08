@@ -14,13 +14,13 @@ from modulo.client.app import (
 )
 from modulo.client.openclaw_discovery import OpenClawDiscovery
 from modulo.client.ollama_discovery import OllamaDiscovery
-from modulo.client.hosting_readiness import OllamaHostingRuntimeProbe
+from modulo.client.hosting_readiness import HostingRuntimeProbeStatus, OllamaHostingRuntimeProbe
 from modulo.cloud.http import ModuloHTTPApp
 from modulo.cloud.router import TrustRouter
 from modulo.cloud.runtime import InMemoryModuloService
 from modulo.common.catalog import SUPPORTED_MODELS
 from modulo.common.contracts import ChatMessage, ChatRequest, ExecutionMode, JobStatus, WorkerBridgeConfig
-from modulo.worker.executors import StubExecutor
+from modulo.worker.executors import OllamaExecutor, OllamaHTTPClient, StubExecutor
 from modulo.worker.runtime import InMemoryWorkerRuntime, WorkerBridgeRuntime, WorkerExecutor
 from modulo.worker.transport import InProcessWorkerHTTPTransport
 
@@ -108,9 +108,13 @@ class LocalPrototypeHarness:
     modulo_url: str = "http://127.0.0.1:8000"
     stub_response_text: str = "Hello from the Modulo local prototype worker."
     executor: WorkerExecutor | None = None
+    ollama_base_url: str = "http://127.0.0.1:11434"
+    ollama_http_client: OllamaHTTPClient | None = None
     openclaw_discovery: OpenClawDiscovery | None = None
     ollama_discovery: OllamaDiscovery | None = None
     hosting_runtime_probe: OllamaHostingRuntimeProbe | None = None
+    selected_executor_mode: str = field(init=False, default="prototype")
+    selected_executor_summary: str = field(init=False, default="")
     service: InMemoryModuloService = field(init=False)
     cloud_runtime: InMemoryWorkerRuntime = field(init=False)
     app: ModuloHTTPApp = field(init=False)
@@ -121,7 +125,7 @@ class LocalPrototypeHarness:
         self.cloud_runtime = InMemoryWorkerRuntime()
         self.app = ModuloHTTPApp(service=self.service, runtime=self.cloud_runtime)
 
-        executor = self.executor or StubExecutor()
+        executor = self._select_executor()
         if hasattr(executor, "register_worker"):
             executor.register_worker(self.worker_id, self.stub_response_text)
 
@@ -144,6 +148,27 @@ class LocalPrototypeHarness:
             smoke_test_runner=self,
             activity_provider=self,
         )
+
+    def _select_executor(self) -> WorkerExecutor:
+        if self.executor is not None:
+            self.selected_executor_mode = "explicit"
+            self.selected_executor_summary = "Prototype harness is using an explicitly supplied executor."
+            return self.executor
+
+        runtime_probe = self.hosting_runtime_probe or OllamaHostingRuntimeProbe()
+        probe_status = runtime_probe.probe(self.model_id)
+        self.hosting_runtime_probe = runtime_probe
+        if probe_status.reachable and probe_status.model_ready:
+            self.selected_executor_mode = "real"
+            self.selected_executor_summary = probe_status.summary
+            return OllamaExecutor(
+                base_url=self.ollama_base_url,
+                http_client=self.ollama_http_client or OllamaExecutor().http_client,
+            )
+
+        self.selected_executor_mode = "prototype"
+        self.selected_executor_summary = probe_status.summary
+        return StubExecutor()
 
     def boot(self) -> ClientStatus:
         return self.client.start_hosting()

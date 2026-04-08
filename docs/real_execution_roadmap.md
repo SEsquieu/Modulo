@@ -29,6 +29,14 @@ Exit criteria:
 - the worker runtime can switch cleanly between stub and real execution paths
 - the selection logic is based on readiness, not hidden assumptions
 
+Status: completed
+
+Summary:
+
+- added readiness-based executor selection in the local prototype harness
+- made the harness choose the real Ollama executor when the selected model probe succeeds
+- kept deterministic stub fallback and explicit executor override behavior intact for development and testing
+
 ### Slice 2: End-to-end real execution proof
 
 Goal:
@@ -55,5 +63,7 @@ Exit criteria:
 
 Add a short summary here when complete:
 
-- summary:
+- summary: the local app can now choose the real executor path when the runtime probe says the selected model is ready, while still falling back safely to the stub path when it is not.
 - proof added to repo:
+  - readiness-based executor selection in `src/modulo/prototype.py`
+  - prototype tests covering real selection, stub fallback, and explicit override behavior
