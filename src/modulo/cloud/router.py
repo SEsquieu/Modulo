@@ -25,6 +25,8 @@ class TrustRouter:
         self,
         request: ChatRequest,
         workers: list[WorkerSnapshot],
+        *,
+        exclude_worker_ids: set[str] | None = None,
     ) -> RouteDecision:
         model = get_model(request.model_id)
         if self.policy.require_curated_supported_model and model is None:
@@ -36,7 +38,12 @@ class TrustRouter:
         if request.requires_tools and not self.policy.tool_calling_enabled:
             raise RoutingError("Tool calling is intentionally disabled in v1.")
 
-        mode_candidates = self._filter_for_mode(request.execution_mode, request.model_id, workers)
+        mode_candidates = self._filter_for_mode(
+            request.execution_mode,
+            request.model_id,
+            workers,
+            exclude_worker_ids=exclude_worker_ids,
+        )
         if mode_candidates:
             winner = mode_candidates[0]
             return RouteDecision(
@@ -55,6 +62,7 @@ class TrustRouter:
                 ExecutionMode.CLOUD,
                 request.model_id,
                 workers,
+                exclude_worker_ids=exclude_worker_ids,
             )
             if fallback_candidates:
                 winner = fallback_candidates[0]
@@ -74,6 +82,8 @@ class TrustRouter:
         mode: ExecutionMode,
         model_id: str,
         workers: list[WorkerSnapshot],
+        *,
+        exclude_worker_ids: set[str] | None = None,
     ) -> list[WorkerSnapshot]:
         eligible_kind = {
             ExecutionMode.LOCAL: WorkerKind.LOCAL,
@@ -83,6 +93,8 @@ class TrustRouter:
 
         eligible_workers: list[tuple[float, WorkerSnapshot]] = []
         for worker in workers:
+            if exclude_worker_ids and worker.worker_id in exclude_worker_ids:
+                continue
             if worker.kind is not eligible_kind or not worker.healthy:
                 continue
 

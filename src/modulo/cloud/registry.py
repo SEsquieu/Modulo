@@ -45,6 +45,26 @@ class InMemoryWorkerRegistry:
         self._workers[worker.worker_id] = updated
         return updated
 
+    def mark_unhealthy(self, worker_id: str, reason: str = "") -> WorkerSnapshot | None:
+        worker = self._workers.get(worker_id)
+        if worker is None:
+            return None
+
+        trust_notes = worker.trust_notes
+        if reason:
+            trust_notes = (*worker.trust_notes, reason)
+
+        updated = WorkerSnapshot(
+            worker_id=worker.worker_id,
+            kind=worker.kind,
+            healthy=False,
+            max_concurrency=worker.max_concurrency,
+            advertised_models=worker.advertised_models,
+            trust_notes=trust_notes,
+        )
+        self._workers[worker.worker_id] = updated
+        return updated
+
     def health_summary(self) -> dict[str, int]:
         healthy = sum(1 for worker in self._workers.values() if worker.healthy)
         unhealthy = len(self._workers) - healthy

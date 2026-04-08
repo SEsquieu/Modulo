@@ -89,6 +89,26 @@ class InMemoryJobQueue:
         self._jobs[job.job_id] = failed
         return failed
 
+    def retry(self, job_id: str, route: RouteDecision, failure_reason: str) -> JobRecord:
+        job = self._jobs.get(job_id)
+        if job is None:
+            raise JobQueueError(f"Unknown job id: {job_id}")
+        if job.status is not JobStatus.CLAIMED:
+            raise JobQueueError(f"Job {job_id} is not in claimed state")
+
+        retried = JobRecord(
+            job_id=job.job_id,
+            request=job.request,
+            status=JobStatus.PENDING,
+            route=route,
+            assigned_worker_id=route.worker_id,
+            assigned_worker_kind=route.worker_kind,
+            attempts=job.attempts + 1,
+            failure_reason=failure_reason,
+        )
+        self._jobs[job.job_id] = retried
+        return retried
+
     def get(self, job_id: str) -> JobRecord | None:
         return self._jobs.get(job_id)
 

@@ -17,7 +17,7 @@ Current phase: `Phase 1` moving toward a working local prototype of the real `cl
 
 Current active slice:
 
-- add the minimum timeout, retry, and unhealthy-worker behavior needed for the prototype to fail honestly
+- add short-lived buyer-to-worker continuity behavior inside the router to reduce cold-start thrash
 
 Definition of progress for this phase:
 
@@ -140,26 +140,25 @@ Proof added to repo:
 - client smoke-test support wired through the local prototype harness
 - tests covering both onboarding state and smoke-test reporting
 
+### Slice 7: Reliability backbone
+
+Status: completed
+
+Summary:
+
+- added minimal retry-on-failure behavior in the control plane so a failed claimed job can be reassigned once to another eligible worker
+- added timeout handling and unhealthy-worker marking so failed workers stop receiving work
+- made client/prototype reporting reflect unhealthy worker state during failed smoke tests
+
+Proof added to repo:
+
+- cloud retry and timeout handling in the in-memory service and job queue
+- router tests covering retry-on-failure and timeout behavior
+- prototype/client tests covering unhealthy-worker reporting after execution failure
+
 ## Upcoming slices
 
 These are ordered to keep the path coherent and consistent.
-
-### Slice 7: Reliability backbone
-
-Goal:
-
-- add the minimum timeout, retry, and unhealthy-worker behavior needed for the prototype to fail honestly
-
-Why this slice matters:
-
-- it prevents the prototype from only working in the happy path
-- it prepares the router for continuity-aware behavior later
-
-Exit criteria:
-
-- claim/execute/report failures leave visible state
-- unhealthy workers stop receiving work
-- timeout and retry rules are tested at the control-plane level
 
 ### Slice 8: Buyer continuity leases
 

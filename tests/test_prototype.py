@@ -5,7 +5,14 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from modulo.common.contracts import JobStatus, WorkerRuntimeState
+from modulo.worker.errors import WorkerExecutionError
 from modulo.prototype import LocalPrototypeHarness
+
+
+class FailingExecutor:
+    def execute(self, worker_id: str, request) -> str:
+        del worker_id, request
+        raise WorkerExecutionError("prototype executor failed")
 
 
 class LocalPrototypeHarnessTests(unittest.TestCase):
@@ -48,6 +55,19 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertEqual("prototype smoke", status.smoke_test.user_message)
         self.assertTrue(onboarding.smoke_test_ok)
         self.assertEqual("", onboarding.smoke_test_error)
+
+    def test_client_smoke_test_reports_failure_when_executor_fails(self) -> None:
+        harness = LocalPrototypeHarness(executor=FailingExecutor())
+
+        harness.boot()
+        status = harness.client.run_smoke_test("prototype failure")
+        onboarding = harness.client.get_onboarding_status()
+
+        self.assertIsNotNone(status.smoke_test)
+        self.assertFalse(status.smoke_test.ok)
+        self.assertIn("did not complete successfully", status.smoke_test.error)
+        self.assertFalse(onboarding.worker_healthy)
+        self.assertFalse(onboarding.smoke_test_ok)
 
 
 if __name__ == "__main__":

@@ -254,7 +254,7 @@ class WorkerBridgeRuntime:
             self.transport.heartbeat_worker(
                 WorkerHeartbeat(
                     worker_id=self.config.worker_id,
-                    healthy=True,
+                    healthy=False,
                     current_load=0,
                 )
             )
@@ -273,7 +273,7 @@ class WorkerBridgeRuntime:
         self._status = replace(
             self._status,
             runtime_state=WorkerRuntimeState.ERROR,
-            healthy=True,
+            healthy=False,
             current_load=0,
             last_job_status=JobStatus.FAILED,
             last_error=message,

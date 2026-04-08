@@ -117,6 +117,7 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
 
         self.assertIsNotNone(status.worker)
         self.assertEqual(WorkerRuntimeState.ERROR, status.worker.runtime_state)
+        self.assertFalse(status.worker.healthy)
         self.assertEqual(JobStatus.FAILED, status.worker.last_job_status)
         self.assertEqual(1, status.worker.failed_jobs)
         self.assertIn("No execution adapter", status.worker.last_error)

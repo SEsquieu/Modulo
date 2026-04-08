@@ -12,7 +12,7 @@ from modulo.common.contracts import (
     WorkerHeartbeat,
     WorkerSnapshot,
 )
-from modulo.cloud.jobs import InMemoryJobQueue
+from modulo.cloud.jobs import InMemoryJobQueue, JobQueueError
 from modulo.cloud.registry import InMemoryWorkerRegistry
 from modulo.cloud.router import RoutingError, TrustRouter
 
@@ -32,6 +32,18 @@ class InMemoryModuloService:
     def route_chat(self, request: ChatRequest) -> RouteDecision:
         return self.router.route(request=request, workers=self.registry.list_workers())
 
+    def reroute_chat(
+        self,
+        request: ChatRequest,
+        *,
+        exclude_worker_ids: set[str],
+    ) -> RouteDecision:
+        return self.router.route(
+            request=request,
+            workers=self.registry.list_workers(),
+            exclude_worker_ids=exclude_worker_ids,
+        )
+
     def submit_chat(self, request: ChatRequest) -> JobRecord:
         route = self.route_chat(request)
         return self.jobs.create_job(request=request, route=route)
@@ -43,7 +55,39 @@ class InMemoryModuloService:
         return self.jobs.complete(result)
 
     def fail_job(self, failure: JobFailure) -> JobRecord:
+        reason = f"{failure.error_code}: {failure.message}"
+        self.registry.mark_unhealthy(failure.worker_id, reason)
+
+        job = self.get_job(failure.job_id)
+        if job is None:
+            raise JobQueueError(f"Unknown job id: {failure.job_id}")
+
+        should_retry = job.attempts < 2
+        if should_retry:
+            try:
+                route = self.reroute_chat(
+                    job.request,
+                    exclude_worker_ids={failure.worker_id},
+                )
+            except RoutingError:
+                return self.jobs.fail(failure)
+            return self.jobs.retry(
+                job_id=failure.job_id,
+                route=route,
+                failure_reason=reason,
+            )
+
         return self.jobs.fail(failure)
+
+    def timeout_job(self, job_id: str, worker_id: str) -> JobRecord:
+        return self.fail_job(
+            JobFailure(
+                job_id=job_id,
+                worker_id=worker_id,
+                error_code="EXEC_TIMEOUT",
+                message="Execution timed out",
+            )
+        )
 
     def get_job(self, job_id: str) -> JobRecord | None:
         return self.jobs.get(job_id)

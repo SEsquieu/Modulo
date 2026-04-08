@@ -188,6 +188,90 @@ class TrustRouterTests(unittest.TestCase):
         self.assertEqual(JobStatus.FAILED, failed.status)
         self.assertIn("EXEC_TIMEOUT", failed.failure_reason)
 
+    def test_failure_retries_once_on_another_eligible_worker(self) -> None:
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="network-1",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                        confidence=0.95,
+                    ),
+                ),
+            )
+        )
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="network-2",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                        confidence=0.90,
+                    ),
+                ),
+            )
+        )
+
+        job = self.service.submit_chat(
+            ChatRequest(model_id="llama3.1:8b", execution_mode=ExecutionMode.NETWORK)
+        )
+        self.service.claim_job("network-1")
+
+        retried = self.service.fail_job(
+            JobFailure(
+                job_id=job.job_id,
+                worker_id="network-1",
+                error_code="EXEC_TIMEOUT",
+                message="Execution timed out",
+            )
+        )
+
+        self.assertEqual(JobStatus.PENDING, retried.status)
+        self.assertEqual("network-2", retried.assigned_worker_id)
+        self.assertEqual(2, retried.attempts)
+
+        unhealthy_worker = self.service.registry.get("network-1")
+        self.assertIsNotNone(unhealthy_worker)
+        self.assertFalse(unhealthy_worker.healthy)
+
+    def test_timeout_marks_worker_unhealthy_and_fails_cleanly_when_no_retry_target(self) -> None:
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="network-1",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                    ),
+                ),
+            )
+        )
+
+        job = self.service.submit_chat(
+            ChatRequest(model_id="llama3.1:8b", execution_mode=ExecutionMode.NETWORK)
+        )
+        self.service.claim_job("network-1")
+
+        timed_out = self.service.timeout_job(job.job_id, "network-1")
+
+        self.assertEqual(JobStatus.FAILED, timed_out.status)
+        self.assertIn("EXEC_TIMEOUT", timed_out.failure_reason)
+
+        unhealthy_worker = self.service.registry.get("network-1")
+        self.assertIsNotNone(unhealthy_worker)
+        self.assertFalse(unhealthy_worker.healthy)
+
     def test_job_cannot_be_completed_by_wrong_worker(self) -> None:
         self.service.register_worker(
             WorkerSnapshot(
