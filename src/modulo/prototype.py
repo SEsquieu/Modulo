@@ -10,6 +10,7 @@ from modulo.client.app import (
     SmokeTestResult,
 )
 from modulo.client.ollama_discovery import OllamaDiscovery
+from modulo.client.hosting_readiness import OllamaHostingRuntimeProbe
 from modulo.cloud.http import ModuloHTTPApp
 from modulo.cloud.router import TrustRouter
 from modulo.cloud.runtime import InMemoryModuloService
@@ -39,6 +40,7 @@ class LocalPrototypeHarness:
     stub_response_text: str = "Hello from the Modulo local prototype worker."
     executor: WorkerExecutor | None = None
     ollama_discovery: OllamaDiscovery | None = None
+    hosting_runtime_probe: OllamaHostingRuntimeProbe | None = None
     service: InMemoryModuloService = field(init=False)
     cloud_runtime: InMemoryWorkerRuntime = field(init=False)
     app: ModuloHTTPApp = field(init=False)
@@ -66,6 +68,7 @@ class LocalPrototypeHarness:
         self.client = ModuloClientSupervisor(
             worker_bridge=bridge,
             ollama_discovery=self.ollama_discovery or OllamaDiscovery(),
+            hosting_runtime_probe=self.hosting_runtime_probe or OllamaHostingRuntimeProbe(),
             smoke_test_runner=self,
             activity_provider=self,
         )

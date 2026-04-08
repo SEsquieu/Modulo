@@ -6,6 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from modulo.gui.controller import GuiAppController
 from modulo.client.ollama_discovery import OllamaDiscoveryStatus
+from modulo.client.hosting_readiness import HostingRuntimeProbeStatus
 from modulo.prototype import LocalPrototypeHarness
 
 
@@ -19,10 +20,24 @@ class FakeGuiOllamaDiscovery:
         )
 
 
+class FakeGuiHostingRuntimeProbe:
+    def probe(self, model_id: str) -> HostingRuntimeProbeStatus:
+        return HostingRuntimeProbeStatus(
+            reachable=False,
+            model_ready=False,
+            summary=f"runtime probe failed for {model_id}",
+            detail="no local runtime match",
+            error="no local runtime match",
+        )
+
+
 class GuiAppControllerTests(unittest.TestCase):
     def setUp(self) -> None:
         self.controller = GuiAppController(
-            harness=LocalPrototypeHarness(ollama_discovery=FakeGuiOllamaDiscovery())
+            harness=LocalPrototypeHarness(
+                ollama_discovery=FakeGuiOllamaDiscovery(),
+                hosting_runtime_probe=FakeGuiHostingRuntimeProbe(),
+            )
         )
 
     def test_refresh_reports_initial_shell_state(self) -> None:

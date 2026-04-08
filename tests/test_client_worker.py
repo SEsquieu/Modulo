@@ -5,6 +5,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from modulo.client.app import ModuloClientSupervisor
+from modulo.client.hosting_readiness import HostingRuntimeProbeStatus
 from modulo.client.ollama_discovery import OllamaDiscoveryStatus
 from modulo.cloud.http import ModuloHTTPApp
 from modulo.cloud.router import TrustRouter
@@ -43,6 +44,16 @@ class FakeOllamaDiscovery:
         )
 
 
+class FakeHostingRuntimeProbe:
+    def probe(self, model_id: str) -> HostingRuntimeProbeStatus:
+        return HostingRuntimeProbeStatus(
+            reachable=True,
+            model_ready=True,
+            summary=f"Ollama runtime resolved {model_id} successfully.",
+            detail="fake runtime probe",
+        )
+
+
 class ClientWorkerIntegrationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.service = InMemoryModuloService(router=TrustRouter())
@@ -68,6 +79,7 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.client = ModuloClientSupervisor(
             worker_bridge=self.bridge,
             ollama_discovery=FakeOllamaDiscovery(),
+            hosting_runtime_probe=FakeHostingRuntimeProbe(),
         )
 
     def test_client_can_start_hosting_without_drifting_from_worker_status(self) -> None:
@@ -178,6 +190,7 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertTrue(status.hosting_setup.preflight.ok)
         self.assertEqual("", status.hosting_setup.preflight.failure_reason)
         self.assertTrue(status.hosting_setup.can_enable_hosting)
+        self.assertIn("PASS The local Ollama runtime can resolve", status.hosting_setup.readiness_details)
         self.assertIn("Ollama is available", status.hosting_setup.readiness_details)
 
     def test_hosting_preflight_fails_when_selected_model_is_missing(self) -> None:
@@ -198,6 +211,25 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertIn("not installed locally", status.hosting_setup.preflight.summary)
         self.assertEqual("llama3.1:8b", status.hosting_setup.preflight.failure_reason)
         self.assertFalse(status.hosting_setup.can_enable_hosting)
+
+    def test_hosting_preflight_fails_when_runtime_probe_cannot_resolve_model(self) -> None:
+        class FailingRuntimeProbe:
+            def probe(self, model_id: str) -> HostingRuntimeProbeStatus:
+                return HostingRuntimeProbeStatus(
+                    reachable=False,
+                    model_ready=False,
+                    summary=f"runtime failed for {model_id}",
+                    detail="runtime probe failed",
+                    error="runtime probe failed",
+                )
+
+        self.client.hosting_runtime_probe = FailingRuntimeProbe()
+
+        status = self.client.get_status()
+
+        self.assertFalse(status.hosting_setup.preflight.ok)
+        self.assertIn("could not resolve", status.hosting_setup.preflight.summary)
+        self.assertEqual("runtime probe failed", status.hosting_setup.preflight.failure_reason)
 
 
 if __name__ == "__main__":

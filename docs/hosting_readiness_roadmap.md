@@ -37,15 +37,19 @@ Proof added to repo:
 
 ### Slice 2: Worker and runtime checks
 
-Goal:
+Status: completed
 
-- run the minimum local checks needed to confirm hosting viability
+Summary:
 
-Exit criteria:
+- added a replaceable local runtime probe that validates whether Ollama can resolve the selected model
+- threaded the runtime probe into hosting preflight so readiness now depends on both inventory truth and runtime response
+- kept the runtime probe outside the GUI and worker layers so it remains a client-facing readiness seam
 
-- selected model presence is validated
-- Ollama reachability is validated
-- readiness can fail with actionable reasons
+Proof added to repo:
+
+- `OllamaHostingRuntimeProbe` and `HostingRuntimeProbeStatus` in the client layer
+- hosting preflight now includes a runtime-resolution check
+- client tests covering both passing and failing runtime probe cases
 
 ### Slice 3: GUI readiness flow
 

@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 from modulo.common.catalog import SUPPORTED_MODELS
 from modulo.client.ollama_discovery import OllamaDiscovery, OllamaDiscoveryStatus
+from modulo.client.hosting_readiness import (
+    HostingRuntimeProbeStatus,
+    OllamaHostingRuntimeProbe,
+)
 from modulo.common.contracts import (
     WorkerBridgeConfig,
     WorkerStatusSnapshot,
@@ -119,12 +123,18 @@ class ClientActivityProvider(Protocol):
         """Return recent activity and continuity hints for the client."""
 
 
+class ClientHostingRuntimeProbe(Protocol):
+    def probe(self, model_id: str) -> HostingRuntimeProbeStatus:
+        """Probe the local runtime for selected hosting model readiness."""
+
+
 @dataclass
 class ModuloClientSupervisor:
     worker_bridge: WorkerBridgeRuntime
     connected_to_modulo: bool = True
     openclaw_connected: bool = False
     ollama_discovery: OllamaDiscovery | None = None
+    hosting_runtime_probe: ClientHostingRuntimeProbe = field(default_factory=OllamaHostingRuntimeProbe)
     smoke_test_runner: ClientSmokeTestRunner | None = None
     activity_provider: ClientActivityProvider | None = None
     _last_smoke_test: SmokeTestResult | None = None
@@ -256,6 +266,7 @@ class ModuloClientSupervisor:
             selected_model_id=selected_model_id,
             discovery=discovery,
             supported_installed_model_ids=supported_installed_model_ids,
+            runtime_probe=self.get_hosting_runtime_probe_status(selected_model_id),
         )
         readiness_summary = self._hosting_readiness_summary(
             preflight=preflight,
@@ -342,6 +353,7 @@ class ModuloClientSupervisor:
         selected_model_id: str,
         discovery: OllamaDiscoveryStatus,
         supported_installed_model_ids: tuple[str, ...],
+        runtime_probe: HostingRuntimeProbeStatus,
     ) -> HostingPreflightStatus:
         checks: list[HostingPreflightCheck] = []
 
@@ -374,6 +386,16 @@ class ModuloClientSupervisor:
             )
         )
 
+        runtime_reachable = runtime_probe.reachable if selected_model_id else False
+        checks.append(
+            HostingPreflightCheck(
+                key="runtime_model_probe",
+                ok=runtime_reachable,
+                summary="The local Ollama runtime can resolve the selected model.",
+                detail=runtime_probe.detail or runtime_probe.summary,
+            )
+        )
+
         failed_check = next((check for check in checks if not check.ok and check.blocking), None)
         if failed_check is not None:
             return HostingPreflightStatus(
@@ -398,6 +420,16 @@ class ModuloClientSupervisor:
             )
         return self.ollama_discovery.discover()
 
+    def get_hosting_runtime_probe_status(self, model_id: str) -> HostingRuntimeProbeStatus:
+        if not model_id:
+            return HostingRuntimeProbeStatus(
+                reachable=False,
+                model_ready=False,
+                summary="No hosting model selected for runtime probe.",
+                detail="Select a curated model before probing the runtime.",
+            )
+        return self.hosting_runtime_probe.probe(model_id)
+
     def get_activity_visibility(self) -> ActivityVisibilityStatus:
         if self.activity_provider is None:
             return ActivityVisibilityStatus()
@@ -413,6 +445,8 @@ class HostingPreflightStatusSummary:
             return "Ollama is not available yet, so hosting is not ready."
         if check.key == "selected_model_installed":
             return f"{selected_model_id} is curated by Modulo but is not installed locally."
+        if check.key == "runtime_model_probe":
+            return f"The local Ollama runtime could not resolve {selected_model_id}."
         return "Hosting preflight did not pass."
 
 
