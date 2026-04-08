@@ -17,7 +17,7 @@ Current phase: `Phase 1` moving toward a working local prototype of the real `cl
 
 Current active slice:
 
-- give the client a minimal but truthful onboarding-facing layer for connection state, hosting state, and smoke-test results
+- add the minimum timeout, retry, and unhealthy-worker behavior needed for the prototype to fail honestly
 
 Definition of progress for this phase:
 
@@ -124,26 +124,25 @@ Proof added to repo:
 - prototype tests for boot and buyer round trip
 - repo docs now show how to run the local prototype path
 
+### Slice 6: Client onboarding and smoke-test surface
+
+Status: completed
+
+Summary:
+
+- extended the client-facing surface with onboarding status reporting for connection, hosting, worker health, and worker registration
+- added a smoke-test result model and a client smoke-test path that reuses the existing prototype harness
+- kept the client supervisory by delegating the actual smoke-test round trip to the harness instead of duplicating runtime logic
+
+Proof added to repo:
+
+- `OnboardingStatus` and `SmokeTestResult` on the client side
+- client smoke-test support wired through the local prototype harness
+- tests covering both onboarding state and smoke-test reporting
+
 ## Upcoming slices
 
 These are ordered to keep the path coherent and consistent.
-
-### Slice 6: Client onboarding and smoke-test surface
-
-Goal:
-
-- give the client a minimal but truthful onboarding-facing layer for connection state, hosting state, and smoke-test results
-
-Why this slice matters:
-
-- it starts shaping the real product surface without turning the client into a second runtime
-- it keeps the demo aligned with the eventual one-click story
-
-Exit criteria:
-
-- client can report connected state, hosting state, and last worker error
-- client can trigger a smoke-test-oriented request path
-- no routing logic is duplicated in `client`
 
 ### Slice 7: Reliability backbone
 

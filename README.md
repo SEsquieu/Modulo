@@ -63,6 +63,8 @@ python -m modulo.prototype
 
 This boots the in-process cloud control plane, starts a supervised worker through the client-facing path, and runs one buyer round trip through the local prototype harness.
 
+The local prototype now also supports a client-facing smoke-test path through the same harness and worker/runtime seams.
+
 ## Current platform surface
 
 The current scaffold includes these worker-facing HTTP routes:

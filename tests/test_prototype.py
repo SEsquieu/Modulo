@@ -36,6 +36,19 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertEqual(JobStatus.COMPLETED, completed_job.status)
         self.assertEqual("prototype hello", completed_job.request.messages[0].content)
 
+    def test_client_smoke_test_reports_success_through_client_surface(self) -> None:
+        harness = LocalPrototypeHarness()
+
+        harness.boot()
+        status = harness.client.run_smoke_test("prototype smoke")
+        onboarding = harness.client.get_onboarding_status()
+
+        self.assertIsNotNone(status.smoke_test)
+        self.assertTrue(status.smoke_test.ok)
+        self.assertEqual("prototype smoke", status.smoke_test.user_message)
+        self.assertTrue(onboarding.smoke_test_ok)
+        self.assertEqual("", onboarding.smoke_test_error)
+
 
 if __name__ == "__main__":
     unittest.main()

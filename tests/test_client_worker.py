@@ -20,6 +20,18 @@ from modulo.worker.runtime import InMemoryWorkerRuntime, WorkerBridgeRuntime
 from modulo.worker.transport import InProcessWorkerHTTPTransport
 
 
+class FakeSmokeTestRunner:
+    def run_smoke_test(self, user_message: str):
+        from modulo.client.app import SmokeTestResult
+
+        return SmokeTestResult(
+            ok=True,
+            model_id="llama3.1:8b",
+            user_message=user_message,
+            response_text="smoke ok",
+        )
+
+
 class ClientWorkerIntegrationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.service = InMemoryModuloService(router=TrustRouter())
@@ -112,6 +124,22 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         failed_job = self.service.get_job(job.job_id)
         self.assertIsNotNone(failed_job)
         self.assertEqual(JobStatus.FAILED, failed_job.status)
+
+    def test_client_onboarding_status_reflects_worker_and_smoke_test_state(self) -> None:
+        self.client.smoke_test_runner = FakeSmokeTestRunner()
+        self.client.connect_openclaw()
+        self.client.start_hosting()
+        self.client.run_smoke_test("hello smoke")
+
+        onboarding = self.client.get_onboarding_status()
+
+        self.assertTrue(onboarding.connected_to_modulo)
+        self.assertTrue(onboarding.openclaw_connected)
+        self.assertTrue(onboarding.hosting_enabled)
+        self.assertTrue(onboarding.worker_registered)
+        self.assertTrue(onboarding.worker_healthy)
+        self.assertTrue(onboarding.smoke_test_ok)
+        self.assertEqual("", onboarding.smoke_test_error)
 
 
 if __name__ == "__main__":

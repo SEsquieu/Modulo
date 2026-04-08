@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from modulo.client.app import ClientStatus, ModuloClientSupervisor
+from modulo.client.app import ClientStatus, ModuloClientSupervisor, SmokeTestResult
 from modulo.cloud.http import ModuloHTTPApp
 from modulo.cloud.router import TrustRouter
 from modulo.cloud.runtime import InMemoryModuloService
@@ -52,7 +52,7 @@ class LocalPrototypeHarness:
             transport=InProcessWorkerHTTPTransport(app=self.app, config=config),
             executor=executor,
         )
-        self.client = ModuloClientSupervisor(worker_bridge=bridge)
+        self.client = ModuloClientSupervisor(worker_bridge=bridge, smoke_test_runner=self)
 
     def boot(self) -> ClientStatus:
         self.client.connect_openclaw()
@@ -83,6 +83,22 @@ class LocalPrototypeHarness:
             user_message=user_message,
             response_text=completed_job.response_text,
             client_status=status,
+        )
+
+    def run_smoke_test(self, user_message: str) -> SmokeTestResult:
+        try:
+            result = self.run_round_trip(user_message)
+        except RuntimeError as exc:
+            return SmokeTestResult(
+                ok=False,
+                user_message=user_message,
+                error=str(exc),
+            )
+        return SmokeTestResult(
+            ok=True,
+            model_id=result.model_id,
+            user_message=result.user_message,
+            response_text=result.response_text,
         )
 
 
