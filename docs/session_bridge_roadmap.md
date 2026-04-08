@@ -72,6 +72,14 @@ Exit criteria:
 - the buyer side of the client can display a truthfully fetched model list
 - model inventory no longer depends on static client assumptions
 
+Status: completed
+
+Summary:
+
+- surfaced session-bridge-backed network and cloud model listings through the Buyer tab
+- buyer-visible model inventory now comes from platform state instead of static client assumptions
+- prototype network model visibility now updates as hosting registers healthy workers
+
 ### Slice 4: Session-backed client sync
 
 Goal:

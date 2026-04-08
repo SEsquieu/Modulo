@@ -28,6 +28,10 @@ class GuiShellState:
     openclaw_summary: str = ""
     openclaw_details: str = ""
     openclaw_safety_note: str = ""
+    buyer_platform_summary: str = ""
+    buyer_network_models: tuple[str, ...] = ()
+    buyer_cloud_models: tuple[str, ...] = ()
+    buyer_credits_summary: str = ""
     hosting_selected_model_id: str = ""
     hosting_available_model_ids: tuple[str, ...] = ()
     hosting_available_model_labels: tuple[str, ...] = ()
@@ -152,6 +156,10 @@ class GuiAppController:
             openclaw_summary=status.openclaw.summary,
             openclaw_details=status.openclaw.details,
             openclaw_safety_note=status.openclaw.safety_note,
+            buyer_platform_summary=status.platform.buyer_routing_summary,
+            buyer_network_models=self._buyer_model_lines(status, source="network"),
+            buyer_cloud_models=self._buyer_model_lines(status, source="cloud"),
+            buyer_credits_summary=status.platform.credits_summary,
             hosting_selected_model_id=status.hosting_setup.selected_model_id,
             hosting_available_model_ids=status.hosting_setup.available_model_ids,
             hosting_available_model_labels=status.hosting_setup.available_model_labels,
@@ -321,6 +329,18 @@ class GuiAppController:
                 f"[{entry.status}] | {entry.continuity_hint}"
             )
         return tuple(lines)
+
+    @staticmethod
+    def _buyer_model_lines(status: ClientStatus, *, source: str) -> tuple[str, ...]:
+        models = status.platform.network_models if source == "network" else status.platform.cloud_models
+        if not models:
+            label = "network" if source == "network" else "cloud"
+            return (f"No {label} models available yet.",)
+        return tuple(
+            f"{model.display_name} [{model.model_id}]"
+            + (f" - {model.summary}" if model.summary else "")
+            for model in models
+        )
 
     @staticmethod
     def _ollama_summary(status: ClientStatus) -> str:
