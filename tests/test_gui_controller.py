@@ -52,7 +52,7 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertTrue(state.start_action_enabled)
         self.assertFalse(state.stop_action_enabled)
         self.assertTrue(state.smoke_action_enabled)
-        self.assertIn("Configure OpenClaw", state.home_subtitle)
+        self.assertIn("managed separately", state.home_subtitle)
         self.assertIn("not configured", state.connection_summary.lower())
         self.assertIn("not configured", state.openclaw_summary.lower())
         self.assertIn("not changing local OpenClaw", state.openclaw_details)

@@ -227,13 +227,9 @@ class GuiAppController:
 
     @staticmethod
     def _home_subtitle(onboarding: OnboardingStatus) -> str:
-        if onboarding.openclaw_configured and onboarding.hosting_enabled:
-            return "OpenClaw routing is configured and hosting is active."
-        if onboarding.openclaw_configured:
-            return "OpenClaw routing is configured. Hosting can be enabled when you are ready."
         if onboarding.hosting_enabled:
-            return "Hosting is active. OpenClaw routing is not configured yet."
-        return "Configure OpenClaw routing or enable hosting to begin using Modulo."
+            return "Use the Host, Buyer, and Diagnostics tabs to manage each side of Modulo separately."
+        return "Host, buyer routing, and diagnostics are managed separately in this client."
 
     @staticmethod
     def _connection_summary(onboarding: OnboardingStatus) -> str:

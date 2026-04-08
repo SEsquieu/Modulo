@@ -36,62 +36,51 @@ Important current client actions:
 
 The first physical GUI should stay extremely small.
 
-### 1. Home screen
+### 1. Host tab
 
 Purpose:
 
-- give the user one place to understand current buyer and hosting state
+- let the user manage hosting setup and inspect the local worker
 
 Should display:
 
-- connected to Modulo or not
-- OpenClaw configured or not
 - hosting enabled or not
 - worker healthy or unhealthy
-- last smoke-test result
-- last worker error if present
+- worker details and host-side health
+- hosting model setup and readiness
 
 Primary actions:
 
-- `Configure OpenClaw`
 - `Enable hosting`
 - `Disable hosting`
-- `Run smoke test`
+- `Restart hosting`
 
 Backed by:
 
 - `OnboardingStatus`
 - `ClientStatus`
 
-### 2. Worker panel
+### 2. Buyer tab
 
 Purpose:
 
-- show the local worker as a supervised runtime, not a hidden background mystery
+- keep buyer routing setup separate from hosting
 
 Should display:
 
-- worker id
-- runtime state
-- registered with cloud or not
-- healthy or unhealthy
-- enabled models
-- current load
-- completed jobs
-- failed jobs
-- last worker error
+- OpenClaw routing configuration status
+- buyer-side setup guidance
+- future buyer model selection status
 
 Primary actions:
 
-- `Start hosting`
-- `Stop hosting`
-- `Restart hosting`
+- `Configure OpenClaw`
 
 Backed by:
 
-- `WorkerStatusSnapshot`
+- `ClientStatus`
 
-### 3. Smoke-test / diagnostics panel
+### 3. Diagnostics tab
 
 Purpose:
 
