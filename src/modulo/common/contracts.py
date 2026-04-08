@@ -22,6 +22,13 @@ class WorkerKind(str, Enum):
     LOCAL = "local"
 
 
+class JobStatus(str, Enum):
+    PENDING = "pending"
+    CLAIMED = "claimed"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
 @dataclass(frozen=True)
 class CanonicalModel:
     model_id: str
@@ -76,3 +83,38 @@ class RouteDecision:
     routed_via_fallback: bool = False
     reason: str = ""
 
+
+@dataclass(frozen=True)
+class JobRecord:
+    job_id: str
+    request: ChatRequest
+    status: JobStatus
+    route: RouteDecision
+    assigned_worker_id: str
+    assigned_worker_kind: WorkerKind
+    attempts: int = 1
+    failure_reason: str = ""
+    response_text: str = ""
+
+
+@dataclass(frozen=True)
+class JobClaim:
+    job_id: str
+    worker_id: str
+    request: ChatRequest
+    route: RouteDecision
+
+
+@dataclass(frozen=True)
+class JobResult:
+    job_id: str
+    worker_id: str
+    response_text: str
+
+
+@dataclass(frozen=True)
+class JobFailure:
+    job_id: str
+    worker_id: str
+    error_code: str
+    message: str

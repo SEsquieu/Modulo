@@ -7,11 +7,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from modulo.common.contracts import (
     ChatRequest,
     ExecutionMode,
+    JobFailure,
+    JobResult,
+    JobStatus,
     RoutingPolicy,
     WorkerKind,
     WorkerModelState,
     WorkerSnapshot,
 )
+from modulo.service.jobs import JobQueueError
 from modulo.service.router import RoutingError, TrustRouter
 from modulo.service.runtime import InMemoryModuloService
 
@@ -106,8 +110,8 @@ class TrustRouterTests(unittest.TestCase):
                         runtime_identity="llama3.1:8b",
                     ),
                 ),
+                )
             )
-        )
 
         with self.assertRaises(RoutingError):
             self.service.route_chat(
@@ -115,6 +119,102 @@ class TrustRouterTests(unittest.TestCase):
                     model_id="llama3.1:8b",
                     execution_mode=ExecutionMode.NETWORK,
                     stream=True,
+                )
+            )
+
+    def test_submit_claim_and_complete_job(self) -> None:
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="network-1",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                    ),
+                ),
+            )
+        )
+
+        job = self.service.submit_chat(
+            ChatRequest(model_id="llama3.1:8b", execution_mode=ExecutionMode.NETWORK)
+        )
+        self.assertEqual(JobStatus.PENDING, job.status)
+
+        claim = self.service.claim_job("network-1")
+        self.assertIsNotNone(claim)
+        self.assertEqual(job.job_id, claim.job_id)
+
+        completed = self.service.complete_job(
+            JobResult(
+                job_id=job.job_id,
+                worker_id="network-1",
+                response_text="hello from worker",
+            )
+        )
+        self.assertEqual(JobStatus.COMPLETED, completed.status)
+        self.assertEqual("hello from worker", completed.response_text)
+
+    def test_submit_and_fail_job(self) -> None:
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="network-1",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                    ),
+                ),
+            )
+        )
+
+        job = self.service.submit_chat(
+            ChatRequest(model_id="llama3.1:8b", execution_mode=ExecutionMode.NETWORK)
+        )
+        self.service.claim_job("network-1")
+        failed = self.service.fail_job(
+            JobFailure(
+                job_id=job.job_id,
+                worker_id="network-1",
+                error_code="EXEC_TIMEOUT",
+                message="Execution timed out",
+            )
+        )
+        self.assertEqual(JobStatus.FAILED, failed.status)
+        self.assertIn("EXEC_TIMEOUT", failed.failure_reason)
+
+    def test_job_cannot_be_completed_by_wrong_worker(self) -> None:
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="network-1",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                    ),
+                ),
+            )
+        )
+
+        job = self.service.submit_chat(
+            ChatRequest(model_id="llama3.1:8b", execution_mode=ExecutionMode.NETWORK)
+        )
+        self.service.claim_job("network-1")
+
+        with self.assertRaises(JobQueueError):
+            self.service.complete_job(
+                JobResult(
+                    job_id=job.job_id,
+                    worker_id="network-2",
+                    response_text="wrong worker",
                 )
             )
 
