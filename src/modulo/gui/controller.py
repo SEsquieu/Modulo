@@ -34,6 +34,9 @@ class GuiShellState:
     hosting_supported_installed_model_ids: tuple[str, ...] = ()
     hosting_supported_missing_model_ids: tuple[str, ...] = ()
     hosting_unsupported_installed_model_ids: tuple[str, ...] = ()
+    ollama_status_badge: str = "UNAVAILABLE"
+    ollama_summary: str = ""
+    ollama_inventory_summary: str = ""
     hosting_setup_summary: str = ""
     hosting_setup_details: str = ""
     hosting_setup_action_enabled: bool = True
@@ -154,6 +157,11 @@ class GuiAppController:
             hosting_supported_installed_model_ids=status.hosting_setup.supported_installed_model_ids,
             hosting_supported_missing_model_ids=status.hosting_setup.supported_missing_model_ids,
             hosting_unsupported_installed_model_ids=status.hosting_setup.unsupported_installed_model_ids,
+            ollama_status_badge=(
+                "AVAILABLE" if status.hosting_setup.ollama_available else "UNAVAILABLE"
+            ),
+            ollama_summary=self._ollama_summary(status),
+            ollama_inventory_summary=self._ollama_inventory_summary(status),
             hosting_setup_summary=status.hosting_setup.readiness_summary,
             hosting_setup_details=status.hosting_setup.readiness_details,
             hosting_setup_action_enabled=bool(status.hosting_setup.available_model_ids),
@@ -309,3 +317,21 @@ class GuiAppController:
                 f"[{entry.status}] | {entry.continuity_hint}"
             )
         return tuple(lines)
+
+    @staticmethod
+    def _ollama_summary(status: ClientStatus) -> str:
+        if status.hosting_setup.ollama_available:
+            installed_count = len(status.hosting_setup.installed_model_ids)
+            return f"Ollama is available locally with {installed_count} discovered model(s)."
+        return "Ollama is not available locally yet."
+
+    @staticmethod
+    def _ollama_inventory_summary(status: ClientStatus) -> str:
+        supported_count = len(status.hosting_setup.supported_installed_model_ids)
+        missing_count = len(status.hosting_setup.supported_missing_model_ids)
+        unsupported_count = len(status.hosting_setup.unsupported_installed_model_ids)
+        return (
+            f"{supported_count} supported model(s) installed, "
+            f"{missing_count} supported model(s) missing, "
+            f"{unsupported_count} installed model(s) outside the curated catalog."
+        )

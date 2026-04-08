@@ -53,15 +53,19 @@ Proof added to repo:
 
 ### Slice 3: GUI discovery visibility
 
-Goal:
+Status: completed
 
-- make local Ollama availability and model presence visible in the GUI
+Summary:
 
-Exit criteria:
+- surfaced Ollama availability and discovered inventory as first-class GUI state in the hosting setup flow
+- added a dedicated Ollama status readout so the GUI can explain local discovery before the user interprets hosting readiness
+- kept the presentation user-facing by summarizing local availability and curated overlap instead of exposing shell-level details
 
-- the GUI can explain whether Ollama is available
-- the GUI can show which curated models are present locally
-- the language is user-facing rather than shell-oriented
+Proof added to repo:
+
+- explicit Ollama summary and inventory state in the GUI controller
+- hosting setup panel now shows Ollama availability and inventory summary directly
+- GUI tests covering local Ollama visibility and curated overlap summaries
 
 ## Completion note
 

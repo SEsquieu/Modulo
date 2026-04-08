@@ -86,6 +86,12 @@ class ModuloMainWindow(QMainWindow):
         self.openclaw_details_box.setMinimumHeight(90)
         self.hosting_model_combo = QComboBox()
         self.hosting_model_combo.currentIndexChanged.connect(self._apply_selected_hosting_model)
+        self.ollama_status_label = QLabel()
+        self.ollama_status_label.setStyleSheet("font-weight: 600;")
+        self.ollama_summary_label = QLabel()
+        self.ollama_summary_label.setWordWrap(True)
+        self.ollama_inventory_summary_label = QLabel()
+        self.ollama_inventory_summary_label.setWordWrap(True)
         self.hosting_setup_summary_label = QLabel()
         self.hosting_setup_summary_label.setWordWrap(True)
         self.hosting_setup_details_box = QPlainTextEdit()
@@ -144,6 +150,9 @@ class ModuloMainWindow(QMainWindow):
         hosting_setup_prompt_row.addWidget(QLabel("Model"))
         hosting_setup_prompt_row.addWidget(self.hosting_model_combo)
         hosting_setup_layout.addLayout(hosting_setup_prompt_row)
+        hosting_setup_layout.addWidget(self.ollama_status_label)
+        hosting_setup_layout.addWidget(self.ollama_summary_label)
+        hosting_setup_layout.addWidget(self.ollama_inventory_summary_label)
         hosting_setup_layout.addWidget(self.hosting_setup_summary_label)
         hosting_setup_layout.addWidget(self.hosting_inventory_label)
         hosting_setup_layout.addWidget(self.hosting_setup_details_box)
@@ -341,6 +350,9 @@ class ModuloMainWindow(QMainWindow):
             self.hosting_model_combo.setCurrentIndex(selected_index)
             self.hosting_model_combo.blockSignals(False)
 
+        self.ollama_status_label.setText(f"Ollama: {state.ollama_status_badge}")
+        self.ollama_summary_label.setText(state.ollama_summary)
+        self.ollama_inventory_summary_label.setText(state.ollama_inventory_summary)
         self.hosting_setup_summary_label.setText(state.hosting_setup_summary)
         supported_installed = ", ".join(state.hosting_supported_installed_model_ids) or "None"
         supported_missing = ", ".join(state.hosting_supported_missing_model_ids) or "None"

@@ -27,7 +27,13 @@ That means:
 
 ### Step 1: Local Ollama discovery
 
-Status: in progress
+Status: completed
+
+Summary:
+
+- added a replaceable local Ollama discovery seam in the client layer
+- combined curated Modulo support with discovered local model inventory
+- surfaced Ollama availability and curated overlap explicitly in the hosting setup GUI
 
 Roadmap:
 
