@@ -72,7 +72,12 @@ Completion gate:
 
 ### Step 3: Client session bridge
 
-Status: not started
+Status: in progress
+
+Summary:
+
+- added the first client-owned session bridge contract and platform state model
+- the client can now carry platform session state separately from worker state
 
 Roadmap:
 

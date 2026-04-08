@@ -4,7 +4,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from modulo.client.app import ModuloClientSupervisor
+from modulo.client.app import ModuloClientSupervisor, PlatformModelListing, PlatformSessionStatus
 from modulo.client.hosting_readiness import HostingRuntimeProbeStatus
 from modulo.client.ollama_discovery import OllamaDiscoveryStatus
 from modulo.cloud.http import ModuloHTTPApp
@@ -82,6 +82,33 @@ class CountingHostingRuntimeProbe:
         )
 
 
+class FakeSessionBridge:
+    def fetch_platform_status(self) -> PlatformSessionStatus:
+        return PlatformSessionStatus(
+            connected=True,
+            summary="Platform session is connected.",
+            details="fake session bridge",
+            network_models=(
+                PlatformModelListing(
+                    model_id="network/llama3.1:8b",
+                    display_name="Network Llama 3.1 8B",
+                    source="network",
+                    summary="Advertised by the Modulo network.",
+                ),
+            ),
+            cloud_models=(
+                PlatformModelListing(
+                    model_id="cloud/gpt-4.1-mini",
+                    display_name="Cloud GPT-4.1 Mini",
+                    source="cloud",
+                    summary="Available through trusted cloud routing.",
+                ),
+            ),
+            credits_summary="12.5 credits available",
+            buyer_routing_summary="Buyer routing defaults to platform-managed selection.",
+        )
+
+
 class ClientWorkerIntegrationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.service = InMemoryModuloService(router=TrustRouter())
@@ -106,6 +133,7 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         )
         self.client = ModuloClientSupervisor(
             worker_bridge=self.bridge,
+            session_bridge=FakeSessionBridge(),
             ollama_discovery=FakeOllamaDiscovery(),
             hosting_runtime_probe=FakeHostingRuntimeProbe(),
         )
@@ -206,6 +234,17 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertTrue(status.hosting_enabled)
         self.assertIsNotNone(status.hosting_setup)
         self.assertEqual("llama3.1:8b", status.hosting_setup.selected_model_id)
+
+    def test_client_status_includes_session_bridge_platform_state(self) -> None:
+        status = self.client.get_status()
+
+        self.assertTrue(status.platform.connected)
+        self.assertEqual("Platform session is connected.", status.platform.summary)
+        self.assertEqual(1, len(status.platform.network_models))
+        self.assertEqual("network", status.platform.network_models[0].source)
+        self.assertEqual(1, len(status.platform.cloud_models))
+        self.assertIn("credits", status.platform.credits_summary)
+        self.assertIsNotNone(status.worker)
 
     def test_hosting_setup_includes_ollama_discovery_state(self) -> None:
         status = self.client.get_status()

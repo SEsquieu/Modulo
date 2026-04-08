@@ -34,6 +34,14 @@ Exit criteria:
 - the client can hold session-bridge-backed platform state separately from worker state
 - the bridge shape is explicit about fetching and syncing, not inference execution
 
+Status: completed
+
+Summary:
+
+- added explicit `PlatformSessionStatus` and `PlatformModelListing` client-side state models
+- added a `ClientSessionBridge` protocol so the client can fetch platform truth independently of the worker bridge
+- threaded session-bridge-backed platform state into `ClientStatus`
+
 ### Slice 2: Prototype platform fetch path
 
 Goal:

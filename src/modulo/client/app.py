@@ -94,11 +94,33 @@ class ActivityVisibilityStatus:
 
 
 @dataclass(frozen=True)
+class PlatformModelListing:
+    model_id: str
+    display_name: str
+    source: str
+    summary: str = ""
+
+
+@dataclass(frozen=True)
+class PlatformSessionStatus:
+    connected: bool = False
+    summary: str = "Platform session bridge is not configured yet."
+    details: str = (
+        "Attach a client-owned session bridge to fetch platform truth independently of hosting."
+    )
+    network_models: tuple[PlatformModelListing, ...] = ()
+    cloud_models: tuple[PlatformModelListing, ...] = ()
+    credits_summary: str = "Unavailable"
+    buyer_routing_summary: str = "Buyer routing state has not been fetched yet."
+
+
+@dataclass(frozen=True)
 class ClientStatus:
     connected_to_modulo: bool = False
     openclaw_configured: bool = False
     hosting_enabled: bool = False
     openclaw: OpenClawConfigurationStatus = OpenClawConfigurationStatus()
+    platform: PlatformSessionStatus = PlatformSessionStatus()
     hosting_setup: HostingSetupStatus = HostingSetupStatus()
     activity: ActivityVisibilityStatus = ActivityVisibilityStatus()
     worker: WorkerStatusSnapshot | None = None
@@ -132,11 +154,17 @@ class ClientHostingRuntimeProbe(Protocol):
         """Probe the local runtime for selected hosting model readiness."""
 
 
+class ClientSessionBridge(Protocol):
+    def fetch_platform_status(self) -> PlatformSessionStatus:
+        """Fetch client-owned platform state independently from the worker runtime."""
+
+
 @dataclass
 class ModuloClientSupervisor:
     worker_bridge: WorkerBridgeRuntime
     connected_to_modulo: bool = True
     openclaw_configured: bool = False
+    session_bridge: ClientSessionBridge | None = None
     ollama_discovery: OllamaDiscovery | None = None
     hosting_runtime_probe: ClientHostingRuntimeProbe = field(default_factory=OllamaHostingRuntimeProbe)
     smoke_test_runner: ClientSmokeTestRunner | None = None
@@ -235,6 +263,7 @@ class ModuloClientSupervisor:
             openclaw_configured=self.openclaw_configured,
             hosting_enabled=worker_status.desired_running,
             openclaw=self.get_openclaw_status(),
+            platform=self.get_platform_session_status(),
             hosting_setup=self.get_hosting_setup_status(),
             activity=self.get_activity_visibility(),
             worker=worker_status,
@@ -475,6 +504,11 @@ class ModuloClientSupervisor:
 
     def _prototype_hosting_available(self) -> bool:
         return isinstance(self.worker_bridge.executor, StubExecutor)
+
+    def get_platform_session_status(self) -> PlatformSessionStatus:
+        if self.session_bridge is None:
+            return PlatformSessionStatus()
+        return self.session_bridge.fetch_platform_status()
 
     def get_activity_visibility(self) -> ActivityVisibilityStatus:
         if self.activity_provider is None:
