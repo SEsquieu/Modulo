@@ -5,8 +5,9 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from modulo.client.app import ModuloClientSupervisor
+from modulo.cloud.http import ModuloHTTPApp
 from modulo.cloud.router import TrustRouter
-from modulo.cloud.runtime import InMemoryModuloService, InMemoryWorkerControlPlane
+from modulo.cloud.runtime import InMemoryModuloService
 from modulo.common.contracts import (
     ChatRequest,
     ExecutionMode,
@@ -15,21 +16,29 @@ from modulo.common.contracts import (
     WorkerRuntimeState,
 )
 from modulo.worker.runtime import InMemoryWorkerRuntime, WorkerBridgeRuntime
+from modulo.worker.transport import InProcessWorkerHTTPTransport
 
 
 class ClientWorkerIntegrationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.service = InMemoryModuloService(router=TrustRouter())
-        self.control_plane = InMemoryWorkerControlPlane(service=self.service)
         self.executor = InMemoryWorkerRuntime()
         self.executor.register_worker("worker-1", "hello from worker-1")
-        self.bridge = WorkerBridgeRuntime(
+        self.app = ModuloHTTPApp(
+            service=self.service,
+            runtime=InMemoryWorkerRuntime(),
+        )
+        self.transport = InProcessWorkerHTTPTransport(
+            app=self.app,
             config=WorkerBridgeConfig(
                 modulo_url="http://127.0.0.1:8000",
                 worker_id="worker-1",
                 enabled_models=("llama3.1:8b",),
             ),
-            control_plane=self.control_plane,
+        )
+        self.bridge = WorkerBridgeRuntime(
+            config=self.transport.config,
+            transport=self.transport,
             executor=self.executor,
         )
         self.client = ModuloClientSupervisor(worker_bridge=self.bridge)
@@ -66,7 +75,14 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
                 worker_id="worker-2",
                 enabled_models=("llama3.1:8b",),
             ),
-            control_plane=self.control_plane,
+            transport=InProcessWorkerHTTPTransport(
+                app=self.app,
+                config=WorkerBridgeConfig(
+                    modulo_url="http://127.0.0.1:8000",
+                    worker_id="worker-2",
+                    enabled_models=("llama3.1:8b",),
+                ),
+            ),
             executor=InMemoryWorkerRuntime(),
         )
         self.client = ModuloClientSupervisor(worker_bridge=self.bridge)

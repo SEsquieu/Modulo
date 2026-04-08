@@ -17,7 +17,7 @@ Current phase: `Phase 1` moving toward a working local prototype of the real `cl
 
 Current active slice:
 
-- turn the in-memory worker/client supervision seam into a runnable local prototype path
+- add a real execution adapter seam while preserving the worker runtime and client supervision contracts
 
 Definition of progress for this phase:
 
@@ -76,26 +76,25 @@ Proof added to repo:
 - `WorkerBridgeRuntime` with pluggable executor and control-plane seams
 - client/worker integration tests that verify successful and failed job cycles
 
+### Slice 3: Real worker transport seam
+
+Status: completed
+
+Summary:
+
+- replaced direct in-memory control-plane coupling in the worker runtime with a transport seam
+- added an in-process HTTP-shaped worker transport that uses the worker protocol endpoints
+- kept the client supervision surface unchanged while making the bridge exercise the real control contract
+
+Proof added to repo:
+
+- `InProcessWorkerHTTPTransport` for register, heartbeat, claim, result, and fail
+- `WorkerBridgeRuntime` now depends on transport behavior instead of direct service access
+- integration tests now run the bridge through `ModuloHTTPApp` worker endpoints
+
 ## Upcoming slices
 
 These are ordered to keep the path coherent and consistent.
-
-### Slice 3: Real worker transport seam
-
-Goal:
-
-- replace the in-memory control-plane coupling with a worker transport that talks through the worker HTTP endpoints
-
-Why this slice matters:
-
-- it makes the bridge behavior real without changing the client/worker supervision contract
-- it keeps the prototype honest by exercising the same protocol the future system will use
-
-Exit criteria:
-
-- worker runtime uses transport methods instead of direct service calls
-- register, heartbeat, claim, result, and fail all work through the same seam
-- current client supervisor still works unchanged against worker status snapshots
 
 ### Slice 4: Real execution adapter seam
 

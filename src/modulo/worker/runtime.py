@@ -5,17 +5,15 @@ from typing import Protocol
 
 from modulo.common.contracts import (
     ChatRequest,
-    JobClaim,
     JobFailure,
     JobResult,
     JobStatus,
     WorkerBridgeConfig,
     WorkerHeartbeat,
-    WorkerModelState,
     WorkerRuntimeState,
-    WorkerSnapshot,
     WorkerStatusSnapshot,
 )
+from modulo.worker.transport import WorkerTransportError
 
 
 class WorkerExecutionError(Exception):
@@ -27,20 +25,20 @@ class WorkerExecutor(Protocol):
         """Execute a claimed job for a worker."""
 
 
-class WorkerControlPlane(Protocol):
-    def register_worker(self, worker: WorkerSnapshot) -> None:
+class WorkerTransport(Protocol):
+    def register_worker(self) -> None:
         """Register the worker with the control plane."""
 
-    def heartbeat_worker(self, heartbeat: WorkerHeartbeat) -> WorkerSnapshot | None:
+    def heartbeat_worker(self, heartbeat: WorkerHeartbeat) -> None:
         """Update worker liveness and load information."""
 
-    def claim_job(self, worker_id: str) -> JobClaim | None:
+    def claim_job(self, worker_id: str):
         """Claim the next eligible job for the worker."""
 
-    def complete_job(self, result: JobResult):
+    def complete_job(self, result: JobResult) -> None:
         """Record a successful job result."""
 
-    def fail_job(self, failure: JobFailure):
+    def fail_job(self, failure: JobFailure) -> None:
         """Record a failed job result."""
 
 
@@ -62,7 +60,7 @@ class InMemoryWorkerRuntime:
 @dataclass
 class WorkerBridgeRuntime:
     config: WorkerBridgeConfig
-    control_plane: WorkerControlPlane
+    transport: WorkerTransport
     executor: WorkerExecutor
     _status: WorkerStatusSnapshot = field(init=False)
 
@@ -83,14 +81,26 @@ class WorkerBridgeRuntime:
             healthy=True,
             last_error="",
         )
-        self.control_plane.register_worker(self._build_worker_snapshot(healthy=True, current_load=0))
-        self.control_plane.heartbeat_worker(
-            WorkerHeartbeat(
-                worker_id=self.config.worker_id,
-                healthy=True,
-                current_load=0,
+        try:
+            self.transport.register_worker()
+            self.transport.heartbeat_worker(
+                WorkerHeartbeat(
+                    worker_id=self.config.worker_id,
+                    healthy=True,
+                    current_load=0,
+                )
             )
-        )
+        except WorkerTransportError as exc:
+            self._status = replace(
+                self._status,
+                desired_running=False,
+                runtime_state=WorkerRuntimeState.ERROR,
+                healthy=False,
+                registered_with_cloud=False,
+                last_error=str(exc),
+            )
+            return self._status
+
         self._status = replace(
             self._status,
             runtime_state=WorkerRuntimeState.IDLE,
@@ -102,13 +112,21 @@ class WorkerBridgeRuntime:
 
     def stop(self) -> WorkerStatusSnapshot:
         if self._status.registered_with_cloud:
-            self.control_plane.heartbeat_worker(
-                WorkerHeartbeat(
-                    worker_id=self.config.worker_id,
-                    healthy=False,
-                    current_load=0,
+            try:
+                self.transport.heartbeat_worker(
+                    WorkerHeartbeat(
+                        worker_id=self.config.worker_id,
+                        healthy=False,
+                        current_load=0,
+                    )
                 )
-            )
+            except WorkerTransportError as exc:
+                self._status = replace(
+                    self._status,
+                    runtime_state=WorkerRuntimeState.ERROR,
+                    last_error=str(exc),
+                )
+                return self._status
         self._status = replace(
             self._status,
             desired_running=False,
@@ -130,15 +148,25 @@ class WorkerBridgeRuntime:
         if not self._status.registered_with_cloud:
             return self.start()
 
-        self.control_plane.heartbeat_worker(
-            WorkerHeartbeat(
-                worker_id=self.config.worker_id,
-                healthy=True,
-                current_load=0,
+        try:
+            self.transport.heartbeat_worker(
+                WorkerHeartbeat(
+                    worker_id=self.config.worker_id,
+                    healthy=True,
+                    current_load=0,
+                )
             )
-        )
+            claim = self.transport.claim_job(self.config.worker_id)
+        except WorkerTransportError as exc:
+            self._status = replace(
+                self._status,
+                runtime_state=WorkerRuntimeState.ERROR,
+                healthy=False,
+                current_load=0,
+                last_error=str(exc),
+            )
+            return self._status
 
-        claim = self.control_plane.claim_job(self.config.worker_id)
         if claim is None:
             self._status = replace(
                 self._status,
@@ -156,17 +184,27 @@ class WorkerBridgeRuntime:
             last_job_id=claim.job_id,
             last_job_status=JobStatus.CLAIMED,
         )
-        self.control_plane.heartbeat_worker(
-            WorkerHeartbeat(
-                worker_id=self.config.worker_id,
-                healthy=True,
-                current_load=1,
+        try:
+            self.transport.heartbeat_worker(
+                WorkerHeartbeat(
+                    worker_id=self.config.worker_id,
+                    healthy=True,
+                    current_load=1,
+                )
             )
-        )
+        except WorkerTransportError as exc:
+            self._status = replace(
+                self._status,
+                runtime_state=WorkerRuntimeState.ERROR,
+                healthy=False,
+                current_load=0,
+                last_error=str(exc),
+            )
+            return self._status
 
         try:
             response_text = self.executor.execute(self.config.worker_id, claim.request)
-            self.control_plane.complete_job(
+            self.transport.complete_job(
                 JobResult(
                     job_id=claim.job_id,
                     worker_id=self.config.worker_id,
@@ -174,29 +212,34 @@ class WorkerBridgeRuntime:
                 )
             )
         except WorkerExecutionError as exc:
-            self.control_plane.fail_job(
-                JobFailure(
-                    job_id=claim.job_id,
-                    worker_id=self.config.worker_id,
-                    error_code="EXEC_ERROR",
-                    message=str(exc),
-                )
-            )
+            return self._handle_execution_failure(claim.job_id, str(exc))
+        except WorkerTransportError as exc:
             self._status = replace(
                 self._status,
                 runtime_state=WorkerRuntimeState.ERROR,
-                healthy=True,
+                healthy=False,
                 current_load=0,
-                last_job_status=JobStatus.FAILED,
                 last_error=str(exc),
-                failed_jobs=self._status.failed_jobs + 1,
             )
-            self.control_plane.heartbeat_worker(
+            return self._status
+
+        try:
+            self.transport.heartbeat_worker(
                 WorkerHeartbeat(
                     worker_id=self.config.worker_id,
                     healthy=True,
                     current_load=0,
                 )
+            )
+        except WorkerTransportError as exc:
+            self._status = replace(
+                self._status,
+                runtime_state=WorkerRuntimeState.ERROR,
+                healthy=False,
+                current_load=0,
+                last_job_status=JobStatus.COMPLETED,
+                last_error=str(exc),
+                completed_jobs=self._status.completed_jobs + 1,
             )
             return self._status
 
@@ -209,27 +252,44 @@ class WorkerBridgeRuntime:
             last_error="",
             completed_jobs=self._status.completed_jobs + 1,
         )
-        self.control_plane.heartbeat_worker(
-            WorkerHeartbeat(
-                worker_id=self.config.worker_id,
-                healthy=True,
-                current_load=0,
-            )
-        )
         return self._status
 
-    def _build_worker_snapshot(self, *, healthy: bool, current_load: int) -> WorkerSnapshot:
-        return WorkerSnapshot(
-            worker_id=self.config.worker_id,
-            kind=self.config.kind,
-            healthy=healthy,
-            max_concurrency=self.config.max_concurrency,
-            advertised_models=tuple(
-                WorkerModelState(
-                    model_id=model_id,
-                    runtime_identity=model_id,
-                    current_load=current_load,
+    def _handle_execution_failure(self, job_id: str, message: str) -> WorkerStatusSnapshot:
+        try:
+            self.transport.fail_job(
+                JobFailure(
+                    job_id=job_id,
+                    worker_id=self.config.worker_id,
+                    error_code="EXEC_ERROR",
+                    message=message,
                 )
-                for model_id in self.config.enabled_models
-            ),
+            )
+            self.transport.heartbeat_worker(
+                WorkerHeartbeat(
+                    worker_id=self.config.worker_id,
+                    healthy=True,
+                    current_load=0,
+                )
+            )
+        except WorkerTransportError as exc:
+            self._status = replace(
+                self._status,
+                runtime_state=WorkerRuntimeState.ERROR,
+                healthy=False,
+                current_load=0,
+                last_job_status=JobStatus.FAILED,
+                last_error=str(exc),
+                failed_jobs=self._status.failed_jobs + 1,
+            )
+            return self._status
+
+        self._status = replace(
+            self._status,
+            runtime_state=WorkerRuntimeState.ERROR,
+            healthy=True,
+            current_load=0,
+            last_job_status=JobStatus.FAILED,
+            last_error=message,
+            failed_jobs=self._status.failed_jobs + 1,
         )
+        return self._status
