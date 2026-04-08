@@ -53,6 +53,7 @@ These rules should guide implementation order:
 
 The current slice order and completion summaries live in [roadmap.md](/Users/16096/Desktop/Projects/Modulo/docs/roadmap.md).
 The GUI-specific build path lives in [gui_roadmap.md](/Users/16096/Desktop/Projects/Modulo/docs/gui_roadmap.md).
+The first GUI screen/state inventory lives in [gui_state_map.md](/Users/16096/Desktop/Projects/Modulo/docs/gui_state_map.md).
 
 ## Development sequencing
 

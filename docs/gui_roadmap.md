@@ -41,7 +41,7 @@ Current GUI phase: `Phase 0` planning and thin-client surface definition.
 
 Current active GUI slice:
 
-- define the GUI build path explicitly so future client work lands as coherent product slices instead of ad hoc frontend additions
+- stand up the thinnest possible physical GUI shell that launches locally and can display real client state
 
 Definition of progress for this phase:
 
@@ -51,34 +51,25 @@ Definition of progress for this phase:
 
 ## Completed GUI slices
 
-No GUI-specific slices are completed yet.
+### GUI Slice 1: Client surface inventory and state map
 
-When GUI work begins, completed slices should follow the same format as the backend roadmap:
+Status: completed
 
-- `Status`
-- short `Summary`
-- short `Proof added to repo`
+Summary:
+
+- mapped the existing client supervision, onboarding, smoke-test, and worker-status types onto the first GUI screens
+- identified the smallest first GUI screens as the home screen, worker panel, and smoke-test/diagnostics panel
+- documented the first command surface and the missing seams that the shell/bootstrap slice must account for
+
+Proof added to repo:
+
+- [gui_state_map.md](/Users/16096/Desktop/Projects/Modulo/docs/gui_state_map.md)
+- explicit mapping from current Python client state to GUI view-model concerns
+- explicit event/command map for the first GUI shell
 
 ## Upcoming GUI slices
 
 These are ordered to keep the GUI build coherent and consistent with the current architecture.
-
-### GUI Slice 1: Client surface inventory and state map
-
-Goal:
-
-- turn the existing client supervision and onboarding data into an explicit GUI-facing state map
-
-Why this slice matters:
-
-- the GUI should start from real product state, not from visual mock logic
-- it makes sure the first screens reflect what the client can already truthfully report
-
-Exit criteria:
-
-- document the first GUI screens and the state each one needs
-- map existing client types such as onboarding status, smoke-test status, worker status, and hosting state to GUI concerns
-- identify missing view-model or event seams without implementing full UI yet
 
 ### GUI Slice 2: Barebones local shell and app bootstrap
 
