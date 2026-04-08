@@ -4,6 +4,7 @@ Project documentation lives here as the repo grows.
 
 Current source of truth:
 
+- [handoff.md](./handoff.md): quick resume file for workstation handoff and current implementation context
 - [../modulo_v_1_design_doc.md](../modulo_v_1_design_doc.md): product and architecture direction for Modulo v1
 - [roadmap.md](./roadmap.md): current development phase, completed slices, and upcoming roadmap-aligned slices
 - [gui_roadmap.md](./gui_roadmap.md): GUI-client-specific build plan, phased slices, and UI guardrails

@@ -96,6 +96,45 @@ class OpenClawDiscoveryTests(unittest.TestCase):
         self.assertEqual("configured", status.state)
         self.assertIn("configured to route through modulo", status.summary.lower())
 
+    def test_reads_primary_model_from_agents_defaults_shape(self) -> None:
+        config_path = Path("C:/fake/openclaw.json")
+        discovery = OpenClawDiscovery(
+            modulo_url="http://127.0.0.1:11434",
+            config_path=config_path,
+            detect_command=False,
+        )
+
+        with (
+            mock.patch.object(Path, "exists", return_value=True),
+            mock.patch.object(
+                Path,
+                "read_text",
+                return_value=json.dumps(
+                    {
+                        "models": {
+                            "providers": {
+                                "ollama": {
+                                    "baseUrl": "http://127.0.0.1:11434",
+                                }
+                            }
+                        },
+                        "agents": {
+                            "defaults": {
+                                "model": {
+                                    "primary": "ollama/gemma4:e2b",
+                                }
+                            }
+                        },
+                    }
+                ),
+            ),
+        ):
+            status = discovery.discover()
+
+        self.assertEqual("ollama/gemma4:e2b", status.current_primary_model)
+        self.assertEqual("ollama", status.current_provider)
+        self.assertEqual("http://127.0.0.1:11434", status.current_base_url)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -68,7 +68,11 @@ class OpenClawDiscovery:
                 error=str(exc),
             )
 
-        primary_model = str(payload.get("model", {}).get("primary", ""))
+        primary_model = str(
+            self._nested_value(payload, "model", "primary")
+            or self._nested_value(payload, "agents", "defaults", "model", "primary")
+            or ""
+        )
         current_provider = primary_model.split("/", 1)[0] if "/" in primary_model else ""
         provider_config = payload.get("models", {}).get("providers", {}).get(current_provider, {})
         if not isinstance(provider_config, dict):
@@ -101,3 +105,12 @@ class OpenClawDiscovery:
             current_primary_model=primary_model,
             current_base_url=base_url,
         )
+
+    @staticmethod
+    def _nested_value(payload: dict, *path: str) -> object:
+        current: object = payload
+        for key in path:
+            if not isinstance(current, dict):
+                return None
+            current = current.get(key)
+        return current
