@@ -91,9 +91,15 @@ Exit criteria:
 - the client has one obvious place for future account, credits, and buyer config reads
 - host and buyer tabs can share platform truth without coupling their workflows
 
+Status: completed
+
+Summary:
+
+- extended the session bridge state to carry account and buyer-config summaries alongside model inventory and credits
+- surfaced that session-backed state through the Buyer tab so the client has one obvious place for future account, credits, and buyer config reads
+- completed the session bridge mini roadmap as the client-owned control-plane layer for both buyer and host surfaces
+
 ## Completion note
 
-Add a short summary here when complete:
-
-- summary:
-- proof added to repo:
+- summary: added a complete prototype-safe client session bridge that owns platform-facing fetch and sync state independently from the worker bridge
+- proof added to repo: `src/modulo/client/app.py`, `src/modulo/prototype.py`, `src/modulo/gui/controller.py`, `src/modulo/gui/window.py`

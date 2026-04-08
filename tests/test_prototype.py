@@ -63,9 +63,11 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
 
         self.assertTrue(status.platform.connected)
         self.assertIn("local prototype control plane", status.platform.summary)
+        self.assertIn("local-only", status.platform.account_summary)
         self.assertEqual((), status.platform.network_models)
         self.assertTrue(status.platform.cloud_models)
         self.assertIn("No network models", status.platform.buyer_routing_summary)
+        self.assertIn("platform-managed", status.platform.buyer_config_summary)
 
     def test_session_bridge_reflects_network_models_after_hosting_registers(self) -> None:
         harness = LocalPrototypeHarness()

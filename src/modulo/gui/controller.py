@@ -29,9 +29,11 @@ class GuiShellState:
     openclaw_details: str = ""
     openclaw_safety_note: str = ""
     buyer_platform_summary: str = ""
+    buyer_account_summary: str = ""
     buyer_network_models: tuple[str, ...] = ()
     buyer_cloud_models: tuple[str, ...] = ()
     buyer_credits_summary: str = ""
+    buyer_config_summary: str = ""
     hosting_selected_model_id: str = ""
     hosting_available_model_ids: tuple[str, ...] = ()
     hosting_available_model_labels: tuple[str, ...] = ()
@@ -157,9 +159,11 @@ class GuiAppController:
             openclaw_details=status.openclaw.details,
             openclaw_safety_note=status.openclaw.safety_note,
             buyer_platform_summary=status.platform.buyer_routing_summary,
+            buyer_account_summary=status.platform.account_summary,
             buyer_network_models=self._buyer_model_lines(status, source="network"),
             buyer_cloud_models=self._buyer_model_lines(status, source="cloud"),
             buyer_credits_summary=status.platform.credits_summary,
+            buyer_config_summary=status.platform.buyer_config_summary,
             hosting_selected_model_id=status.hosting_setup.selected_model_id,
             hosting_available_model_ids=status.hosting_setup.available_model_ids,
             hosting_available_model_labels=status.hosting_setup.available_model_labels,

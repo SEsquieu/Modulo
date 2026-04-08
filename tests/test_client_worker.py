@@ -88,6 +88,7 @@ class FakeSessionBridge:
             connected=True,
             summary="Platform session is connected.",
             details="fake session bridge",
+            account_summary="Prototype account: local-dev-user",
             network_models=(
                 PlatformModelListing(
                     model_id="network/llama3.1:8b",
@@ -106,6 +107,7 @@ class FakeSessionBridge:
             ),
             credits_summary="12.5 credits available",
             buyer_routing_summary="Buyer routing defaults to platform-managed selection.",
+            buyer_config_summary="Buyer config is using platform-managed model selection.",
         )
 
 
@@ -240,10 +242,12 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
 
         self.assertTrue(status.platform.connected)
         self.assertEqual("Platform session is connected.", status.platform.summary)
+        self.assertIn("local-dev-user", status.platform.account_summary)
         self.assertEqual(1, len(status.platform.network_models))
         self.assertEqual("network", status.platform.network_models[0].source)
         self.assertEqual(1, len(status.platform.cloud_models))
         self.assertIn("credits", status.platform.credits_summary)
+        self.assertIn("platform-managed", status.platform.buyer_config_summary)
         self.assertIsNotNone(status.worker)
 
     def test_hosting_setup_includes_ollama_discovery_state(self) -> None:

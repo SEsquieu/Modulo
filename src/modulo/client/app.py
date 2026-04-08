@@ -108,10 +108,12 @@ class PlatformSessionStatus:
     details: str = (
         "Attach a client-owned session bridge to fetch platform truth independently of hosting."
     )
+    account_summary: str = "No account context has been fetched yet."
     network_models: tuple[PlatformModelListing, ...] = ()
     cloud_models: tuple[PlatformModelListing, ...] = ()
     credits_summary: str = "Unavailable"
     buyer_routing_summary: str = "Buyer routing state has not been fetched yet."
+    buyer_config_summary: str = "Buyer model selection and routing preferences have not been fetched yet."
 
 
 @dataclass(frozen=True)

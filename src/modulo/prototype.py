@@ -88,10 +88,14 @@ class LocalPrototypeSessionBridge(ClientSessionBridge):
             connected=True,
             summary="Platform session bridge is connected to the local prototype control plane.",
             details=details,
+            account_summary="Prototype account context is local-only and not authenticated yet.",
             network_models=tuple(network_models.values()),
             cloud_models=cloud_models,
             credits_summary="Prototype credits are not implemented yet.",
             buyer_routing_summary=network_summary,
+            buyer_config_summary=(
+                "Buyer routing defaults to platform-managed selection in the local prototype."
+            ),
         )
 
 

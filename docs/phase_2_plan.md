@@ -72,13 +72,14 @@ Completion gate:
 
 ### Step 3: Client session bridge
 
-Status: in progress
+Status: completed
 
 Summary:
 
 - added the first client-owned session bridge contract and platform state model
 - the client can now carry platform session state separately from worker state
 - added a prototype-safe platform fetch path so the client can read platform state without enabling hosting
+- surfaced session-backed buyer inventory, account summary, credits, and buyer-config state through the client and GUI
 
 Roadmap:
 
