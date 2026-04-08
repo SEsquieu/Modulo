@@ -54,6 +54,34 @@ class FakeHostingRuntimeProbe:
         )
 
 
+class CountingOllamaDiscovery:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def discover(self) -> OllamaDiscoveryStatus:
+        self.calls += 1
+        return OllamaDiscoveryStatus(
+            available=True,
+            installed_model_ids=("llama3.1:8b",),
+            summary="counting discovery",
+            details="counting discovery",
+        )
+
+
+class CountingHostingRuntimeProbe:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def probe(self, model_id: str) -> HostingRuntimeProbeStatus:
+        self.calls += 1
+        return HostingRuntimeProbeStatus(
+            reachable=True,
+            model_ready=True,
+            summary=f"counting runtime probe for {model_id}",
+            detail="counting runtime probe",
+        )
+
+
 class ClientWorkerIntegrationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.service = InMemoryModuloService(router=TrustRouter())
@@ -230,6 +258,18 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertFalse(status.hosting_setup.preflight.ok)
         self.assertIn("could not resolve", status.hosting_setup.preflight.summary)
         self.assertEqual("runtime probe failed", status.hosting_setup.preflight.failure_reason)
+
+    def test_readiness_checks_are_cached_between_status_reads(self) -> None:
+        discovery = CountingOllamaDiscovery()
+        runtime_probe = CountingHostingRuntimeProbe()
+        self.client.ollama_discovery = discovery
+        self.client.hosting_runtime_probe = runtime_probe
+
+        self.client.get_status()
+        self.client.get_status()
+
+        self.assertEqual(1, discovery.calls)
+        self.assertEqual(1, runtime_probe.calls)
 
 
 if __name__ == "__main__":

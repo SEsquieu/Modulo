@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import time
 from typing import Protocol
 
 from modulo.common.catalog import SUPPORTED_MODELS
@@ -137,7 +138,13 @@ class ModuloClientSupervisor:
     hosting_runtime_probe: ClientHostingRuntimeProbe = field(default_factory=OllamaHostingRuntimeProbe)
     smoke_test_runner: ClientSmokeTestRunner | None = None
     activity_provider: ClientActivityProvider | None = None
+    readiness_cache_ttl_seconds: float = 5.0
     _last_smoke_test: SmokeTestResult | None = None
+    _cached_ollama_discovery: OllamaDiscoveryStatus | None = None
+    _cached_ollama_discovery_at: float = 0.0
+    _cached_runtime_probe: HostingRuntimeProbeStatus | None = None
+    _cached_runtime_probe_model_id: str = ""
+    _cached_runtime_probe_at: float = 0.0
 
     def configure_worker(self, config: WorkerBridgeConfig) -> ClientStatus:
         was_running = self.worker_bridge.get_status().desired_running
@@ -150,6 +157,7 @@ class ModuloClientSupervisor:
         self.worker_bridge.__post_init__()
         if was_running:
             self.worker_bridge.start()
+        self._invalidate_readiness_cache()
         self._last_smoke_test = None
         return self.get_status()
 
@@ -412,13 +420,23 @@ class ModuloClientSupervisor:
         )
 
     def get_ollama_discovery_status(self) -> OllamaDiscoveryStatus:
+        now = time.monotonic()
+        if (
+            self._cached_ollama_discovery is not None
+            and now - self._cached_ollama_discovery_at < self.readiness_cache_ttl_seconds
+        ):
+            return self._cached_ollama_discovery
         if self.ollama_discovery is None:
-            return OllamaDiscoveryStatus(
+            status = OllamaDiscoveryStatus(
                 summary="Ollama discovery is not configured.",
                 details="Attach a discovery provider before using live local model detection.",
                 error="no discovery provider configured",
             )
-        return self.ollama_discovery.discover()
+        else:
+            status = self.ollama_discovery.discover()
+        self._cached_ollama_discovery = status
+        self._cached_ollama_discovery_at = now
+        return status
 
     def get_hosting_runtime_probe_status(self, model_id: str) -> HostingRuntimeProbeStatus:
         if not model_id:
@@ -428,12 +446,30 @@ class ModuloClientSupervisor:
                 summary="No hosting model selected for runtime probe.",
                 detail="Select a curated model before probing the runtime.",
             )
-        return self.hosting_runtime_probe.probe(model_id)
+        now = time.monotonic()
+        if (
+            self._cached_runtime_probe is not None
+            and self._cached_runtime_probe_model_id == model_id
+            and now - self._cached_runtime_probe_at < self.readiness_cache_ttl_seconds
+        ):
+            return self._cached_runtime_probe
+        status = self.hosting_runtime_probe.probe(model_id)
+        self._cached_runtime_probe = status
+        self._cached_runtime_probe_model_id = model_id
+        self._cached_runtime_probe_at = now
+        return status
 
     def get_activity_visibility(self) -> ActivityVisibilityStatus:
         if self.activity_provider is None:
             return ActivityVisibilityStatus()
         return self.activity_provider.get_activity_visibility()
+
+    def _invalidate_readiness_cache(self) -> None:
+        self._cached_ollama_discovery = None
+        self._cached_ollama_discovery_at = 0.0
+        self._cached_runtime_probe = None
+        self._cached_runtime_probe_model_id = ""
+        self._cached_runtime_probe_at = 0.0
 
 
 class HostingPreflightStatusSummary:

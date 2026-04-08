@@ -213,12 +213,12 @@ class ModuloMainWindow(QMainWindow):
         root_layout.addStretch(1)
         root.setLayout(root_layout)
 
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.NoFrame)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        scroll.setWidget(root)
-        self.setCentralWidget(scroll)
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setFrameShape(QFrame.NoFrame)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll_area.setWidget(root)
+        self.setCentralWidget(self.scroll_area)
 
         self._apply_window_sizing()
 
@@ -264,7 +264,10 @@ class ModuloMainWindow(QMainWindow):
             value_label.setText(text)
 
     def _poll_state(self) -> None:
+        scrollbar = self.scroll_area.verticalScrollBar()
+        previous_value = scrollbar.value()
         self._apply_state(self.controller.poll_worker())
+        scrollbar.setValue(previous_value)
 
     def _run_smoke_test_from_input(self) -> None:
         prompt = self.smoke_prompt_input.text().strip() or "GUI smoke test request"
