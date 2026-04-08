@@ -2,11 +2,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from modulo.client.app import ClientStatus, ModuloClientSupervisor, SmokeTestResult
+from modulo.client.app import (
+    ActivityEntry,
+    ActivityVisibilityStatus,
+    ClientStatus,
+    ModuloClientSupervisor,
+    SmokeTestResult,
+)
 from modulo.cloud.http import ModuloHTTPApp
 from modulo.cloud.router import TrustRouter
 from modulo.cloud.runtime import InMemoryModuloService
-from modulo.common.contracts import ChatMessage, ChatRequest, ExecutionMode, WorkerBridgeConfig
+from modulo.common.contracts import ChatMessage, ChatRequest, ExecutionMode, JobStatus, WorkerBridgeConfig
 from modulo.worker.executors import StubExecutor
 from modulo.worker.runtime import InMemoryWorkerRuntime, WorkerBridgeRuntime, WorkerExecutor
 from modulo.worker.transport import InProcessWorkerHTTPTransport
@@ -55,7 +61,11 @@ class LocalPrototypeHarness:
             transport=InProcessWorkerHTTPTransport(app=self.app, config=config),
             executor=executor,
         )
-        self.client = ModuloClientSupervisor(worker_bridge=bridge, smoke_test_runner=self)
+        self.client = ModuloClientSupervisor(
+            worker_bridge=bridge,
+            smoke_test_runner=self,
+            activity_provider=self,
+        )
 
     def boot(self) -> ClientStatus:
         self.client.connect_openclaw()
@@ -107,6 +117,63 @@ class LocalPrototypeHarness:
             user_message=result.user_message,
             response_text=result.response_text,
         )
+
+    def get_activity_visibility(self) -> ActivityVisibilityStatus:
+        jobs = sorted(
+            self.service.jobs.list_jobs(),
+            key=lambda job: job.job_id,
+            reverse=True,
+        )
+        recent_entries = tuple(self._activity_entry_for_job(job) for job in jobs[:5])
+        continuity_summary = self._continuity_summary(jobs)
+        return ActivityVisibilityStatus(
+            continuity_summary=continuity_summary,
+            recent_activity=recent_entries,
+        )
+
+    def _activity_entry_for_job(self, job) -> ActivityEntry:
+        continuity_hint = self._continuity_hint(job)
+        buyer_label = job.request.buyer_id or "anonymous buyer"
+        summary = (
+            f"{buyer_label} requested {job.request.model_id} and landed on "
+            f"{job.assigned_worker_id}."
+        )
+        if job.status is JobStatus.FAILED and job.failure_reason:
+            summary = f"{summary} Final state: {job.failure_reason}"
+        return ActivityEntry(
+            job_id=job.job_id,
+            buyer_id=job.request.buyer_id,
+            model_id=job.request.model_id,
+            worker_id=job.assigned_worker_id,
+            status=job.status.value,
+            continuity_hint=continuity_hint,
+            summary=summary,
+        )
+
+    def _continuity_summary(self, jobs) -> str:
+        if not jobs:
+            return "No buyer continuity activity yet."
+        leased_jobs = [job for job in jobs if "leased worker" in job.route.reason.lower()]
+        if leased_jobs:
+            latest = leased_jobs[0]
+            buyer_label = latest.request.buyer_id or "recent buyer"
+            return (
+                f"Buyer continuity reused {latest.assigned_worker_id} for {buyer_label} "
+                f"on {latest.request.model_id}."
+            )
+        latest = jobs[0]
+        return (
+            f"Latest routing sent {latest.request.model_id} to {latest.assigned_worker_id}. "
+            "Run another request from the same buyer to exercise continuity."
+        )
+
+    @staticmethod
+    def _continuity_hint(job) -> str:
+        if "leased worker" in job.route.reason.lower():
+            return "Continuity lease reused"
+        if job.attempts > 1:
+            return "Retried onto a different worker"
+        return "Fresh routing decision"
 
 
 def main() -> None:

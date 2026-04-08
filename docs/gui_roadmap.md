@@ -41,7 +41,7 @@ Current GUI phase: `Phase 0` planning and thin-client surface definition.
 
 Current active GUI slice:
 
-- surface enough routing and activity information in the GUI to make behavior legible without turning it into an operator console
+- maintain and refine the GUI while the backend shifts from prototype-safe behavior toward real integrations
 
 Definition of progress for this phase:
 
@@ -163,23 +163,31 @@ Proof added to repo:
 - dedicated hosting setup section in the PySide shell with model visibility and readiness details
 - client and controller tests covering setup-state synchronization and model selection
 
-## Upcoming GUI slices
-
-These are ordered to keep the GUI build coherent and consistent with the current architecture.
-
 ### GUI Slice 8: Activity and continuity visibility
 
-Goal:
-- surface enough routing/activity information in the GUI to make behavior legible without turning the GUI into an operator console
+Status: completed
 
-Why this slice matters:
-- users should be able to tell that Modulo is alive, where work is going, and whether continuity is helping
-- this helps trust without leaking backend policy complexity into the interface
+Summary:
 
-Exit criteria:
-- GUI can show recent jobs or recent worker activity
-- GUI can show simple routing/continuity hints when useful
-- the presentation stays user-facing rather than internal-only
+- added a user-facing activity panel that shows recent jobs and a simple continuity summary without exposing raw backend internals
+- extended the prototype and client-facing state so recent job records and lease reuse hints are available to the GUI through the same thin supervision path
+- kept the presentation lightweight and legible instead of turning the GUI into an operator console
+
+Proof added to repo:
+
+- activity visibility surfaced through the client status and prototype harness
+- dedicated activity section in the PySide shell with recent job lines and continuity summary
+- prototype and controller tests covering recent activity and lease reuse visibility
+
+## Next GUI work
+
+The planned phase-0 GUI slices are now complete.
+
+From here, new GUI work should be added only when it clearly supports one of these goals:
+
+- replacing prototype-safe placeholders with real integrations
+- tightening installability and packaging for a physical desktop app
+- refining usability based on real local testing without moving runtime logic into the GUI
 
 ## GUI guardrails
 

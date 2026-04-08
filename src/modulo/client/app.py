@@ -45,12 +45,30 @@ class HostingSetupStatus:
 
 
 @dataclass(frozen=True)
+class ActivityEntry:
+    job_id: str
+    buyer_id: str = ""
+    model_id: str = ""
+    worker_id: str = ""
+    status: str = ""
+    continuity_hint: str = ""
+    summary: str = ""
+
+
+@dataclass(frozen=True)
+class ActivityVisibilityStatus:
+    continuity_summary: str = "No buyer continuity activity yet."
+    recent_activity: tuple[ActivityEntry, ...] = ()
+
+
+@dataclass(frozen=True)
 class ClientStatus:
     connected_to_modulo: bool = False
     openclaw_connected: bool = False
     hosting_enabled: bool = False
     openclaw: OpenClawConnectionStatus = OpenClawConnectionStatus()
     hosting_setup: HostingSetupStatus = HostingSetupStatus()
+    activity: ActivityVisibilityStatus = ActivityVisibilityStatus()
     worker: WorkerStatusSnapshot | None = None
     smoke_test: SmokeTestResult | None = None
 
@@ -72,12 +90,18 @@ class ClientSmokeTestRunner(Protocol):
         """Run a smoke test through the client-facing prototype path."""
 
 
+class ClientActivityProvider(Protocol):
+    def get_activity_visibility(self) -> ActivityVisibilityStatus:
+        """Return recent activity and continuity hints for the client."""
+
+
 @dataclass
 class ModuloClientSupervisor:
     worker_bridge: WorkerBridgeRuntime
     connected_to_modulo: bool = True
     openclaw_connected: bool = False
     smoke_test_runner: ClientSmokeTestRunner | None = None
+    activity_provider: ClientActivityProvider | None = None
     _last_smoke_test: SmokeTestResult | None = None
 
     def configure_worker(self, config: WorkerBridgeConfig) -> ClientStatus:
@@ -170,6 +194,7 @@ class ModuloClientSupervisor:
             hosting_enabled=worker_status.desired_running,
             openclaw=self.get_openclaw_status(),
             hosting_setup=self.get_hosting_setup_status(),
+            activity=self.get_activity_visibility(),
             worker=worker_status,
             smoke_test=self._last_smoke_test,
         )
@@ -218,6 +243,11 @@ class ModuloClientSupervisor:
             f"Runtime identity: {model.ollama_runtime_name}\n"
             "Hosting remains explicit and opt-in. Use Start Hosting when you are ready."
         )
+
+    def get_activity_visibility(self) -> ActivityVisibilityStatus:
+        if self.activity_provider is None:
+            return ActivityVisibilityStatus()
+        return self.activity_provider.get_activity_visibility()
 
 
 def describe_default_actions() -> list[str]:

@@ -69,6 +69,21 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertFalse(onboarding.worker_healthy)
         self.assertFalse(onboarding.smoke_test_ok)
 
+    def test_activity_visibility_tracks_recent_jobs_and_continuity(self) -> None:
+        harness = LocalPrototypeHarness()
+
+        harness.run_round_trip("first buyer turn", buyer_id="buyer-a")
+        harness.run_round_trip("second buyer turn", buyer_id="buyer-a")
+        activity = harness.get_activity_visibility()
+
+        self.assertIn("Buyer continuity reused", activity.continuity_summary)
+        self.assertGreaterEqual(len(activity.recent_activity), 2)
+        self.assertEqual("buyer-a", activity.recent_activity[0].buyer_id)
+        self.assertIn(
+            activity.recent_activity[0].continuity_hint,
+            {"Continuity lease reused", "Fresh routing decision"},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

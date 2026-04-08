@@ -57,6 +57,8 @@ class GuiShellState:
     smoke_test_result_label: str = "Not run yet"
     diagnostics_summary: str = ""
     diagnostics_details: str = ""
+    continuity_summary: str = ""
+    activity_lines: tuple[str, ...] = ()
 
 
 @dataclass
@@ -172,6 +174,8 @@ class GuiAppController:
             smoke_test_result_label=self._smoke_test_result_label(smoke_test),
             diagnostics_summary=self._diagnostics_summary(onboarding, smoke_test),
             diagnostics_details=self._diagnostics_details(onboarding, smoke_test),
+            continuity_summary=status.activity.continuity_summary,
+            activity_lines=self._activity_lines(status),
         )
 
     @staticmethod
@@ -286,3 +290,16 @@ class GuiAppController:
             else:
                 lines.append(f"Smoke test error: {smoke_test.error or 'Unknown error'}")
         return "\n".join(lines)
+
+    @staticmethod
+    def _activity_lines(status: ClientStatus) -> tuple[str, ...]:
+        if not status.activity.recent_activity:
+            return ("No recent buyer activity yet.",)
+        lines: list[str] = []
+        for entry in status.activity.recent_activity:
+            buyer_label = entry.buyer_id or "anonymous buyer"
+            lines.append(
+                f"{entry.job_id}: {buyer_label} -> {entry.worker_id} "
+                f"[{entry.status}] | {entry.continuity_hint}"
+            )
+        return tuple(lines)

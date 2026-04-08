@@ -84,6 +84,7 @@ The GUI currently includes:
 - hosting start, stop, and restart controls
 - a worker panel with live registration, health, activity, and error summaries
 - a prompt-driven smoke-test and diagnostics panel backed by the current prototype harness
+- an activity panel with recent jobs and buyer continuity hints
 
 ## Current platform surface
 

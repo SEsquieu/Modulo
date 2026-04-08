@@ -72,6 +72,11 @@ class ModuloMainWindow(QMainWindow):
         self.diagnostics_details_box = QPlainTextEdit()
         self.diagnostics_details_box.setReadOnly(True)
         self.diagnostics_details_box.setMinimumHeight(100)
+        self.continuity_summary_label = QLabel()
+        self.continuity_summary_label.setWordWrap(True)
+        self.activity_box = QPlainTextEdit()
+        self.activity_box.setReadOnly(True)
+        self.activity_box.setMinimumHeight(110)
         self.openclaw_status_label = QLabel()
         self.openclaw_status_label.setStyleSheet("font-weight: 600;")
         self.openclaw_summary_label = QLabel()
@@ -176,6 +181,12 @@ class ModuloMainWindow(QMainWindow):
         smoke_layout.addWidget(self.diagnostics_details_box)
         smoke_box.setLayout(smoke_layout)
 
+        activity_box = QGroupBox("Activity")
+        activity_layout = QVBoxLayout()
+        activity_layout.addWidget(self.continuity_summary_label)
+        activity_layout.addWidget(self.activity_box)
+        activity_box.setLayout(activity_layout)
+
         root = QWidget()
         root_layout = QVBoxLayout()
         root_layout.setContentsMargins(12, 12, 12, 12)
@@ -186,6 +197,7 @@ class ModuloMainWindow(QMainWindow):
         root_layout.addWidget(hosting_box)
         root_layout.addWidget(worker_box)
         root_layout.addWidget(smoke_box)
+        root_layout.addWidget(activity_box)
         root_layout.addStretch(1)
         root.setLayout(root_layout)
 
@@ -354,6 +366,8 @@ class ModuloMainWindow(QMainWindow):
         self.smoke_details_box.setPlainText(state.smoke_test_details)
         self.diagnostics_summary_label.setText(state.diagnostics_summary)
         self.diagnostics_details_box.setPlainText(state.diagnostics_details)
+        self.continuity_summary_label.setText(state.continuity_summary)
+        self.activity_box.setPlainText("\n".join(state.activity_lines))
 
 
 def launch_gui(controller: GuiAppController | None = None) -> int:
