@@ -41,6 +41,9 @@ class HostingSetupStatus:
     available_model_ids: tuple[str, ...] = ()
     available_model_labels: tuple[str, ...] = ()
     installed_model_ids: tuple[str, ...] = ()
+    supported_installed_model_ids: tuple[str, ...] = ()
+    supported_missing_model_ids: tuple[str, ...] = ()
+    unsupported_installed_model_ids: tuple[str, ...] = ()
     ollama_available: bool = False
     readiness_summary: str = "Select a model to prepare hosting."
     readiness_details: str = ""
@@ -220,43 +223,93 @@ class ModuloClientSupervisor:
         discovery = self.get_ollama_discovery_status()
         available_models = tuple(SUPPORTED_MODELS.values())
         labels = tuple(f"{model.display_name} ({model.model_id})" for model in available_models)
-        readiness_summary = self._hosting_readiness_summary(selected_model_id)
+        supported_model_ids = tuple(model.model_id for model in available_models)
+        installed_model_ids = discovery.installed_model_ids
+        supported_installed_model_ids = tuple(
+            model_id for model_id in supported_model_ids if model_id in installed_model_ids
+        )
+        supported_missing_model_ids = tuple(
+            model_id for model_id in supported_model_ids if model_id not in installed_model_ids
+        )
+        unsupported_installed_model_ids = tuple(
+            model_id for model_id in installed_model_ids if model_id not in supported_model_ids
+        )
+        readiness_summary = self._hosting_readiness_summary(
+            selected_model_id=selected_model_id,
+            discovery=discovery,
+            supported_installed_model_ids=supported_installed_model_ids,
+        )
         return HostingSetupStatus(
             selected_model_id=selected_model_id,
-            available_model_ids=tuple(model.model_id for model in available_models),
+            available_model_ids=supported_model_ids,
             available_model_labels=labels,
-            installed_model_ids=discovery.installed_model_ids,
+            installed_model_ids=installed_model_ids,
+            supported_installed_model_ids=supported_installed_model_ids,
+            supported_missing_model_ids=supported_missing_model_ids,
+            unsupported_installed_model_ids=unsupported_installed_model_ids,
             ollama_available=discovery.available,
             readiness_summary=readiness_summary,
-            readiness_details=self._hosting_readiness_details(selected_model_id, discovery),
+            readiness_details=self._hosting_readiness_details(
+                selected_model_id=selected_model_id,
+                discovery=discovery,
+                supported_installed_model_ids=supported_installed_model_ids,
+                supported_missing_model_ids=supported_missing_model_ids,
+                unsupported_installed_model_ids=unsupported_installed_model_ids,
+            ),
             can_enable_hosting=bool(selected_model_id),
         )
 
     @staticmethod
-    def _hosting_readiness_summary(selected_model_id: str) -> str:
+    def _hosting_readiness_summary(
+        *,
+        selected_model_id: str,
+        discovery: OllamaDiscoveryStatus,
+        supported_installed_model_ids: tuple[str, ...],
+    ) -> str:
         if not selected_model_id:
             return "Select a curated model to prepare hosting."
-        return f"Ready to host with {selected_model_id}."
+        if not discovery.available:
+            return "Ollama is not available yet, so hosting is not ready."
+        if selected_model_id in supported_installed_model_ids:
+            return f"Ready to host with {selected_model_id}."
+        return f"{selected_model_id} is curated by Modulo but is not installed locally."
 
     @staticmethod
     def _hosting_readiness_details(
+        *,
         selected_model_id: str,
         discovery: OllamaDiscoveryStatus,
+        supported_installed_model_ids: tuple[str, ...],
+        supported_missing_model_ids: tuple[str, ...],
+        unsupported_installed_model_ids: tuple[str, ...],
     ) -> str:
         if not selected_model_id:
             return "No model is selected for hosting yet."
         model = SUPPORTED_MODELS.get(selected_model_id)
         if model is None:
             return "The selected model is outside the curated v1 catalog."
-        discovery_line = (
-            f"Ollama discovery: {discovery.summary}"
-            if discovery.available or discovery.error
-            else "Ollama discovery has not run yet."
+        supported_installed_line = (
+            ", ".join(supported_installed_model_ids)
+            if supported_installed_model_ids
+            else "None"
+        )
+        supported_missing_line = (
+            ", ".join(supported_missing_model_ids)
+            if supported_missing_model_ids
+            else "None"
+        )
+        unsupported_installed_line = (
+            ", ".join(unsupported_installed_model_ids)
+            if unsupported_installed_model_ids
+            else "None"
         )
         return (
             f"Selected model: {model.display_name}\n"
             f"Runtime identity: {model.ollama_runtime_name}\n"
-            f"{discovery_line}\n"
+            f"Ollama discovery: {discovery.summary}\n"
+            f"Supported and installed: {supported_installed_line}\n"
+            f"Supported but missing: {supported_missing_line}\n"
+            f"Installed but not curated: {unsupported_installed_line}\n"
             "Hosting remains explicit and opt-in. Use Start Hosting when you are ready."
         )
 

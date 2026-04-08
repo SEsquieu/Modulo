@@ -37,7 +37,7 @@ class FakeOllamaDiscovery:
     def discover(self) -> OllamaDiscoveryStatus:
         return OllamaDiscoveryStatus(
             available=True,
-            installed_model_ids=("llama3.1:8b",),
+            installed_model_ids=("llama3.1:8b", "qwen3.5:4b"),
             summary="Ollama is available with 1 local model.",
             details="fake discovery",
         )
@@ -171,7 +171,10 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         status = self.client.get_status()
 
         self.assertTrue(status.hosting_setup.ollama_available)
-        self.assertEqual(("llama3.1:8b",), status.hosting_setup.installed_model_ids)
+        self.assertEqual(("llama3.1:8b", "qwen3.5:4b"), status.hosting_setup.installed_model_ids)
+        self.assertEqual(("llama3.1:8b",), status.hosting_setup.supported_installed_model_ids)
+        self.assertEqual((), status.hosting_setup.supported_missing_model_ids)
+        self.assertEqual(("qwen3.5:4b",), status.hosting_setup.unsupported_installed_model_ids)
         self.assertIn("Ollama is available", status.hosting_setup.readiness_details)
 
 

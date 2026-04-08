@@ -31,6 +31,9 @@ class GuiShellState:
     hosting_selected_model_id: str = ""
     hosting_available_model_ids: tuple[str, ...] = ()
     hosting_available_model_labels: tuple[str, ...] = ()
+    hosting_supported_installed_model_ids: tuple[str, ...] = ()
+    hosting_supported_missing_model_ids: tuple[str, ...] = ()
+    hosting_unsupported_installed_model_ids: tuple[str, ...] = ()
     hosting_setup_summary: str = ""
     hosting_setup_details: str = ""
     hosting_setup_action_enabled: bool = True
@@ -148,6 +151,9 @@ class GuiAppController:
             hosting_selected_model_id=status.hosting_setup.selected_model_id,
             hosting_available_model_ids=status.hosting_setup.available_model_ids,
             hosting_available_model_labels=status.hosting_setup.available_model_labels,
+            hosting_supported_installed_model_ids=status.hosting_setup.supported_installed_model_ids,
+            hosting_supported_missing_model_ids=status.hosting_setup.supported_missing_model_ids,
+            hosting_unsupported_installed_model_ids=status.hosting_setup.unsupported_installed_model_ids,
             hosting_setup_summary=status.hosting_setup.readiness_summary,
             hosting_setup_details=status.hosting_setup.readiness_details,
             hosting_setup_action_enabled=bool(status.hosting_setup.available_model_ids),

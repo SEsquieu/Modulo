@@ -38,6 +38,7 @@ class LocalPrototypeHarness:
     modulo_url: str = "http://127.0.0.1:8000"
     stub_response_text: str = "Hello from the Modulo local prototype worker."
     executor: WorkerExecutor | None = None
+    ollama_discovery: OllamaDiscovery | None = None
     service: InMemoryModuloService = field(init=False)
     cloud_runtime: InMemoryWorkerRuntime = field(init=False)
     app: ModuloHTTPApp = field(init=False)
@@ -64,7 +65,7 @@ class LocalPrototypeHarness:
         )
         self.client = ModuloClientSupervisor(
             worker_bridge=bridge,
-            ollama_discovery=OllamaDiscovery(),
+            ollama_discovery=self.ollama_discovery or OllamaDiscovery(),
             smoke_test_runner=self,
             activity_provider=self,
         )

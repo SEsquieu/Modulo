@@ -91,6 +91,8 @@ class ModuloMainWindow(QMainWindow):
         self.hosting_setup_details_box = QPlainTextEdit()
         self.hosting_setup_details_box.setReadOnly(True)
         self.hosting_setup_details_box.setMinimumHeight(90)
+        self.hosting_inventory_label = QLabel()
+        self.hosting_inventory_label.setWordWrap(True)
 
         self.connect_button = QPushButton("Connect OpenClaw")
         self.connect_button.clicked.connect(
@@ -143,6 +145,7 @@ class ModuloMainWindow(QMainWindow):
         hosting_setup_prompt_row.addWidget(self.hosting_model_combo)
         hosting_setup_layout.addLayout(hosting_setup_prompt_row)
         hosting_setup_layout.addWidget(self.hosting_setup_summary_label)
+        hosting_setup_layout.addWidget(self.hosting_inventory_label)
         hosting_setup_layout.addWidget(self.hosting_setup_details_box)
         hosting_setup_box.setLayout(hosting_setup_layout)
 
@@ -339,6 +342,17 @@ class ModuloMainWindow(QMainWindow):
             self.hosting_model_combo.blockSignals(False)
 
         self.hosting_setup_summary_label.setText(state.hosting_setup_summary)
+        supported_installed = ", ".join(state.hosting_supported_installed_model_ids) or "None"
+        supported_missing = ", ".join(state.hosting_supported_missing_model_ids) or "None"
+        unsupported_installed = ", ".join(state.hosting_unsupported_installed_model_ids) or "None"
+        self.hosting_inventory_label.setText(
+            "Supported and installed: "
+            f"{supported_installed}\n"
+            "Supported but missing: "
+            f"{supported_missing}\n"
+            "Installed but not curated: "
+            f"{unsupported_installed}"
+        )
         self.hosting_setup_details_box.setPlainText(state.hosting_setup_details)
 
         self.worker_id_label.setText(f"Worker ID: {state.worker_id or 'Unavailable'}")

@@ -5,11 +5,25 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from modulo.gui.controller import GuiAppController
+from modulo.client.ollama_discovery import OllamaDiscoveryStatus
+from modulo.prototype import LocalPrototypeHarness
+
+
+class FakeGuiOllamaDiscovery:
+    def discover(self) -> OllamaDiscoveryStatus:
+        return OllamaDiscoveryStatus(
+            available=True,
+            installed_model_ids=(),
+            summary="Ollama is available, but no local models were found.",
+            details="fake gui discovery",
+        )
 
 
 class GuiAppControllerTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.controller = GuiAppController.build_default()
+        self.controller = GuiAppController(
+            harness=LocalPrototypeHarness(ollama_discovery=FakeGuiOllamaDiscovery())
+        )
 
     def test_refresh_reports_initial_shell_state(self) -> None:
         state = self.controller.refresh()
@@ -30,8 +44,12 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertIn("Safe prototype mode", state.openclaw_safety_note)
         self.assertEqual("llama3.1:8b", state.hosting_selected_model_id)
         self.assertEqual(("llama3.1:8b",), state.hosting_available_model_ids)
+        self.assertEqual((), state.hosting_supported_installed_model_ids)
+        self.assertEqual(("llama3.1:8b",), state.hosting_supported_missing_model_ids)
+        self.assertEqual((), state.hosting_unsupported_installed_model_ids)
         self.assertTrue(state.hosting_setup_action_enabled)
-        self.assertIn("Ready to host", state.hosting_setup_summary)
+        self.assertIn("not installed locally", state.hosting_setup_summary)
+        self.assertIn("Supported but missing: llama3.1:8b", state.hosting_setup_details)
         self.assertIn("Hosting remains explicit and opt-in", state.hosting_setup_details)
         self.assertIn("Not registered", state.worker_registration_text)
         self.assertIn("idle", state.worker_health_summary.lower())
@@ -89,7 +107,7 @@ class GuiAppControllerTests(unittest.TestCase):
         state = self.controller.select_hosting_model("llama3.1:8b")
 
         self.assertEqual("llama3.1:8b", state.hosting_selected_model_id)
-        self.assertIn("Ready to host with llama3.1:8b", state.hosting_setup_summary)
+        self.assertIn("not installed locally", state.hosting_setup_summary)
 
 
 if __name__ == "__main__":

@@ -37,14 +37,19 @@ Proof added to repo:
 
 ### Slice 2: Curated-versus-installed model view
 
-Goal:
+Status: completed
 
-- combine the curated Modulo catalog with the discovered local model inventory
+Summary:
 
-Exit criteria:
+- combined the curated Modulo catalog with discovered local Ollama inventory in the client hosting setup state
+- taught the hosting setup surface to distinguish supported-and-installed, supported-but-missing, and installed-but-not-curated models
+- updated the hosting setup guidance so “ready” now depends on whether the selected curated model is actually present locally
 
-- the client can distinguish among unsupported, supported-but-not-installed, and installed-supported models
-- the hosting setup surface reads from this combined state
+Proof added to repo:
+
+- richer hosting setup state in the client supervisor
+- hosting setup panel now shows the overlap between curated and installed models
+- client and GUI tests covering installed-versus-curated model distinctions
 
 ### Slice 3: GUI discovery visibility
 
