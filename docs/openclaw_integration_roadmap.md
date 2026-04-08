@@ -30,6 +30,14 @@ Exit criteria:
 - the client can distinguish not installed, installed-unconfigured, and connected states
 - discovery results are visible through the client status surface
 
+Status: completed
+
+Summary:
+
+- added a dedicated OpenClaw discovery seam that reads local install/config state safely
+- the client can now distinguish not installed, installed-unconfigured, and configured-to-Modulo states
+- the Buyer tab now reflects real discovery-backed status instead of only the prototype-safe placeholder
+
 ### Slice 2: Staged connection flow
 
 Goal:

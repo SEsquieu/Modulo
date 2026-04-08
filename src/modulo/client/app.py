@@ -5,6 +5,7 @@ import time
 from typing import Protocol
 
 from modulo.common.catalog import SUPPORTED_MODELS
+from modulo.client.openclaw_discovery import OpenClawDiscovery, OpenClawDiscoveryStatus
 from modulo.client.ollama_discovery import OllamaDiscovery, OllamaDiscoveryStatus
 from modulo.client.hosting_readiness import (
     HostingRuntimeProbeStatus,
@@ -31,6 +32,9 @@ class SmokeTestResult:
 @dataclass(frozen=True)
 class OpenClawConfigurationStatus:
     configured: bool = False
+    installed: bool = False
+    config_present: bool = False
+    state: str = "not_installed"
     mode: str = "prototype-safe"
     summary: str = "OpenClaw is not configured to route through Modulo yet."
     details: str = (
@@ -161,12 +165,18 @@ class ClientSessionBridge(Protocol):
         """Fetch client-owned platform state independently from the worker runtime."""
 
 
+class ClientOpenClawDiscovery(Protocol):
+    def discover(self) -> OpenClawDiscoveryStatus:
+        """Detect local OpenClaw installation and config state."""
+
+
 @dataclass
 class ModuloClientSupervisor:
     worker_bridge: WorkerBridgeRuntime
     connected_to_modulo: bool = True
     openclaw_configured: bool = False
     session_bridge: ClientSessionBridge | None = None
+    openclaw_discovery: ClientOpenClawDiscovery | None = None
     ollama_discovery: OllamaDiscovery | None = None
     hosting_runtime_probe: ClientHostingRuntimeProbe = field(default_factory=OllamaHostingRuntimeProbe)
     smoke_test_runner: ClientSmokeTestRunner | None = None
@@ -175,6 +185,8 @@ class ModuloClientSupervisor:
     _last_smoke_test: SmokeTestResult | None = None
     _cached_ollama_discovery: OllamaDiscoveryStatus | None = None
     _cached_ollama_discovery_at: float = 0.0
+    _cached_openclaw_discovery: OpenClawDiscoveryStatus | None = None
+    _cached_openclaw_discovery_at: float = 0.0
     _cached_runtime_probe: HostingRuntimeProbeStatus | None = None
     _cached_runtime_probe_model_id: str = ""
     _cached_runtime_probe_at: float = 0.0
@@ -260,11 +272,12 @@ class ModuloClientSupervisor:
 
     def get_status(self) -> ClientStatus:
         worker_status = self.worker_bridge.get_status()
+        openclaw_status = self.get_openclaw_status()
         return ClientStatus(
             connected_to_modulo=self.connected_to_modulo,
-            openclaw_configured=self.openclaw_configured,
+            openclaw_configured=openclaw_status.configured,
             hosting_enabled=worker_status.desired_running,
-            openclaw=self.get_openclaw_status(),
+            openclaw=openclaw_status,
             platform=self.get_platform_session_status(),
             hosting_setup=self.get_hosting_setup_status(),
             activity=self.get_activity_visibility(),
@@ -273,9 +286,31 @@ class ModuloClientSupervisor:
         )
 
     def get_openclaw_status(self) -> OpenClawConfigurationStatus:
+        discovery = self.get_openclaw_discovery_status()
+        if discovery.installed or discovery.config_present:
+            details = discovery.details
+            if self.openclaw_configured and not discovery.configured_for_modulo:
+                details = (
+                    f"{details}\n\nA prototype-safe configuration intent is staged in Modulo, "
+                    "but the local OpenClaw config is not routing through Modulo yet."
+                )
+            return OpenClawConfigurationStatus(
+                configured=discovery.configured_for_modulo,
+                installed=discovery.installed,
+                config_present=discovery.config_present,
+                state=discovery.state,
+                mode="discovery",
+                summary=discovery.summary,
+                details=details,
+                safety_note=(
+                    "Discovery mode: Modulo is reading local OpenClaw state but is not changing "
+                    "local OpenClaw files in this slice."
+                ),
+            )
         if self.openclaw_configured:
             return OpenClawConfigurationStatus(
                 configured=True,
+                state="prototype_configured",
                 summary="OpenClaw is configured in Modulo to route through the OpenClaw platform.",
                 details=(
                     "This prototype uses a safe in-app setup state so the GUI can model "
@@ -287,6 +322,21 @@ class ModuloClientSupervisor:
                 ),
             )
         return OpenClawConfigurationStatus()
+
+    def get_openclaw_discovery_status(self) -> OpenClawDiscoveryStatus:
+        now = time.monotonic()
+        if (
+            self._cached_openclaw_discovery is not None
+            and now - self._cached_openclaw_discovery_at < self.readiness_cache_ttl_seconds
+        ):
+            return self._cached_openclaw_discovery
+        discovery = self.openclaw_discovery or OpenClawDiscovery(
+            modulo_url=self.worker_bridge.config.modulo_url,
+        )
+        status = discovery.discover()
+        self._cached_openclaw_discovery = status
+        self._cached_openclaw_discovery_at = now
+        return status
 
     def get_hosting_setup_status(self) -> HostingSetupStatus:
         selected_model_id = self.worker_bridge.config.enabled_models[0] if self.worker_bridge.config.enabled_models else ""
@@ -520,6 +570,8 @@ class ModuloClientSupervisor:
     def _invalidate_readiness_cache(self) -> None:
         self._cached_ollama_discovery = None
         self._cached_ollama_discovery_at = 0.0
+        self._cached_openclaw_discovery = None
+        self._cached_openclaw_discovery_at = 0.0
         self._cached_runtime_probe = None
         self._cached_runtime_probe_model_id = ""
         self._cached_runtime_probe_at = 0.0

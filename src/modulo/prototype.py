@@ -12,6 +12,7 @@ from modulo.client.app import (
     PlatformSessionStatus,
     SmokeTestResult,
 )
+from modulo.client.openclaw_discovery import OpenClawDiscovery
 from modulo.client.ollama_discovery import OllamaDiscovery
 from modulo.client.hosting_readiness import OllamaHostingRuntimeProbe
 from modulo.cloud.http import ModuloHTTPApp
@@ -107,6 +108,7 @@ class LocalPrototypeHarness:
     modulo_url: str = "http://127.0.0.1:8000"
     stub_response_text: str = "Hello from the Modulo local prototype worker."
     executor: WorkerExecutor | None = None
+    openclaw_discovery: OpenClawDiscovery | None = None
     ollama_discovery: OllamaDiscovery | None = None
     hosting_runtime_probe: OllamaHostingRuntimeProbe | None = None
     service: InMemoryModuloService = field(init=False)
@@ -136,6 +138,7 @@ class LocalPrototypeHarness:
         self.client = ModuloClientSupervisor(
             worker_bridge=bridge,
             session_bridge=LocalPrototypeSessionBridge(service=self.service),
+            openclaw_discovery=self.openclaw_discovery or OpenClawDiscovery(modulo_url=self.modulo_url),
             ollama_discovery=self.ollama_discovery or OllamaDiscovery(),
             hosting_runtime_probe=self.hosting_runtime_probe or OllamaHostingRuntimeProbe(),
             smoke_test_runner=self,

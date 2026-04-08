@@ -6,6 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from modulo.gui.controller import GuiAppController
 from modulo.client.ollama_discovery import OllamaDiscoveryStatus
+from modulo.client.openclaw_discovery import OpenClawDiscoveryStatus
 from modulo.client.hosting_readiness import HostingRuntimeProbeStatus
 from modulo.prototype import LocalPrototypeHarness
 
@@ -31,10 +32,23 @@ class FakeGuiHostingRuntimeProbe:
         )
 
 
+class FakeGuiOpenClawDiscovery:
+    def discover(self) -> OpenClawDiscoveryStatus:
+        return OpenClawDiscoveryStatus(
+            installed=False,
+            config_present=False,
+            configured_for_modulo=False,
+            state="not_installed",
+            summary="OpenClaw was not detected on this machine.",
+            details="No OpenClaw install or config footprint was found.",
+        )
+
+
 class GuiAppControllerTests(unittest.TestCase):
     def setUp(self) -> None:
         self.controller = GuiAppController(
             harness=LocalPrototypeHarness(
+                openclaw_discovery=FakeGuiOpenClawDiscovery(),
                 ollama_discovery=FakeGuiOllamaDiscovery(),
                 hosting_runtime_probe=FakeGuiHostingRuntimeProbe(),
             )
@@ -48,7 +62,7 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertFalse(state.hosting_enabled)
         self.assertTrue(state.connect_action_enabled)
         self.assertEqual("Configure OpenClaw", state.openclaw_action_label)
-        self.assertEqual("NOT CONFIGURED", state.openclaw_status_badge)
+        self.assertEqual("NOT INSTALLED", state.openclaw_status_badge)
         self.assertTrue(state.start_action_enabled)
         self.assertFalse(state.stop_action_enabled)
         self.assertTrue(state.smoke_action_enabled)

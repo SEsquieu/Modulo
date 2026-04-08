@@ -24,7 +24,7 @@ class GuiShellState:
     secondary_action_label: str = ""
     connect_action_enabled: bool = True
     openclaw_action_label: str = "Configure OpenClaw"
-    openclaw_status_badge: str = "NOT CONFIGURED"
+    openclaw_status_badge: str = "NOT INSTALLED"
     openclaw_summary: str = ""
     openclaw_details: str = ""
     openclaw_safety_note: str = ""
@@ -152,9 +152,7 @@ class GuiAppController:
             openclaw_action_label=(
                 "Review OpenClaw Setup" if status.openclaw.configured else "Configure OpenClaw"
             ),
-            openclaw_status_badge=(
-                "CONFIGURED" if status.openclaw.configured else "NOT CONFIGURED"
-            ),
+            openclaw_status_badge=self._openclaw_status_badge(status),
             openclaw_summary=status.openclaw.summary,
             openclaw_details=status.openclaw.details,
             openclaw_safety_note=status.openclaw.safety_note,
@@ -345,6 +343,14 @@ class GuiAppController:
             + (f" - {model.summary}" if model.summary else "")
             for model in models
         )
+
+    @staticmethod
+    def _openclaw_status_badge(status: ClientStatus) -> str:
+        if status.openclaw.configured:
+            return "CONFIGURED"
+        if status.openclaw.installed:
+            return "INSTALLED"
+        return "NOT INSTALLED"
 
     @staticmethod
     def _ollama_summary(status: ClientStatus) -> str:

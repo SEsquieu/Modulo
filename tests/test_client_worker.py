@@ -6,6 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from modulo.client.app import ModuloClientSupervisor, PlatformModelListing, PlatformSessionStatus
 from modulo.client.hosting_readiness import HostingRuntimeProbeStatus
+from modulo.client.openclaw_discovery import OpenClawDiscoveryStatus
 from modulo.client.ollama_discovery import OllamaDiscoveryStatus
 from modulo.cloud.http import ModuloHTTPApp
 from modulo.cloud.router import TrustRouter
@@ -82,6 +83,18 @@ class CountingHostingRuntimeProbe:
         )
 
 
+class FakeOpenClawDiscovery:
+    def discover(self) -> OpenClawDiscoveryStatus:
+        return OpenClawDiscoveryStatus(
+            installed=False,
+            config_present=False,
+            configured_for_modulo=False,
+            state="not_installed",
+            summary="OpenClaw was not detected on this machine.",
+            details="No OpenClaw install or config footprint was found.",
+        )
+
+
 class FakeSessionBridge:
     def fetch_platform_status(self) -> PlatformSessionStatus:
         return PlatformSessionStatus(
@@ -136,6 +149,7 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.client = ModuloClientSupervisor(
             worker_bridge=self.bridge,
             session_bridge=FakeSessionBridge(),
+            openclaw_discovery=FakeOpenClawDiscovery(),
             ollama_discovery=FakeOllamaDiscovery(),
             hosting_runtime_probe=FakeHostingRuntimeProbe(),
         )
@@ -225,6 +239,28 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertTrue(onboarding.worker_healthy)
         self.assertTrue(onboarding.smoke_test_ok)
         self.assertEqual("", onboarding.smoke_test_error)
+
+    def test_openclaw_status_distinguishes_installed_unconfigured_state(self) -> None:
+        class InstalledOpenClawDiscovery:
+            def discover(self) -> OpenClawDiscoveryStatus:
+                return OpenClawDiscoveryStatus(
+                    installed=True,
+                    config_present=True,
+                    configured_for_modulo=False,
+                    state="installed_unconfigured",
+                    summary="OpenClaw is installed, but the local config is not routing through Modulo.",
+                    details="Config path: C:\\Users\\test\\.openclaw\\openclaw.json",
+                )
+
+        self.client.openclaw_discovery = InstalledOpenClawDiscovery()
+
+        status = self.client.get_status()
+
+        self.assertFalse(status.openclaw.configured)
+        self.assertTrue(status.openclaw.installed)
+        self.assertTrue(status.openclaw.config_present)
+        self.assertEqual("installed_unconfigured", status.openclaw.state)
+        self.assertIn("not routing through Modulo", status.openclaw.summary)
 
     def test_configure_worker_keeps_transport_and_status_in_sync(self) -> None:
         self.client.start_hosting()

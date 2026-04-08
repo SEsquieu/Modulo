@@ -5,6 +5,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from modulo.common.contracts import JobStatus, WorkerRuntimeState
+from modulo.client.openclaw_discovery import OpenClawDiscoveryStatus
 from modulo.worker.errors import WorkerExecutionError
 from modulo.prototype import LocalPrototypeHarness
 
@@ -15,9 +16,21 @@ class FailingExecutor:
         raise WorkerExecutionError("prototype executor failed")
 
 
+class FakePrototypeOpenClawDiscovery:
+    def discover(self) -> OpenClawDiscoveryStatus:
+        return OpenClawDiscoveryStatus(
+            installed=False,
+            config_present=False,
+            configured_for_modulo=False,
+            state="not_installed",
+            summary="OpenClaw was not detected on this machine.",
+            details="No OpenClaw install or config footprint was found.",
+        )
+
+
 class LocalPrototypeHarnessTests(unittest.TestCase):
     def test_boot_starts_hosting_and_registers_worker(self) -> None:
-        harness = LocalPrototypeHarness()
+        harness = LocalPrototypeHarness(openclaw_discovery=FakePrototypeOpenClawDiscovery())
 
         status = harness.boot()
 
@@ -28,7 +41,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertEqual(WorkerRuntimeState.IDLE, status.worker.runtime_state)
 
     def test_round_trip_completes_job_and_returns_response(self) -> None:
-        harness = LocalPrototypeHarness()
+        harness = LocalPrototypeHarness(openclaw_discovery=FakePrototypeOpenClawDiscovery())
 
         result = harness.run_round_trip("prototype hello")
 
@@ -44,7 +57,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertEqual("prototype hello", completed_job.request.messages[0].content)
 
     def test_client_smoke_test_reports_success_through_client_surface(self) -> None:
-        harness = LocalPrototypeHarness()
+        harness = LocalPrototypeHarness(openclaw_discovery=FakePrototypeOpenClawDiscovery())
 
         harness.boot()
         status = harness.client.run_smoke_test("prototype smoke")
@@ -81,7 +94,10 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertIn("currently advertised", status.platform.buyer_routing_summary)
 
     def test_client_smoke_test_reports_failure_when_executor_fails(self) -> None:
-        harness = LocalPrototypeHarness(executor=FailingExecutor())
+        harness = LocalPrototypeHarness(
+            executor=FailingExecutor(),
+            openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+        )
 
         harness.boot()
         status = harness.client.run_smoke_test("prototype failure")
@@ -94,7 +110,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertFalse(onboarding.smoke_test_ok)
 
     def test_activity_visibility_tracks_recent_jobs_and_continuity(self) -> None:
-        harness = LocalPrototypeHarness()
+        harness = LocalPrototypeHarness(openclaw_discovery=FakePrototypeOpenClawDiscovery())
 
         harness.run_round_trip("first buyer turn", buyer_id="buyer-a")
         harness.run_round_trip("second buyer turn", buyer_id="buyer-a")
