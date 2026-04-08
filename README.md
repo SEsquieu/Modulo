@@ -41,6 +41,7 @@ Roadmap reference:
 - [docs/roadmap.md](/Users/16096/Desktop/Projects/Modulo/docs/roadmap.md)
 - [docs/gui_roadmap.md](/Users/16096/Desktop/Projects/Modulo/docs/gui_roadmap.md)
 - [docs/gui_state_map.md](/Users/16096/Desktop/Projects/Modulo/docs/gui_state_map.md)
+- [docs/phase_2_plan.md](/Users/16096/Desktop/Projects/Modulo/docs/phase_2_plan.md)
 
 ## Running the demo server
 

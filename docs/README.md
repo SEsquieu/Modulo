@@ -8,6 +8,12 @@ Current source of truth:
 - [roadmap.md](./roadmap.md): current development phase, completed slices, and upcoming roadmap-aligned slices
 - [gui_roadmap.md](./gui_roadmap.md): GUI-client-specific build plan, phased slices, and UI guardrails
 - [gui_state_map.md](./gui_state_map.md): first GUI screens, view-model mapping, and command/event inventory
+- [phase_2_plan.md](./phase_2_plan.md): sequenced next-phase integration plan after the initial backend and GUI roadmaps
+- [ollama_discovery_roadmap.md](./ollama_discovery_roadmap.md): mini roadmap for truthful local Ollama discovery
+- [hosting_readiness_roadmap.md](./hosting_readiness_roadmap.md): mini roadmap for real hosting preflight and readiness
+- [openclaw_integration_roadmap.md](./openclaw_integration_roadmap.md): mini roadmap for real OpenClaw detection and connection flow
+- [real_execution_roadmap.md](./real_execution_roadmap.md): mini roadmap for real Ollama-backed execution
+- [productization_checklist.md](./productization_checklist.md): compact gated checklist for packaging and trust polish
 
 Recommended next docs to add:
 
