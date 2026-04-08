@@ -28,6 +28,11 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertIn("not connected yet", state.openclaw_summary.lower())
         self.assertIn("not changing local OpenClaw", state.openclaw_details)
         self.assertIn("Safe prototype mode", state.openclaw_safety_note)
+        self.assertEqual("llama3.1:8b", state.hosting_selected_model_id)
+        self.assertEqual(("llama3.1:8b",), state.hosting_available_model_ids)
+        self.assertTrue(state.hosting_setup_action_enabled)
+        self.assertIn("Ready to host", state.hosting_setup_summary)
+        self.assertIn("Hosting remains explicit and opt-in", state.hosting_setup_details)
         self.assertIn("Not registered", state.worker_registration_text)
         self.assertIn("idle", state.worker_health_summary.lower())
         self.assertIn("not processed a job", state.worker_activity_summary)
@@ -75,6 +80,12 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertFalse(disconnected.openclaw_connected)
         self.assertEqual("Connect OpenClaw", disconnected.openclaw_action_label)
         self.assertEqual("NOT CONNECTED", disconnected.openclaw_status_badge)
+
+    def test_select_hosting_model_updates_setup_state(self) -> None:
+        state = self.controller.select_hosting_model("llama3.1:8b")
+
+        self.assertEqual("llama3.1:8b", state.hosting_selected_model_id)
+        self.assertIn("Ready to host with llama3.1:8b", state.hosting_setup_summary)
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ try:
     from PySide6.QtCore import QTimer, Qt
     from PySide6.QtWidgets import (
         QApplication,
+        QComboBox,
         QFrame,
         QGridLayout,
         QGroupBox,
@@ -78,6 +79,13 @@ class ModuloMainWindow(QMainWindow):
         self.openclaw_details_box = QPlainTextEdit()
         self.openclaw_details_box.setReadOnly(True)
         self.openclaw_details_box.setMinimumHeight(90)
+        self.hosting_model_combo = QComboBox()
+        self.hosting_model_combo.currentIndexChanged.connect(self._apply_selected_hosting_model)
+        self.hosting_setup_summary_label = QLabel()
+        self.hosting_setup_summary_label.setWordWrap(True)
+        self.hosting_setup_details_box = QPlainTextEdit()
+        self.hosting_setup_details_box.setReadOnly(True)
+        self.hosting_setup_details_box.setMinimumHeight(90)
 
         self.connect_button = QPushButton("Connect OpenClaw")
         self.connect_button.clicked.connect(
@@ -123,6 +131,16 @@ class ModuloMainWindow(QMainWindow):
         hosting_layout.addWidget(self.restart_button, 1, 0, 1, 2)
         hosting_box.setLayout(hosting_layout)
 
+        hosting_setup_box = QGroupBox("Hosting Setup")
+        hosting_setup_layout = QVBoxLayout()
+        hosting_setup_prompt_row = QHBoxLayout()
+        hosting_setup_prompt_row.addWidget(QLabel("Model"))
+        hosting_setup_prompt_row.addWidget(self.hosting_model_combo)
+        hosting_setup_layout.addLayout(hosting_setup_prompt_row)
+        hosting_setup_layout.addWidget(self.hosting_setup_summary_label)
+        hosting_setup_layout.addWidget(self.hosting_setup_details_box)
+        hosting_setup_box.setLayout(hosting_setup_layout)
+
         openclaw_box = QGroupBox("OpenClaw")
         openclaw_layout = QVBoxLayout()
         openclaw_layout.addWidget(self.openclaw_status_label)
@@ -164,6 +182,7 @@ class ModuloMainWindow(QMainWindow):
         root_layout.setSpacing(12)
         root_layout.addWidget(home_box)
         root_layout.addWidget(openclaw_box)
+        root_layout.addWidget(hosting_setup_box)
         root_layout.addWidget(hosting_box)
         root_layout.addWidget(worker_box)
         root_layout.addWidget(smoke_box)
@@ -236,6 +255,13 @@ class ModuloMainWindow(QMainWindow):
         )
         self._apply_state(next_state)
 
+    def _apply_selected_hosting_model(self) -> None:
+        model_id = self.hosting_model_combo.currentData()
+        if isinstance(model_id, str) and model_id:
+            state = self.controller.refresh()
+            if model_id != state.hosting_selected_model_id:
+                self._apply_state(self.controller.select_hosting_model(model_id))
+
     def _apply_state(self, state: GuiShellState) -> None:
         self.title_label.setText(state.home_title)
         self.subtitle_label.setText(state.home_subtitle)
@@ -265,6 +291,7 @@ class ModuloMainWindow(QMainWindow):
 
         self.connect_button.setText(state.openclaw_action_label)
         self.connect_button.setEnabled(state.connect_action_enabled)
+        self.hosting_model_combo.setEnabled(state.hosting_setup_action_enabled)
         self.start_button.setEnabled(state.start_action_enabled)
         self.stop_button.setEnabled(state.stop_action_enabled)
         self.restart_button.setEnabled(state.restart_action_enabled)
@@ -277,6 +304,30 @@ class ModuloMainWindow(QMainWindow):
         self.openclaw_details_box.setPlainText(
             f"{state.openclaw_details}\n\n{state.openclaw_safety_note}"
         )
+
+        combo_model_ids = tuple(
+            self.hosting_model_combo.itemData(index)
+            for index in range(self.hosting_model_combo.count())
+        )
+        if combo_model_ids != state.hosting_available_model_ids:
+            self.hosting_model_combo.blockSignals(True)
+            self.hosting_model_combo.clear()
+            for label, model_id in zip(
+                state.hosting_available_model_labels,
+                state.hosting_available_model_ids,
+                strict=False,
+            ):
+                self.hosting_model_combo.addItem(label, model_id)
+            self.hosting_model_combo.blockSignals(False)
+
+        selected_index = self.hosting_model_combo.findData(state.hosting_selected_model_id)
+        if selected_index >= 0 and selected_index != self.hosting_model_combo.currentIndex():
+            self.hosting_model_combo.blockSignals(True)
+            self.hosting_model_combo.setCurrentIndex(selected_index)
+            self.hosting_model_combo.blockSignals(False)
+
+        self.hosting_setup_summary_label.setText(state.hosting_setup_summary)
+        self.hosting_setup_details_box.setPlainText(state.hosting_setup_details)
 
         self.worker_id_label.setText(f"Worker ID: {state.worker_id or 'Unavailable'}")
         self.worker_state_label.setText(f"Runtime state: {state.worker_runtime_state}")

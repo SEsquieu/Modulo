@@ -142,6 +142,17 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertTrue(onboarding.smoke_test_ok)
         self.assertEqual("", onboarding.smoke_test_error)
 
+    def test_configure_worker_keeps_transport_and_status_in_sync(self) -> None:
+        self.client.start_hosting()
+
+        status = self.client.set_hosting_model("llama3.1:8b")
+
+        self.assertEqual(("llama3.1:8b",), self.bridge.config.enabled_models)
+        self.assertEqual(("llama3.1:8b",), self.transport.config.enabled_models)
+        self.assertTrue(status.hosting_enabled)
+        self.assertIsNotNone(status.hosting_setup)
+        self.assertEqual("llama3.1:8b", status.hosting_setup.selected_model_id)
+
 
 if __name__ == "__main__":
     unittest.main()

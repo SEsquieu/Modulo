@@ -28,6 +28,12 @@ class GuiShellState:
     openclaw_summary: str = ""
     openclaw_details: str = ""
     openclaw_safety_note: str = ""
+    hosting_selected_model_id: str = ""
+    hosting_available_model_ids: tuple[str, ...] = ()
+    hosting_available_model_labels: tuple[str, ...] = ()
+    hosting_setup_summary: str = ""
+    hosting_setup_details: str = ""
+    hosting_setup_action_enabled: bool = True
     start_action_enabled: bool = True
     stop_action_enabled: bool = False
     restart_action_enabled: bool = False
@@ -57,6 +63,12 @@ class GuiShellState:
 class GuiAppController:
     harness: LocalPrototypeHarness
     _last_smoke_test_prompt: str = "GUI smoke test request"
+    _selected_model_id: str = ""
+
+    def __post_init__(self) -> None:
+        if not self._selected_model_id:
+            enabled_models = self.harness.client.worker_bridge.config.enabled_models
+            self._selected_model_id = enabled_models[0] if enabled_models else ""
 
     def refresh(self) -> GuiShellState:
         return self._build_state(
@@ -70,6 +82,11 @@ class GuiAppController:
 
     def disconnect_openclaw(self) -> GuiShellState:
         self.harness.client.disconnect_openclaw()
+        return self.refresh()
+
+    def select_hosting_model(self, model_id: str) -> GuiShellState:
+        self._selected_model_id = model_id
+        self.harness.client.set_hosting_model(model_id)
         return self.refresh()
 
     def start_hosting(self) -> GuiShellState:
@@ -126,6 +143,12 @@ class GuiAppController:
             openclaw_summary=status.openclaw.summary,
             openclaw_details=status.openclaw.details,
             openclaw_safety_note=status.openclaw.safety_note,
+            hosting_selected_model_id=status.hosting_setup.selected_model_id,
+            hosting_available_model_ids=status.hosting_setup.available_model_ids,
+            hosting_available_model_labels=status.hosting_setup.available_model_labels,
+            hosting_setup_summary=status.hosting_setup.readiness_summary,
+            hosting_setup_details=status.hosting_setup.readiness_details,
+            hosting_setup_action_enabled=bool(status.hosting_setup.available_model_ids),
             start_action_enabled=not onboarding.hosting_enabled,
             stop_action_enabled=onboarding.hosting_enabled,
             restart_action_enabled=onboarding.hosting_enabled,

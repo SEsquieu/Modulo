@@ -41,7 +41,7 @@ Current GUI phase: `Phase 0` planning and thin-client surface definition.
 
 Current active GUI slice:
 
-- implement the GUI path for selecting a model, enabling hosting, and understanding local readiness
+- surface enough routing and activity information in the GUI to make behavior legible without turning it into an operator console
 
 Definition of progress for this phase:
 
@@ -147,40 +147,36 @@ Proof added to repo:
 - dedicated OpenClaw section in the PySide shell with status, details, and safety note
 - controller tests covering connect, disconnect, and safe prototype messaging
 
+### GUI Slice 7: Hosting setup flow
+
+Status: completed
+
+Summary:
+
+- added a dedicated hosting-setup panel with model selection, readiness summary, and explicit setup guidance
+- extended the client status surface so the GUI reads selected model and setup readiness from real worker config instead of widget-only state
+- kept hosting enablement explicit and opt-in while making the selected curated model visible before the worker is started
+
+Proof added to repo:
+
+- explicit `HostingSetupStatus` surfaced through the client status
+- dedicated hosting setup section in the PySide shell with model visibility and readiness details
+- client and controller tests covering setup-state synchronization and model selection
+
 ## Upcoming GUI slices
 
 These are ordered to keep the GUI build coherent and consistent with the current architecture.
 
-### GUI Slice 6: OpenClaw connection flow
-
-Goal:
-
-- implement the GUI path for selecting a model, enabling hosting, and understanding local readiness
-
-Why this slice matters:
-
-- hosting is the second half of the product story
-- it turns the app into a real contributor control surface
-
-Exit criteria:
-
-- GUI can guide a user through model selection and hosting enablement
-- worker readiness and simple constraints are made visible
-- the flow stays explicit and opt-in
-
 ### GUI Slice 8: Activity and continuity visibility
 
 Goal:
-
 - surface enough routing/activity information in the GUI to make behavior legible without turning the GUI into an operator console
 
 Why this slice matters:
-
 - users should be able to tell that Modulo is alive, where work is going, and whether continuity is helping
 - this helps trust without leaking backend policy complexity into the interface
 
 Exit criteria:
-
 - GUI can show recent jobs or recent worker activity
 - GUI can show simple routing/continuity hints when useful
 - the presentation stays user-facing rather than internal-only

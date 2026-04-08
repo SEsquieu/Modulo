@@ -80,6 +80,7 @@ The GUI currently includes:
 
 - an onboarding-oriented home screen
 - a dedicated OpenClaw connection panel with explicit safe prototype messaging
+- a hosting setup panel that shows the selected curated model and local readiness guidance
 - hosting start, stop, and restart controls
 - a worker panel with live registration, health, activity, and error summaries
 - a prompt-driven smoke-test and diagnostics panel backed by the current prototype harness
