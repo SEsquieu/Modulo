@@ -128,7 +128,6 @@ class ModuloMainWindow(QMainWindow):
         overview_layout = QVBoxLayout()
         overview_layout.addWidget(self.title_label)
         overview_layout.addWidget(self.subtitle_label)
-        overview_layout.addWidget(self.status_strip)
         overview_box.setLayout(overview_layout)
 
         host_setup_box = QGroupBox("Hosting Setup")
@@ -229,6 +228,7 @@ class ModuloMainWindow(QMainWindow):
         root_layout.addWidget(overview_box)
         root_layout.addWidget(self.tab_widget)
         root_layout.addStretch(1)
+        root_layout.addWidget(self.status_strip)
         root.setLayout(root_layout)
 
         self.scroll_area = QScrollArea()
@@ -284,10 +284,8 @@ class ModuloMainWindow(QMainWindow):
             " | ".join(
                 (
                     f"Modulo {'online' if state.connected_to_modulo else 'offline'}",
-                    f"OpenClaw {'configured' if state.openclaw_configured else 'not configured'}",
                     f"Hosting {'enabled' if state.hosting_enabled else 'disabled'}",
                     f"Worker {state.worker_status_badge.lower()}",
-                    f"Smoke {state.smoke_status_badge.lower()}",
                 )
             )
         )
