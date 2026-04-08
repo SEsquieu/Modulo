@@ -17,7 +17,7 @@ Current phase: `Phase 1` moving toward a working local prototype of the real `cl
 
 Current active slice:
 
-- add one clear local prototype entry path that can bring up the cloud, supervise a worker, and prove a buyer request round trip
+- give the client a minimal but truthful onboarding-facing layer for connection state, hosting state, and smoke-test results
 
 Definition of progress for this phase:
 
@@ -108,26 +108,25 @@ Proof added to repo:
 - `ChatRequest` and worker claim transport now preserve message payloads
 - executor tests verify payload construction and error handling for the Ollama path
 
+### Slice 5: Local prototype orchestration
+
+Status: completed
+
+Summary:
+
+- added one local prototype harness that wires cloud, client supervision, worker transport, and worker execution into a repeatable demo path
+- kept the orchestration in-process so the prototype remains fast to run while still respecting the package boundaries
+- made the prototype runnable from a single module entry point
+
+Proof added to repo:
+
+- `LocalPrototypeHarness` and `python -m modulo.prototype`
+- prototype tests for boot and buyer round trip
+- repo docs now show how to run the local prototype path
+
 ## Upcoming slices
 
 These are ordered to keep the path coherent and consistent.
-
-### Slice 5: Local prototype orchestration
-
-Goal:
-
-- add one clear local prototype entry path that starts cloud, supervises a worker, and proves a buyer request round trip
-
-Why this slice matters:
-
-- it creates a repeatable proof path for development
-- it gives every future slice a concrete demo to preserve
-
-Exit criteria:
-
-- one command or demo harness can bring up the local prototype path
-- one request can traverse `client -> worker -> cloud -> worker -> response`
-- operator-visible status is available during the run
 
 ### Slice 6: Client onboarding and smoke-test surface
 

@@ -54,6 +54,15 @@ curl http://127.0.0.1:8000/api/tags
 curl -Method Post http://127.0.0.1:8000/api/chat -ContentType "application/json" -Body '{"model":"llama3.1:8b","messages":[{"role":"user","content":"hello"}],"stream":false}'
 ```
 
+## Running the local prototype
+
+```powershell
+python -m pip install -e .
+python -m modulo.prototype
+```
+
+This boots the in-process cloud control plane, starts a supervised worker through the client-facing path, and runs one buyer round trip through the local prototype harness.
+
 ## Current platform surface
 
 The current scaffold includes these worker-facing HTTP routes:

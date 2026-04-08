@@ -1,0 +1,41 @@
+import unittest
+from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from modulo.common.contracts import JobStatus, WorkerRuntimeState
+from modulo.prototype import LocalPrototypeHarness
+
+
+class LocalPrototypeHarnessTests(unittest.TestCase):
+    def test_boot_starts_hosting_and_registers_worker(self) -> None:
+        harness = LocalPrototypeHarness()
+
+        status = harness.boot()
+
+        self.assertTrue(status.openclaw_connected)
+        self.assertTrue(status.hosting_enabled)
+        self.assertIsNotNone(status.worker)
+        self.assertTrue(status.worker.registered_with_cloud)
+        self.assertEqual(WorkerRuntimeState.IDLE, status.worker.runtime_state)
+
+    def test_round_trip_completes_job_and_returns_response(self) -> None:
+        harness = LocalPrototypeHarness()
+
+        result = harness.run_round_trip("prototype hello")
+
+        self.assertEqual("llama3.1:8b", result.model_id)
+        self.assertEqual("prototype hello", result.user_message)
+        self.assertIn("prototype worker", result.response_text)
+        self.assertIsNotNone(result.client_status.worker)
+        self.assertEqual(JobStatus.COMPLETED, result.client_status.worker.last_job_status)
+
+        completed_job = harness.service.get_job(result.job_id)
+        self.assertIsNotNone(completed_job)
+        self.assertEqual(JobStatus.COMPLETED, completed_job.status)
+        self.assertEqual("prototype hello", completed_job.request.messages[0].content)
+
+
+if __name__ == "__main__":
+    unittest.main()
