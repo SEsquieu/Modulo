@@ -115,7 +115,7 @@ class GuiAppController:
             start_action_enabled=not onboarding.hosting_enabled,
             stop_action_enabled=onboarding.hosting_enabled,
             restart_action_enabled=onboarding.hosting_enabled,
-            smoke_action_enabled=onboarding.openclaw_connected and onboarding.hosting_enabled,
+            smoke_action_enabled=onboarding.connected_to_modulo,
             worker_registration_text=self._worker_registration_text(onboarding),
             worker_health_summary=self._worker_health_summary(onboarding),
             worker_activity_summary=self._worker_activity_summary(worker),

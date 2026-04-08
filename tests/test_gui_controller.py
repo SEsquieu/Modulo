@@ -20,7 +20,7 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertTrue(state.connect_action_enabled)
         self.assertTrue(state.start_action_enabled)
         self.assertFalse(state.stop_action_enabled)
-        self.assertFalse(state.smoke_action_enabled)
+        self.assertTrue(state.smoke_action_enabled)
         self.assertIn("Connect OpenClaw", state.home_subtitle)
         self.assertIn("not connected", state.connection_summary.lower())
         self.assertIn("Not registered", state.worker_registration_text)

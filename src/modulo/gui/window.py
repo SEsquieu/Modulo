@@ -3,7 +3,7 @@ from __future__ import annotations
 from modulo.gui.controller import GuiAppController, GuiShellState
 
 try:
-    from PySide6.QtCore import QTimer
+    from PySide6.QtCore import QTimer, Qt
     from PySide6.QtWidgets import (
         QApplication,
         QFrame,
@@ -15,6 +15,7 @@ try:
         QMainWindow,
         QPushButton,
         QPlainTextEdit,
+        QScrollArea,
         QVBoxLayout,
         QWidget,
     )
@@ -29,7 +30,8 @@ class ModuloMainWindow(QMainWindow):
         super().__init__()
         self.controller = controller
         self.setWindowTitle("Modulo")
-        self.resize(900, 640)
+        self.resize(880, 720)
+        self.setMinimumSize(720, 520)
 
         self.title_label = QLabel()
         self.title_label.setStyleSheet("font-size: 24px; font-weight: 700;")
@@ -95,6 +97,8 @@ class ModuloMainWindow(QMainWindow):
 
         home_box = QGroupBox("Home")
         home_layout = QGridLayout()
+        home_layout.setHorizontalSpacing(12)
+        home_layout.setVerticalSpacing(12)
         home_layout.addWidget(self.title_label, 0, 0, 1, 2)
         home_layout.addWidget(self.subtitle_label, 1, 0, 1, 2)
         home_layout.addWidget(self.connection_card, 2, 0)
@@ -141,12 +145,23 @@ class ModuloMainWindow(QMainWindow):
 
         root = QWidget()
         root_layout = QVBoxLayout()
+        root_layout.setContentsMargins(12, 12, 12, 12)
+        root_layout.setSpacing(12)
         root_layout.addWidget(home_box)
         root_layout.addWidget(hosting_box)
         root_layout.addWidget(worker_box)
         root_layout.addWidget(smoke_box)
+        root_layout.addStretch(1)
         root.setLayout(root_layout)
-        self.setCentralWidget(root)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setWidget(root)
+        self.setCentralWidget(scroll)
+
+        self._apply_window_sizing()
 
         self._poll_timer = QTimer(self)
         self._poll_timer.setInterval(1000)
@@ -160,19 +175,28 @@ class ModuloMainWindow(QMainWindow):
         frame = QFrame()
         frame.setFrameShape(QFrame.StyledPanel)
         frame.setStyleSheet(
-            "QFrame { border: 1px solid #d4d4d8; border-radius: 8px; padding: 8px; background: #fafaf9; }"
+            "QFrame { border: 1px solid #3f3f46; border-radius: 10px; padding: 10px; background: #27272a; }"
         )
         layout = QVBoxLayout()
         title_label = QLabel(title)
-        title_label.setStyleSheet("font-weight: 600; font-size: 14px;")
+        title_label.setStyleSheet("font-weight: 600; font-size: 14px; color: #f4f4f5;")
         value_label = QLabel()
         value_label.setObjectName("value")
         value_label.setWordWrap(True)
-        value_label.setStyleSheet("font-size: 13px;")
+        value_label.setStyleSheet("font-size: 13px; color: #d4d4d8;")
         layout.addWidget(title_label)
         layout.addWidget(value_label)
         frame.setLayout(layout)
         return frame
+
+    def _apply_window_sizing(self) -> None:
+        screen = self.screen() or QApplication.primaryScreen()
+        if screen is None:
+            return
+        available = screen.availableGeometry()
+        target_width = min(920, max(720, available.width() - 120))
+        target_height = min(760, max(520, available.height() - 120))
+        self.resize(target_width, target_height)
 
     @staticmethod
     def _set_card_text(card: QFrame, text: str) -> None:
