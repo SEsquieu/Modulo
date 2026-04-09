@@ -7,6 +7,11 @@ from typing import Callable, Protocol
 from modulo.common.catalog import SUPPORTED_MODELS
 from modulo.client.openclaw_discovery import OpenClawDiscovery, OpenClawDiscoveryStatus
 from modulo.client.ollama_discovery import OllamaDiscovery, OllamaDiscoveryStatus
+from modulo.client.ollama_loaded_models import (
+    LoadedOllamaModel,
+    OllamaLoadedModelsDiscovery,
+    OllamaLoadedModelsStatus,
+)
 from modulo.client.hosting_readiness import (
     HostingRuntimeProbeStatus,
     OllamaHostingRuntimeProbe,
@@ -91,6 +96,10 @@ class HostingSetupStatus:
     preflight: HostingPreflightStatus = HostingPreflightStatus()
     prototype_hosting_available: bool = False
     hosting_mode_label: str = "real"
+    warm_state_badge: str = "UNKNOWN"
+    warm_summary: str = "Warm-state visibility is unavailable."
+    warm_details: tuple[str, ...] = ()
+    loaded_model_ids: tuple[str, ...] = ()
     readiness_summary: str = "Select a model to prepare hosting."
     readiness_details: str = ""
     can_enable_hosting: bool = False
@@ -186,6 +195,11 @@ class ClientOpenClawDiscovery(Protocol):
         """Detect local OpenClaw installation and config state."""
 
 
+class ClientOllamaLoadedModelsDiscovery(Protocol):
+    def discover(self) -> OllamaLoadedModelsStatus:
+        """Detect which Ollama models are currently loaded in local memory."""
+
+
 @dataclass
 class ModuloClientSupervisor:
     worker_bridge: WorkerBridgeRuntime
@@ -194,6 +208,7 @@ class ModuloClientSupervisor:
     session_bridge: ClientSessionBridge | None = None
     openclaw_discovery: ClientOpenClawDiscovery | None = None
     ollama_discovery: OllamaDiscovery | None = None
+    ollama_loaded_models_discovery: ClientOllamaLoadedModelsDiscovery | None = None
     hosting_runtime_probe: ClientHostingRuntimeProbe = field(default_factory=OllamaHostingRuntimeProbe)
     smoke_test_runner: ClientSmokeTestRunner | None = None
     activity_provider: ClientActivityProvider | None = None
@@ -202,6 +217,8 @@ class ModuloClientSupervisor:
     _last_smoke_test: SmokeTestResult | None = None
     _cached_ollama_discovery: OllamaDiscoveryStatus | None = None
     _cached_ollama_discovery_at: float = 0.0
+    _cached_ollama_loaded_models: OllamaLoadedModelsStatus | None = None
+    _cached_ollama_loaded_models_at: float = 0.0
     _cached_openclaw_discovery: OpenClawDiscoveryStatus | None = None
     _cached_openclaw_discovery_at: float = 0.0
     _cached_runtime_probe: HostingRuntimeProbeStatus | None = None
@@ -422,6 +439,11 @@ class ModuloClientSupervisor:
             installed_model_ids=installed_model_ids,
             runtime_probe=self.get_hosting_runtime_probe_status(selected_model_id),
         )
+        loaded_models = self.get_ollama_loaded_models_status()
+        warm_state_badge, warm_summary, warm_details = self._hosting_warm_state(
+            selected_model_id=selected_model_id,
+            loaded_status=loaded_models,
+        )
         readiness_summary = self._hosting_readiness_summary(
             preflight=preflight,
             prototype_hosting_available=prototype_hosting_available,
@@ -438,6 +460,10 @@ class ModuloClientSupervisor:
             preflight=preflight,
             prototype_hosting_available=prototype_hosting_available,
             hosting_mode_label="prototype" if prototype_hosting_available else "real",
+            warm_state_badge=warm_state_badge,
+            warm_summary=warm_summary,
+            warm_details=warm_details,
+            loaded_model_ids=tuple(model.model_id for model in loaded_models.loaded_models),
             readiness_summary=readiness_summary,
             readiness_details=self._hosting_readiness_details(
                 selected_model_id=selected_model_id,
@@ -599,13 +625,26 @@ class ModuloClientSupervisor:
         if self.ollama_discovery is None:
             status = OllamaDiscoveryStatus(
                 summary="Ollama discovery is not configured.",
-                details="Attach a discovery provider before using live local model detection.",
-                error="no discovery provider configured",
-            )
+            details="Attach a discovery provider before using live local model detection.",
+            error="no discovery provider configured",
+        )
         else:
             status = self.ollama_discovery.discover()
         self._cached_ollama_discovery = status
         self._cached_ollama_discovery_at = now
+        return status
+
+    def get_ollama_loaded_models_status(self) -> OllamaLoadedModelsStatus:
+        now = time.monotonic()
+        if (
+            self._cached_ollama_loaded_models is not None
+            and now - self._cached_ollama_loaded_models_at < self.readiness_cache_ttl_seconds
+        ):
+            return self._cached_ollama_loaded_models
+        discovery = self.ollama_loaded_models_discovery or OllamaLoadedModelsDiscovery()
+        status = discovery.discover()
+        self._cached_ollama_loaded_models = status
+        self._cached_ollama_loaded_models_at = now
         return status
 
     def get_hosting_runtime_probe_status(self, model_id: str) -> HostingRuntimeProbeStatus:
@@ -652,11 +691,67 @@ class ModuloClientSupervisor:
     def _invalidate_readiness_cache(self) -> None:
         self._cached_ollama_discovery = None
         self._cached_ollama_discovery_at = 0.0
+        self._cached_ollama_loaded_models = None
+        self._cached_ollama_loaded_models_at = 0.0
         self._cached_openclaw_discovery = None
         self._cached_openclaw_discovery_at = 0.0
         self._cached_runtime_probe = None
         self._cached_runtime_probe_model_id = ""
         self._cached_runtime_probe_at = 0.0
+
+    @staticmethod
+    def _hosting_warm_state(
+        *,
+        selected_model_id: str,
+        loaded_status: OllamaLoadedModelsStatus,
+    ) -> tuple[str, str, tuple[str, ...]]:
+        if not selected_model_id:
+            return (
+                "NO MODEL",
+                "Select a host model before checking warm state.",
+                ("No host model is selected.",),
+            )
+        if not loaded_status.available:
+            return (
+                "UNKNOWN",
+                loaded_status.summary,
+                (loaded_status.details,),
+            )
+
+        loaded_model = next(
+            (model for model in loaded_status.loaded_models if model.model_id == selected_model_id),
+            None,
+        )
+        if loaded_model is None:
+            return (
+                "COLD",
+                f"{selected_model_id} is not currently loaded in Ollama memory.",
+                (
+                    loaded_status.summary,
+                    f"Loaded models: {', '.join(model.model_id for model in loaded_status.loaded_models) or 'None'}",
+                ),
+            )
+
+        detail_lines = [f"Loaded model: {loaded_model.model_id}"]
+        if loaded_model.expires_at:
+            detail_lines.append(f"Expires at: {loaded_model.expires_at}")
+        if loaded_model.size_vram_bytes:
+            detail_lines.append(f"VRAM: {loaded_model.size_vram_bytes} bytes")
+        if loaded_model.size_bytes:
+            detail_lines.append(f"Loaded size: {loaded_model.size_bytes} bytes")
+        if loaded_model.context_length:
+            detail_lines.append(f"Context length: {loaded_model.context_length}")
+        if loaded_model.family:
+            detail_lines.append(f"Family: {loaded_model.family}")
+        if loaded_model.parameter_size:
+            detail_lines.append(f"Parameters: {loaded_model.parameter_size}")
+        if loaded_model.quantization_level:
+            detail_lines.append(f"Quantization: {loaded_model.quantization_level}")
+        return (
+            "WARM",
+            f"{selected_model_id} is currently loaded in Ollama memory.",
+            tuple(detail_lines),
+        )
 
     def _build_openclaw_connection_plan(
         self,

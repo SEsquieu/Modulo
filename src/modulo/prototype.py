@@ -14,6 +14,7 @@ from modulo.client.app import (
 )
 from modulo.client.openclaw_discovery import OpenClawDiscovery
 from modulo.client.ollama_discovery import OllamaDiscovery
+from modulo.client.ollama_loaded_models import OllamaLoadedModelsDiscovery
 from modulo.client.hosting_readiness import HostingRuntimeProbeStatus, OllamaHostingRuntimeProbe
 from modulo.cloud.http import ModuloHTTPApp
 from modulo.cloud.router import TrustRouter
@@ -114,6 +115,7 @@ class LocalPrototypeHarness:
     ollama_http_client: OllamaHTTPClient | None = None
     openclaw_discovery: OpenClawDiscovery | None = None
     ollama_discovery: OllamaDiscovery | None = None
+    ollama_loaded_models_discovery: OllamaLoadedModelsDiscovery | None = None
     hosting_runtime_probe: OllamaHostingRuntimeProbe | None = None
     selected_executor_mode: str = field(init=False, default="prototype")
     selected_executor_summary: str = field(init=False, default="")
@@ -147,6 +149,7 @@ class LocalPrototypeHarness:
             session_bridge=LocalPrototypeSessionBridge(service=self.service),
             openclaw_discovery=self.openclaw_discovery or OpenClawDiscovery(modulo_url=self.modulo_url),
             ollama_discovery=self.ollama_discovery or OllamaDiscovery(),
+            ollama_loaded_models_discovery=self.ollama_loaded_models_discovery or OllamaLoadedModelsDiscovery(),
             hosting_runtime_probe=self.hosting_runtime_probe or OllamaHostingRuntimeProbe(),
             smoke_test_runner=self,
             activity_provider=self,

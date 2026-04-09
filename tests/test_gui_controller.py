@@ -6,6 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from modulo.gui.controller import GuiAppController
 from modulo.client.ollama_discovery import OllamaDiscoveryStatus
+from modulo.client.ollama_loaded_models import LoadedOllamaModel, OllamaLoadedModelsStatus
 from modulo.client.openclaw_discovery import OpenClawDiscoveryStatus
 from modulo.client.hosting_readiness import HostingRuntimeProbeStatus
 from modulo.prototype import LocalPrototypeHarness
@@ -41,6 +42,23 @@ class FakeGuiOpenClawDiscovery:
             state="not_installed",
             summary="OpenClaw was not detected on this machine.",
             details="No OpenClaw install or config footprint was found.",
+        )
+
+
+class FakeGuiLoadedModelsDiscovery:
+    def discover(self) -> OllamaLoadedModelsStatus:
+        return OllamaLoadedModelsStatus(
+            available=True,
+            loaded_models=(
+                LoadedOllamaModel(
+                    model_id="llama3.1:8b",
+                    display_name="llama3.1:8b",
+                    expires_at="2099-01-01T00:00:00Z",
+                    size_vram_bytes=4096,
+                ),
+            ),
+            summary="1 Ollama model is currently loaded in memory.",
+            details="fake gui loaded discovery",
         )
 
 
@@ -98,6 +116,7 @@ class GuiAppControllerTests(unittest.TestCase):
             harness=LocalPrototypeHarness(
                 openclaw_discovery=FakeGuiOpenClawDiscovery(),
                 ollama_discovery=FakeGuiOllamaDiscovery(),
+                ollama_loaded_models_discovery=FakeGuiLoadedModelsDiscovery(),
                 hosting_runtime_probe=FakeGuiHostingRuntimeProbe(),
             )
         )
@@ -167,6 +186,7 @@ class GuiAppControllerTests(unittest.TestCase):
             harness=LocalPrototypeHarness(
                 openclaw_discovery=InstalledGuiOpenClawDiscovery(),
                 ollama_discovery=FakeGuiOllamaDiscovery(),
+                ollama_loaded_models_discovery=FakeGuiLoadedModelsDiscovery(),
                 hosting_runtime_probe=FakeGuiHostingRuntimeProbe(),
             )
         )
@@ -214,6 +234,7 @@ class GuiAppControllerTests(unittest.TestCase):
             harness=LocalPrototypeHarness(
                 openclaw_discovery=InstalledGuiOpenClawDiscovery(),
                 ollama_discovery=FakeGuiOllamaDiscovery(),
+                ollama_loaded_models_discovery=FakeGuiLoadedModelsDiscovery(),
                 hosting_runtime_probe=ReadyGuiHostingRuntimeProbe(),
                 ollama_http_client=FakeGuiOllamaHTTPClient(),
             )
@@ -237,6 +258,7 @@ class GuiAppControllerTests(unittest.TestCase):
             harness=LocalPrototypeHarness(
                 openclaw_discovery=InstalledGuiOpenClawDiscovery(),
                 ollama_discovery=FakeGuiOllamaDiscovery(),
+                ollama_loaded_models_discovery=FakeGuiLoadedModelsDiscovery(),
                 hosting_runtime_probe=FakeGuiHostingRuntimeProbe(),
             )
         )
@@ -253,6 +275,7 @@ class GuiAppControllerTests(unittest.TestCase):
             harness=LocalPrototypeHarness(
                 openclaw_discovery=BrokenGuiOpenClawDiscovery(),
                 ollama_discovery=FakeGuiOllamaDiscovery(),
+                ollama_loaded_models_discovery=FakeGuiLoadedModelsDiscovery(),
                 hosting_runtime_probe=FakeGuiHostingRuntimeProbe(),
             )
         )
@@ -269,6 +292,7 @@ class GuiAppControllerTests(unittest.TestCase):
             harness=LocalPrototypeHarness(
                 openclaw_discovery=InstalledGuiOpenClawDiscovery(),
                 ollama_discovery=FakeGuiOllamaDiscovery(),
+                ollama_loaded_models_discovery=FakeGuiLoadedModelsDiscovery(),
                 hosting_runtime_probe=FakeGuiHostingRuntimeProbe(),
             )
         )
@@ -284,6 +308,7 @@ class GuiAppControllerTests(unittest.TestCase):
             harness=LocalPrototypeHarness(
                 openclaw_discovery=FakeGuiOpenClawDiscovery(),
                 ollama_discovery=FakeGuiOllamaDiscovery(),
+                ollama_loaded_models_discovery=FakeGuiLoadedModelsDiscovery(),
                 hosting_runtime_probe=ReadyGuiHostingRuntimeProbe(),
             )
         )

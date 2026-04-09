@@ -22,26 +22,23 @@ It exists to make hosting behavior visible and trustworthy by showing whether th
 
 ### Slice 1: Ollama loaded-model discovery seam
 
-Status: not started
+Status: completed
 
-Goal:
+Summary:
 
-- add a client-facing seam for reading loaded local models from Ollama
-- detect whether the selected host model is currently loaded
-- expose warm-state facts without yet changing hosting behavior
-
-Done when:
-
-- the client can tell whether the selected model is loaded locally
-- the host state includes a warm-state badge and compact runtime facts
+- added a client-facing loaded-model discovery seam that reads the local Ollama `/api/ps` state
+- threaded loaded-model visibility into hosting setup status with a warm-state badge, summary, and compact runtime facts
+- kept the change in the client/prototype seam so the Host tab can consume it later without embedding Ollama logic in widgets
 
 Proof added to repo:
 
-- 
+- `OllamaLoadedModelsDiscovery`, `OllamaLoadedModelsStatus`, and `LoadedOllamaModel` in the client layer
+- hosting setup state now includes warm-state badge, summary, details, and loaded-model ids
+- client, prototype, and loaded-model discovery tests covering warm and cold host states
 
 ### Slice 2: Host GUI warm-state visibility
 
-Status: not started
+Status: in progress
 
 Goal:
 

@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from modulo.common.contracts import JobStatus, WorkerRuntimeState
 from modulo.client.hosting_readiness import HostingRuntimeProbeStatus
+from modulo.client.ollama_loaded_models import LoadedOllamaModel, OllamaLoadedModelsStatus
 from modulo.client.openclaw_discovery import OpenClawDiscoveryStatus
 from modulo.worker.errors import WorkerExecutionError
 from modulo.worker.executors import OllamaExecutor, StubExecutor
@@ -52,6 +53,23 @@ class InstalledQwenDiscovery:
         )
 
 
+class FakeLoadedModelsDiscovery:
+    def discover(self) -> OllamaLoadedModelsStatus:
+        return OllamaLoadedModelsStatus(
+            available=True,
+            loaded_models=(
+                LoadedOllamaModel(
+                    model_id="llama3.1:8b",
+                    display_name="llama3.1:8b",
+                    expires_at="2099-01-01T00:00:00Z",
+                    size_vram_bytes=4096,
+                ),
+            ),
+            summary="1 Ollama model is currently loaded in memory.",
+            details="fake loaded discovery",
+        )
+
+
 class BlockedRuntimeProbe:
     def probe(self, model_id: str) -> HostingRuntimeProbeStatus:
         return HostingRuntimeProbeStatus(
@@ -85,6 +103,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
     def test_selects_real_executor_when_runtime_probe_is_ready(self) -> None:
         harness = LocalPrototypeHarness(
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
             hosting_runtime_probe=ReadyRuntimeProbe(),
             ollama_http_client=FakeOllamaHTTPClient(),
         )
@@ -96,6 +115,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
     def test_falls_back_to_stub_executor_when_runtime_probe_is_blocked(self) -> None:
         harness = LocalPrototypeHarness(
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
             hosting_runtime_probe=BlockedRuntimeProbe(),
         )
 
@@ -108,6 +128,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         harness = LocalPrototypeHarness(
             executor=executor,
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
             hosting_runtime_probe=ReadyRuntimeProbe(),
         )
 
@@ -115,7 +136,10 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertEqual("explicit", harness.selected_executor_mode)
 
     def test_boot_starts_hosting_and_registers_worker(self) -> None:
-        harness = LocalPrototypeHarness(openclaw_discovery=FakePrototypeOpenClawDiscovery())
+        harness = LocalPrototypeHarness(
+            openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
+        )
 
         status = harness.boot()
 
@@ -126,7 +150,10 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertEqual(WorkerRuntimeState.IDLE, status.worker.runtime_state)
 
     def test_round_trip_completes_job_and_returns_response(self) -> None:
-        harness = LocalPrototypeHarness(openclaw_discovery=FakePrototypeOpenClawDiscovery())
+        harness = LocalPrototypeHarness(
+            openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
+        )
 
         result = harness.run_round_trip("prototype hello")
 
@@ -144,6 +171,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
     def test_real_round_trip_completes_through_supervised_path(self) -> None:
         harness = LocalPrototypeHarness(
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
             hosting_runtime_probe=ReadyRuntimeProbe(),
             ollama_http_client=FakeOllamaHTTPClient(),
         )
@@ -165,6 +193,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         harness = LocalPrototypeHarness(
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
             ollama_discovery=InstalledQwenDiscovery(),
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
             hosting_runtime_probe=ReadyRuntimeProbe(),
             ollama_http_client=FakeOllamaHTTPClient(),
         )
@@ -179,7 +208,10 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertEqual("qwen3.5:4b", completed_job.request.model_id)
 
     def test_client_smoke_test_reports_success_through_client_surface(self) -> None:
-        harness = LocalPrototypeHarness(openclaw_discovery=FakePrototypeOpenClawDiscovery())
+        harness = LocalPrototypeHarness(
+            openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
+        )
 
         harness.boot()
         status = harness.client.run_smoke_test("prototype smoke")
@@ -192,7 +224,9 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertEqual("", onboarding.smoke_test_error)
 
     def test_session_bridge_fetches_platform_state_without_hosting(self) -> None:
-        harness = LocalPrototypeHarness()
+        harness = LocalPrototypeHarness(
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
+        )
 
         status = harness.client.get_status()
 
@@ -205,7 +239,9 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertIn("platform-managed", status.platform.buyer_config_summary)
 
     def test_session_bridge_reflects_network_models_after_hosting_registers(self) -> None:
-        harness = LocalPrototypeHarness()
+        harness = LocalPrototypeHarness(
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
+        )
 
         harness.boot()
         status = harness.client.get_status()
@@ -219,6 +255,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         harness = LocalPrototypeHarness(
             executor=FailingExecutor(),
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
         )
 
         harness.boot()
@@ -234,6 +271,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
     def test_real_execution_failure_surfaces_through_smoke_test_and_onboarding(self) -> None:
         harness = LocalPrototypeHarness(
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
             hosting_runtime_probe=ReadyRuntimeProbe(),
             ollama_http_client=FailingOllamaHTTPClient(),
         )
@@ -253,6 +291,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
     def test_real_execution_timeout_surfaces_as_clean_smoke_test_failure(self) -> None:
         harness = LocalPrototypeHarness(
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
             hosting_runtime_probe=ReadyRuntimeProbe(),
             ollama_http_client=TimeoutOllamaHTTPClient(),
         )
@@ -269,7 +308,10 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertFalse(onboarding.smoke_test_ok)
 
     def test_activity_visibility_tracks_recent_jobs_and_continuity(self) -> None:
-        harness = LocalPrototypeHarness(openclaw_discovery=FakePrototypeOpenClawDiscovery())
+        harness = LocalPrototypeHarness(
+            openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
+        )
 
         harness.run_round_trip("first buyer turn", buyer_id="buyer-a")
         harness.run_round_trip("second buyer turn", buyer_id="buyer-a")

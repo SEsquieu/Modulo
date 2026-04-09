@@ -8,6 +8,7 @@ This file is the quickest way to regain context when switching workstations.
 - GUI phase-0 roadmap is completed
 - Phase 2 integration work is completed through `Step 5: Real local execution`
 - a host-side warm-state refinement roadmap is now active before packaging
+- current warm-state roadmap progress: `Slice 1` completed, `Slice 2` in progress
 - the active next step is [host_warm_state_roadmap.md](./host_warm_state_roadmap.md)
 
 ## What exists today
@@ -28,6 +29,7 @@ This file is the quickest way to regain context when switching workstations.
 - real local execution through the supervised smoke-test path when runtime readiness passes
 - GUI truth for execution mode, including `REAL` versus `PROTOTYPE`
 - host-side selection of installed local Ollama models outside the curated catalog
+- client-side warm-state detection for whether the selected host model is currently loaded in Ollama memory
 
 ## What is still prototype-safe
 
@@ -66,12 +68,12 @@ The host selector can now choose installed local Ollama models outside the curat
 
 ## Next recommended starting point
 
-Start with `Slice 1: Ollama loaded-model discovery seam` in [host_warm_state_roadmap.md](./host_warm_state_roadmap.md).
+Start with `Slice 2: Host GUI warm-state visibility` in [host_warm_state_roadmap.md](./host_warm_state_roadmap.md).
 
 The most likely first useful slice is:
 
 - add a client-facing warm-state seam based on Ollama loaded-model visibility
-- show whether the selected host model is actually loaded on hardware
+- show that warm-state cleanly in the Host tab
 - use that as the basis for later prewarm and host transparency work
 
 ## Run commands

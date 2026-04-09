@@ -6,6 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from modulo.client.app import ModuloClientSupervisor, PlatformModelListing, PlatformSessionStatus
 from modulo.client.hosting_readiness import HostingRuntimeProbeStatus
+from modulo.client.ollama_loaded_models import LoadedOllamaModel, OllamaLoadedModelsStatus
 from modulo.client.openclaw_discovery import OpenClawDiscoveryStatus
 from modulo.client.ollama_discovery import OllamaDiscoveryStatus
 from modulo.cloud.http import ModuloHTTPApp
@@ -52,6 +53,24 @@ class FakeHostingRuntimeProbe:
             model_ready=True,
             summary=f"Ollama runtime resolved {model_id} successfully.",
             detail="fake runtime probe",
+        )
+
+
+class FakeLoadedModelsDiscovery:
+    def discover(self) -> OllamaLoadedModelsStatus:
+        return OllamaLoadedModelsStatus(
+            available=True,
+            loaded_models=(
+                LoadedOllamaModel(
+                    model_id="llama3.1:8b",
+                    display_name="llama3.1:8b",
+                    expires_at="2099-01-01T00:00:00Z",
+                    size_vram_bytes=4096,
+                    context_length=8192,
+                ),
+            ),
+            summary="1 Ollama model is currently loaded in memory.",
+            details="fake loaded-model discovery",
         )
 
 
@@ -166,6 +185,7 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
             session_bridge=FakeSessionBridge(),
             openclaw_discovery=FakeOpenClawDiscovery(),
             ollama_discovery=FakeOllamaDiscovery(),
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
             hosting_runtime_probe=FakeHostingRuntimeProbe(),
         )
 
@@ -217,6 +237,7 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
             executor=InMemoryWorkerRuntime(),
         )
         self.client = ModuloClientSupervisor(worker_bridge=self.bridge)
+        self.client.ollama_loaded_models_discovery = FakeLoadedModelsDiscovery()
         self.client.start_hosting()
 
         job = self.service.submit_chat(
@@ -324,6 +345,10 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertTrue(status.hosting_setup.preflight.ok)
         self.assertEqual("", status.hosting_setup.preflight.failure_reason)
         self.assertTrue(status.hosting_setup.can_enable_hosting)
+        self.assertEqual("WARM", status.hosting_setup.warm_state_badge)
+        self.assertIn("currently loaded", status.hosting_setup.warm_summary)
+        self.assertTrue(status.hosting_setup.warm_details)
+        self.assertEqual(("llama3.1:8b",), status.hosting_setup.loaded_model_ids)
         self.assertIn("Readiness result: Hosting preflight passed", status.hosting_setup.readiness_details)
         self.assertIn("Ollama is available", status.hosting_setup.readiness_details)
 
@@ -334,6 +359,7 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertTrue(status.hosting_setup.preflight.ok)
         self.assertEqual("", status.hosting_setup.preflight.failure_reason)
         self.assertTrue(status.hosting_setup.can_enable_hosting)
+        self.assertEqual("COLD", status.hosting_setup.warm_state_badge)
         self.assertIn("Installed local Ollama model", status.hosting_setup.readiness_details)
 
     def test_hosting_preflight_fails_when_selected_model_is_missing(self) -> None:
