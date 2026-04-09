@@ -331,84 +331,84 @@ class ModuloMainWindow(QMainWindow):
         self.setStyleSheet(
             """
             QWidget {
-                background-color: #161217;
-                color: #f6f2ff;
+                background-color: #09110c;
+                color: #8df7a6;
                 font-family: "Consolas", "Courier New", monospace;
                 font-size: 13px;
             }
             QMainWindow {
-                background-color: #161217;
+                background-color: #09110c;
             }
             QGroupBox {
-                border: 2px solid #7c3aed;
+                border: 2px solid #2bd66b;
                 margin-top: 14px;
                 padding-top: 12px;
-                background-color: #221a24;
+                background-color: #0f1712;
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
                 left: 12px;
                 top: 2px;
                 padding: 0 6px;
-                color: #fde047;
-                background-color: #161217;
+                color: #b8ff65;
+                background-color: #09110c;
                 font-weight: 700;
             }
             QLabel {
                 background: transparent;
             }
             QFrame {
-                background-color: #2a2230;
+                background-color: #111a15;
             }
             QScrollArea {
                 border: none;
-                background-color: #161217;
+                background-color: #09110c;
             }
             QTabWidget::pane {
-                border: 2px solid #7c3aed;
+                border: 2px solid #2bd66b;
                 top: -2px;
-                background-color: #221a24;
+                background-color: #0f1712;
             }
             QTabBar::tab {
-                background-color: #2c1f42;
-                color: #f6f2ff;
-                border: 2px solid #7c3aed;
+                background-color: #101712;
+                color: #8df7a6;
+                border: 2px solid #2bd66b;
                 padding: 6px 14px;
                 margin-right: 4px;
                 min-width: 68px;
             }
             QTabBar::tab:selected {
-                background-color: #fde047;
-                color: #221a24;
+                background-color: #b8ff65;
+                color: #09110c;
             }
             QPushButton {
-                background-color: #31243d;
-                color: #f6f2ff;
-                border: 2px solid #8b5cf6;
+                background-color: #111a15;
+                color: #8df7a6;
+                border: 2px solid #2bd66b;
                 border-radius: 0px;
                 padding: 8px 14px;
                 font-weight: 700;
             }
             QPushButton:hover {
-                background-color: #3b2b4a;
+                background-color: #16221b;
             }
             QPushButton:pressed {
                 padding-top: 10px;
                 padding-left: 16px;
             }
             QPushButton:disabled {
-                background-color: #2b2430;
-                color: #8a8294;
-                border: 2px solid #4b4453;
+                background-color: #101712;
+                color: #4d7658;
+                border: 2px solid #31503a;
             }
             QComboBox, QPlainTextEdit {
-                background-color: #120f16;
-                color: #f6f2ff;
-                border: 2px solid #8b5cf6;
+                background-color: #050906;
+                color: #8df7a6;
+                border: 2px solid #2bd66b;
                 border-radius: 0px;
                 padding: 6px 8px;
-                selection-background-color: #fde047;
-                selection-color: #221a24;
+                selection-background-color: #b8ff65;
+                selection-color: #09110c;
             }
             QComboBox::drop-down {
                 border: none;
@@ -419,20 +419,20 @@ class ModuloMainWindow(QMainWindow):
                 height: 10px;
             }
             QProgressBar {
-                border: 2px solid #8b5cf6;
-                background-color: #120f16;
+                border: 2px solid #2bd66b;
+                background-color: #050906;
                 min-height: 10px;
             }
             QProgressBar::chunk {
-                background-color: #22c55e;
+                background-color: #b8ff65;
             }
             QScrollBar:vertical {
-                background-color: #120f16;
+                background-color: #050906;
                 width: 12px;
                 margin: 0;
             }
             QScrollBar::handle:vertical {
-                background-color: #8b5cf6;
+                background-color: #2bd66b;
                 min-height: 24px;
             }
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
