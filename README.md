@@ -43,6 +43,7 @@ Roadmap reference:
 - [docs/gui_state_map.md](./docs/gui_state_map.md)
 - [docs/phase_2_plan.md](./docs/phase_2_plan.md)
 - [docs/session_bridge_roadmap.md](./docs/session_bridge_roadmap.md)
+- [docs/host_warm_state_roadmap.md](./docs/host_warm_state_roadmap.md)
 
 ## Running the demo server
 
@@ -89,6 +90,10 @@ The GUI currently includes:
 - a worker panel with live registration, health, activity, and error summaries
 - a prompt-driven smoke-test and diagnostics panel backed by the current prototype harness
 - an activity panel with recent jobs and buyer continuity hints
+
+Planned next host refinement:
+
+- [docs/host_warm_state_roadmap.md](./docs/host_warm_state_roadmap.md) to make model warm-state and local resource usage visible before packaging work
 
 ## Current platform surface
 

@@ -15,6 +15,7 @@ Current source of truth:
 - [session_bridge_roadmap.md](./session_bridge_roadmap.md): mini roadmap for the always-on client control-plane/session bridge
 - [openclaw_integration_roadmap.md](./openclaw_integration_roadmap.md): mini roadmap for real OpenClaw detection and connection flow
 - [real_execution_roadmap.md](./real_execution_roadmap.md): mini roadmap for real Ollama-backed execution
+- [host_warm_state_roadmap.md](./host_warm_state_roadmap.md): mini roadmap for host-side warm-state visibility and prewarm lifecycle
 - [productization_checklist.md](./productization_checklist.md): compact gated checklist for packaging and trust polish
 
 Recommended next docs to add:
