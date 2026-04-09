@@ -63,6 +63,7 @@ class ModuloMainWindow(QMainWindow):
         self.setWindowTitle("Modulo")
         self.resize(880, 720)
         self.setMinimumSize(720, 520)
+        self._apply_retro_theme()
 
         self.title_label = QLabel()
         self.title_label.setStyleSheet("font-size: 24px; font-weight: 700;")
@@ -325,6 +326,120 @@ class ModuloMainWindow(QMainWindow):
         self._poll_timer.start()
 
         self._apply_state(self.controller.refresh())
+
+    def _apply_retro_theme(self) -> None:
+        self.setStyleSheet(
+            """
+            QWidget {
+                background-color: #161217;
+                color: #f6f2ff;
+                font-family: "Consolas", "Courier New", monospace;
+                font-size: 13px;
+            }
+            QMainWindow {
+                background-color: #161217;
+            }
+            QGroupBox {
+                border: 2px solid #7c3aed;
+                margin-top: 14px;
+                padding-top: 12px;
+                background-color: #221a24;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 12px;
+                top: 2px;
+                padding: 0 6px;
+                color: #fde047;
+                background-color: #161217;
+                font-weight: 700;
+            }
+            QLabel {
+                background: transparent;
+            }
+            QFrame {
+                background-color: #2a2230;
+            }
+            QScrollArea {
+                border: none;
+                background-color: #161217;
+            }
+            QTabWidget::pane {
+                border: 2px solid #7c3aed;
+                top: -2px;
+                background-color: #221a24;
+            }
+            QTabBar::tab {
+                background-color: #2c1f42;
+                color: #f6f2ff;
+                border: 2px solid #7c3aed;
+                padding: 6px 14px;
+                margin-right: 4px;
+                min-width: 68px;
+            }
+            QTabBar::tab:selected {
+                background-color: #fde047;
+                color: #221a24;
+            }
+            QPushButton {
+                background-color: #31243d;
+                color: #f6f2ff;
+                border: 2px solid #8b5cf6;
+                border-radius: 0px;
+                padding: 8px 14px;
+                font-weight: 700;
+            }
+            QPushButton:hover {
+                background-color: #3b2b4a;
+            }
+            QPushButton:pressed {
+                padding-top: 10px;
+                padding-left: 16px;
+            }
+            QPushButton:disabled {
+                background-color: #2b2430;
+                color: #8a8294;
+                border: 2px solid #4b4453;
+            }
+            QComboBox, QPlainTextEdit {
+                background-color: #120f16;
+                color: #f6f2ff;
+                border: 2px solid #8b5cf6;
+                border-radius: 0px;
+                padding: 6px 8px;
+                selection-background-color: #fde047;
+                selection-color: #221a24;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 24px;
+            }
+            QComboBox::down-arrow {
+                width: 10px;
+                height: 10px;
+            }
+            QProgressBar {
+                border: 2px solid #8b5cf6;
+                background-color: #120f16;
+                min-height: 10px;
+            }
+            QProgressBar::chunk {
+                background-color: #22c55e;
+            }
+            QScrollBar:vertical {
+                background-color: #120f16;
+                width: 12px;
+                margin: 0;
+            }
+            QScrollBar::handle:vertical {
+                background-color: #8b5cf6;
+                min-height: 24px;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+            """
+        )
 
     def _build_host_card(self, title: str, value_label: QLabel) -> QFrame:
         card = QFrame()
