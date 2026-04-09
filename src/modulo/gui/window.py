@@ -18,6 +18,7 @@ try:
         QPushButton,
         QPlainTextEdit,
         QScrollArea,
+        QSizePolicy,
         QTabWidget,
         QVBoxLayout,
         QWidget,
@@ -155,6 +156,8 @@ class ModuloMainWindow(QMainWindow):
         self.hosting_warm_state_label.setStyleSheet("font-weight: 600;")
         self.hosting_warm_summary_label = QLabel()
         self.hosting_warm_summary_label.setWordWrap(True)
+        self.host_runtime_details_label = QLabel()
+        self.host_runtime_details_label.setWordWrap(True)
         self.hosting_warm_details_label = QLabel()
         self.hosting_warm_details_label.setWordWrap(True)
         self.execution_mode_label = QLabel()
@@ -182,8 +185,9 @@ class ModuloMainWindow(QMainWindow):
         self.host_toggle_button = QPushButton("Enable Hosting")
         self.host_toggle_button.clicked.connect(self._toggle_hosting_async)
 
-        self.restart_button = QPushButton("Restart Hosting")
+        self.restart_button = QPushButton("Refresh Host")
         self.restart_button.clicked.connect(self._restart_hosting_async)
+        self.restart_button.setMaximumWidth(140)
 
         self.smoke_button = QPushButton("Run Smoke Test")
         self.smoke_button.clicked.connect(self._run_smoke_test)
@@ -210,9 +214,13 @@ class ModuloMainWindow(QMainWindow):
         host_layout.addWidget(self._build_host_card("Loaded Model", self.host_card_model_value))
 
         self.host_detail_tabs = QTabWidget()
-        self.host_detail_tabs.addTab(self._build_host_details_page(), "Details")
+        self.host_detail_tabs.addTab(self._build_host_details_page(), "Runtime")
         self.host_detail_tabs.addTab(self._build_readiness_page(), "Model")
         self.host_detail_tabs.addTab(self._build_worker_details_page(), "Worker")
+        self.host_detail_tabs.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Maximum,
+        )
         host_layout.addWidget(self.host_detail_tabs)
         host_box.setLayout(host_layout)
 
@@ -333,7 +341,9 @@ class ModuloMainWindow(QMainWindow):
         layout = QVBoxLayout()
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
-        layout.addWidget(self.hosting_warm_details_label)
+        layout.addWidget(self.hosting_warm_summary_label)
+        layout.addWidget(self.host_runtime_details_label)
+        layout.addStretch(1)
         page.setLayout(layout)
         return page
 
@@ -342,15 +352,8 @@ class ModuloMainWindow(QMainWindow):
         layout = QVBoxLayout()
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
-        layout.addWidget(self.execution_mode_label)
-        layout.addWidget(self.execution_summary_label)
-        layout.addWidget(self.ollama_status_label)
-        layout.addWidget(self.ollama_summary_label)
-        layout.addWidget(self.ollama_inventory_summary_label)
-        layout.addWidget(self.hosting_readiness_label)
-        layout.addWidget(self.hosting_preflight_summary_label)
-        layout.addWidget(self.hosting_preflight_reason_label)
-        layout.addWidget(self.hosting_inventory_label)
+        layout.addWidget(self.hosting_warm_details_label)
+        layout.addStretch(1)
         page.setLayout(layout)
         return page
 
@@ -359,7 +362,10 @@ class ModuloMainWindow(QMainWindow):
         layout = QVBoxLayout()
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
-        layout.addWidget(self.restart_button)
+        restart_row = QHBoxLayout()
+        restart_row.addStretch(1)
+        restart_row.addWidget(self.restart_button, 0)
+        layout.addLayout(restart_row)
         layout.addWidget(self.worker_registration_label)
         layout.addWidget(self.worker_health_summary_label)
         layout.addWidget(self.worker_activity_label)
@@ -370,6 +376,7 @@ class ModuloMainWindow(QMainWindow):
         layout.addWidget(self.worker_jobs_label)
         layout.addWidget(self.worker_last_job_label)
         layout.addWidget(self.worker_error_label)
+        layout.addStretch(1)
         page.setLayout(layout)
         return page
 
@@ -679,31 +686,50 @@ class ModuloMainWindow(QMainWindow):
 
         self.hosting_mode_label.setText(f"Host: {state.hosting_mode_badge}")
         self.hosting_warm_state_label.setText(f"State: {state.hosting_warm_state_badge}")
-        detail_lines = []
-        if state.hosting_warm_summary:
-            detail_lines.append(state.hosting_warm_summary)
-        detail_lines.extend(state.hosting_warm_details)
-        self.hosting_warm_details_label.setText("\n".join(detail_lines))
-        self.execution_mode_label.setText(f"Execution path: {state.execution_mode_badge}")
-        self.execution_summary_label.setText(state.execution_summary)
-        self.ollama_status_label.setText(f"Ollama: {state.ollama_status_badge}")
-        self.ollama_summary_label.setText(state.ollama_summary)
-        self.ollama_inventory_summary_label.setText(state.ollama_inventory_summary)
-        self.hosting_readiness_label.setText(f"Readiness: {state.hosting_readiness_badge}")
-        self.hosting_preflight_summary_label.setText(state.hosting_preflight_summary)
-        self.hosting_preflight_reason_label.setText(
-            f"Why blocked: {state.hosting_preflight_reason}"
-            if state.hosting_preflight_reason
-            else ""
+        self.hosting_warm_summary_label.setText(state.hosting_warm_summary)
+        model_detail_lines = []
+        runtime_detail_lines = []
+        for detail in state.hosting_warm_details:
+            if detail.startswith(
+                (
+                    "Loaded model:",
+                    "Expires at:",
+                    "VRAM:",
+                    "Loaded size:",
+                    "Context length:",
+                    "Family:",
+                    "Parameters:",
+                    "Quantization:",
+                )
+            ):
+                model_detail_lines.append(detail)
+            else:
+                runtime_detail_lines.append(detail)
+        runtime_detail_lines.extend(
+            (
+                f"Execution path: {state.execution_mode_badge}",
+                state.execution_summary,
+                f"Ollama: {state.ollama_status_badge}",
+                state.ollama_summary,
+                state.ollama_inventory_summary,
+                f"Readiness: {state.hosting_readiness_badge}",
+                state.hosting_preflight_summary,
+            )
         )
+        if state.hosting_preflight_reason:
+            runtime_detail_lines.append(f"Why blocked: {state.hosting_preflight_reason}")
         supported_installed = len(state.hosting_supported_installed_model_ids)
         supported_missing = len(state.hosting_supported_missing_model_ids)
         unsupported_installed = len(state.hosting_unsupported_installed_model_ids)
-        self.hosting_inventory_label.setText(
+        runtime_detail_lines.append(
             "Inventory: "
             f"{supported_installed} supported installed, "
             f"{supported_missing} supported missing, "
             f"{unsupported_installed} installed outside the curated catalog."
+        )
+        self.host_runtime_details_label.setText("\n".join(line for line in runtime_detail_lines if line))
+        self.hosting_warm_details_label.setText(
+            "\n".join(model_detail_lines) or "No active loaded-model details are available yet."
         )
 
         self.worker_id_label.setText(f"Worker ID: {state.worker_id or 'Unavailable'}")
