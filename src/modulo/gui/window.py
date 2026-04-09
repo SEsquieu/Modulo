@@ -6,6 +6,7 @@ from modulo.gui.controller import GuiAppController, GuiShellState
 
 try:
     from PySide6.QtCore import QObject, QRunnable, QThreadPool, QTimer, Qt, Signal
+    from PySide6.QtGui import QFont
     from PySide6.QtWidgets import (
         QApplication,
         QComboBox,
@@ -148,6 +149,9 @@ class ModuloMainWindow(QMainWindow):
         self.openclaw_plan_box.setReadOnly(True)
         self.openclaw_plan_box.setMinimumHeight(110)
         self.hosting_model_combo = QComboBox()
+        combo_font = QFont("Consolas", 11)
+        self.hosting_model_combo.setFont(combo_font)
+        self.hosting_model_combo.view().setFont(combo_font)
         self.hosting_model_combo.currentIndexChanged.connect(self._apply_selected_hosting_model)
         self.ollama_status_label = QLabel()
         self.ollama_status_label.setStyleSheet("font-weight: 600;")
@@ -407,8 +411,17 @@ class ModuloMainWindow(QMainWindow):
                 border: 2px solid #2bd66b;
                 border-radius: 0px;
                 padding: 6px 8px;
+                font-size: 13px;
                 selection-background-color: #b8ff65;
                 selection-color: #09110c;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #050906;
+                color: #8df7a6;
+                border: 2px solid #2bd66b;
+                selection-background-color: #b8ff65;
+                selection-color: #09110c;
+                font-size: 13px;
             }
             QComboBox::drop-down {
                 border: none;
