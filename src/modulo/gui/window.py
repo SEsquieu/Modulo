@@ -3,7 +3,7 @@ from __future__ import annotations
 from modulo.gui.controller import GuiAppController, GuiShellState
 
 try:
-    from PySide6.QtCore import QTimer, Qt
+    from PySide6.QtCore import QObject, QRunnable, QThreadPool, QTimer, Qt, Signal
     from PySide6.QtWidgets import (
         QApplication,
         QComboBox,
@@ -25,10 +25,36 @@ except ImportError as exc:  # pragma: no cover - import guard for environments w
     ) from exc
 
 
+class _AsyncGuiTaskSignals(QObject):
+    completed = Signal(object)
+    failed = Signal(str)
+
+
+class _AsyncGuiTask(QRunnable):
+    def __init__(self, fn) -> None:
+        super().__init__()
+        self.fn = fn
+        self.signals = _AsyncGuiTaskSignals()
+
+    def run(self) -> None:
+        try:
+            result = self.fn()
+        except Exception as exc:  # pragma: no cover - UI background safeguard
+            self.signals.failed.emit(str(exc))
+            return
+        self.signals.completed.emit(result)
+
+
 class ModuloMainWindow(QMainWindow):
     def __init__(self, controller: GuiAppController) -> None:
         super().__init__()
         self.controller = controller
+        self._thread_pool = QThreadPool.globalInstance()
+        self._action_in_flight = False
+        self._poll_in_flight = False
+        self._ui_notice = ""
+        self._latest_state: GuiShellState | None = None
+        self._active_tasks: list[_AsyncGuiTask] = []
         self.setWindowTitle("Modulo")
         self.resize(880, 720)
         self.setMinimumSize(720, 520)
@@ -132,17 +158,13 @@ class ModuloMainWindow(QMainWindow):
         self.apply_openclaw_button.clicked.connect(self._apply_openclaw_plan)
 
         self.start_button = QPushButton("Start Hosting")
-        self.start_button.clicked.connect(
-            lambda: self._apply_state(self.controller.start_hosting())
-        )
+        self.start_button.clicked.connect(self._start_hosting_async)
 
         self.stop_button = QPushButton("Stop Hosting")
-        self.stop_button.clicked.connect(lambda: self._apply_state(self.controller.stop_hosting()))
+        self.stop_button.clicked.connect(self._stop_hosting_async)
 
         self.restart_button = QPushButton("Restart Hosting")
-        self.restart_button.clicked.connect(
-            lambda: self._apply_state(self.controller.restart_hosting())
-        )
+        self.restart_button.clicked.connect(self._restart_hosting_async)
 
         self.smoke_button = QPushButton("Run Smoke Test")
         self.smoke_button.clicked.connect(self._run_smoke_test)
@@ -298,50 +320,165 @@ class ModuloMainWindow(QMainWindow):
         self.resize(target_width, target_height)
 
     def _poll_state(self) -> None:
+        if self._action_in_flight or self._poll_in_flight:
+            return
         scrollbar = self.scroll_area.verticalScrollBar()
         previous_value = scrollbar.value()
-        self._apply_state(self.controller.poll_worker())
+        self._run_async_state_action(
+            self.controller.poll_worker,
+            on_success=lambda state: self._apply_state_with_scroll_restore(state, previous_value),
+            busy_message="",
+            action=False,
+        )
         scrollbar.setValue(previous_value)
 
     def _run_smoke_test(self) -> None:
-        self._apply_state(self.controller.run_smoke_test())
+        self._run_async_state_action(
+            self.controller.run_smoke_test,
+            busy_message="Running constrained smoke probe...",
+            action=True,
+        )
 
     def _run_openclaw_action(self) -> None:
-        self._apply_state(self.controller.configure_openclaw())
+        self._run_async_state_action(
+            self.controller.configure_openclaw,
+            busy_message="Refreshing OpenClaw configuration state...",
+            action=True,
+        )
 
     def _apply_openclaw_plan(self) -> None:
-        self._apply_state(self.controller.apply_openclaw_connection())
+        self._run_async_state_action(
+            self.controller.apply_openclaw_connection,
+            busy_message="Applying staged OpenClaw plan...",
+            action=True,
+        )
 
     def _apply_selected_hosting_model(self) -> None:
         model_id = self.hosting_model_combo.currentData()
         if isinstance(model_id, str) and model_id:
-            state = self.controller.refresh()
-            if model_id != state.hosting_selected_model_id:
-                self._apply_state(self.controller.select_hosting_model(model_id))
+            if self._latest_state is not None and model_id == self._latest_state.hosting_selected_model_id:
+                return
+            self._run_async_state_action(
+                lambda: self.controller.select_hosting_model(model_id),
+                busy_message=f"Switching host model to {model_id}...",
+                action=True,
+            )
+
+    def _start_hosting_async(self) -> None:
+        self._run_async_state_action(
+            self.controller.start_hosting,
+            busy_message="Starting hosting and warming the selected model...",
+            action=True,
+        )
+
+    def _stop_hosting_async(self) -> None:
+        self._run_async_state_action(
+            self.controller.stop_hosting,
+            busy_message="Stopping hosting...",
+            action=True,
+        )
+
+    def _restart_hosting_async(self) -> None:
+        self._run_async_state_action(
+            self.controller.restart_hosting,
+            busy_message="Restarting hosting and refreshing warm state...",
+            action=True,
+        )
+
+    def _apply_state_with_scroll_restore(self, state: GuiShellState, previous_value: int) -> None:
+        self._apply_state(state)
+        self.scroll_area.verticalScrollBar().setValue(previous_value)
+
+    def _run_async_state_action(
+        self,
+        fn,
+        *,
+        on_success=None,
+        busy_message: str,
+        action: bool,
+    ) -> None:
+        if action and self._action_in_flight:
+            return
+        if not action and (self._action_in_flight or self._poll_in_flight):
+            return
+
+        if action:
+            self._action_in_flight = True
+            self._ui_notice = busy_message
+        else:
+            self._poll_in_flight = True
+
+        task = _AsyncGuiTask(fn)
+        self._active_tasks.append(task)
+        task.signals.completed.connect(
+            lambda state, task=task, on_success=on_success, action=action: self._complete_async_state_action(
+                task,
+                state,
+                on_success=on_success,
+                action=action,
+            )
+        )
+        task.signals.failed.connect(
+            lambda message, task=task, action=action: self._fail_async_state_action(
+                task,
+                message,
+                action=action,
+            )
+        )
+        self._thread_pool.start(task)
+
+    def _complete_async_state_action(self, task: _AsyncGuiTask, state: GuiShellState, *, on_success, action: bool) -> None:
+        self._discard_task(task)
+        if action:
+            self._action_in_flight = False
+            self._ui_notice = ""
+        else:
+            self._poll_in_flight = False
+
+        if on_success is not None:
+            on_success(state)
+        else:
+            self._apply_state(state)
+
+    def _fail_async_state_action(self, task: _AsyncGuiTask, message: str, *, action: bool) -> None:
+        self._discard_task(task)
+        if action:
+            self._action_in_flight = False
+        else:
+            self._poll_in_flight = False
+        self._ui_notice = f"Action failed: {message}"
+        self._apply_state(self.controller.refresh())
+
+    def _discard_task(self, task: _AsyncGuiTask) -> None:
+        if task in self._active_tasks:
+            self._active_tasks.remove(task)
 
     def _apply_state(self, state: GuiShellState) -> None:
+        self._latest_state = state
         self.title_label.setText(state.home_title)
         self.subtitle_label.setText(state.home_subtitle)
 
+        footer_parts = [
+            f"Modulo {'online' if state.connected_to_modulo else 'offline'}",
+            f"Hosting {'enabled' if state.hosting_enabled else 'disabled'}",
+            f"Worker {state.worker_status_badge.lower()}",
+        ]
+        if self._ui_notice:
+            footer_parts.append(self._ui_notice)
         self.status_strip.setText(
-            " | ".join(
-                (
-                    f"Modulo {'online' if state.connected_to_modulo else 'offline'}",
-                    f"Hosting {'enabled' if state.hosting_enabled else 'disabled'}",
-                    f"Worker {state.worker_status_badge.lower()}",
-                )
-            )
+            " | ".join(footer_parts)
         )
 
         self.connect_button.setText(state.openclaw_action_label)
-        self.connect_button.setEnabled(state.connect_action_enabled)
+        controls_enabled = not self._action_in_flight
+        self.connect_button.setEnabled(state.connect_action_enabled and controls_enabled)
         self.apply_openclaw_button.setText(state.openclaw_plan_apply_label)
-        self.apply_openclaw_button.setEnabled(state.openclaw_plan_apply_enabled)
-        self.hosting_model_combo.setEnabled(state.hosting_setup_action_enabled)
-        self.start_button.setEnabled(state.start_action_enabled)
-        self.stop_button.setEnabled(state.stop_action_enabled)
-        self.restart_button.setEnabled(state.restart_action_enabled)
-        self.smoke_button.setEnabled(state.smoke_action_enabled)
+        self.apply_openclaw_button.setEnabled(state.openclaw_plan_apply_enabled and controls_enabled)
+        self.hosting_model_combo.setEnabled(state.hosting_setup_action_enabled and controls_enabled)
+        self.start_button.setEnabled(state.start_action_enabled and controls_enabled)
+        self.stop_button.setEnabled(state.stop_action_enabled and controls_enabled)
+        self.restart_button.setEnabled(state.restart_action_enabled and controls_enabled)
+        self.smoke_button.setEnabled(state.smoke_action_enabled and controls_enabled)
 
         self.openclaw_status_label.setText(
             f"Status: {state.openclaw_status_badge}"

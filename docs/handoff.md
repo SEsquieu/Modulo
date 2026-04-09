@@ -32,6 +32,8 @@ This file is the quickest way to regain context when switching workstations.
 - client-side warm-state detection for whether the selected host model is currently loaded in Ollama memory
 - Host tab visibility for warm versus cold selected-model state and compact loaded-model details
 - host-side prewarm lifecycle that can warm the selected model when hosting starts and surface `warming`, `warm`, and `warm_failed`
+- host-side warm maintenance that refreshes the selected model when hosting stays enabled and local warmth drops away
+- GUI host actions and smoke tests now run asynchronously so long local Ollama calls do not freeze the client shell
 
 ## What is still prototype-safe
 

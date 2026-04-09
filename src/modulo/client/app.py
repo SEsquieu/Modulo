@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 import time
 from typing import Callable, Protocol
 
@@ -247,6 +248,9 @@ class ModuloClientSupervisor:
     _prewarm_state: str = "idle"
     _prewarm_summary: str = ""
     _prewarm_detail: str = ""
+    _last_prewarm_attempt_at: float = 0.0
+    warm_maintenance_min_ttl_seconds: float = 120.0
+    prewarm_retry_cooldown_seconds: float = 30.0
 
     def configure_worker(self, config: WorkerBridgeConfig) -> ClientStatus:
         was_running = self.worker_bridge.get_status().desired_running
@@ -327,6 +331,8 @@ class ModuloClientSupervisor:
 
     def run_hosting_cycle(self) -> ClientStatus:
         self.worker_bridge.run_cycle()
+        if self.worker_bridge.get_status().desired_running:
+            return self._maintain_host_warmth()
         return self.get_status()
 
     def run_smoke_test(
@@ -844,6 +850,7 @@ class ModuloClientSupervisor:
         self._prewarm_state = "warming"
         self._prewarm_summary = f"Prewarming {selected_model_id} on the local Ollama runtime."
         self._prewarm_detail = "Modulo requested a lightweight host-side warmup for the selected model."
+        self._last_prewarm_attempt_at = time.monotonic()
 
         try:
             result = self.hosting_prewarmer.prewarm(selected_model_id)
@@ -881,6 +888,62 @@ class ModuloClientSupervisor:
         self._prewarm_state = "idle"
         self._prewarm_summary = ""
         self._prewarm_detail = ""
+        self._last_prewarm_attempt_at = 0.0
+
+    def _maintain_host_warmth(self) -> ClientStatus:
+        selected_model_id = (
+            self.worker_bridge.config.enabled_models[0]
+            if self.worker_bridge.config.enabled_models
+            else ""
+        )
+        if not selected_model_id:
+            return self.get_status()
+        if self._prototype_hosting_available() or self.hosting_prewarmer is None:
+            return self.get_status()
+
+        self._cached_ollama_loaded_models = None
+        self._cached_ollama_loaded_models_at = 0.0
+        loaded_status = self.get_ollama_loaded_models_status()
+        if self._should_refresh_warmth(selected_model_id, loaded_status):
+            return self._prewarm_selected_model()
+        return self.get_status()
+
+    def _should_refresh_warmth(
+        self,
+        selected_model_id: str,
+        loaded_status: OllamaLoadedModelsStatus,
+    ) -> bool:
+        if not self._prewarm_retry_allowed():
+            return False
+        if not loaded_status.available:
+            return False
+
+        loaded_model = next(
+            (model for model in loaded_status.loaded_models if model.model_id == selected_model_id),
+            None,
+        )
+        if loaded_model is None:
+            return True
+
+        expires_at = self._parse_ollama_timestamp(loaded_model.expires_at)
+        if expires_at is None:
+            return False
+        remaining_seconds = (expires_at - datetime.now(timezone.utc)).total_seconds()
+        return remaining_seconds <= self.warm_maintenance_min_ttl_seconds
+
+    def _prewarm_retry_allowed(self) -> bool:
+        now = time.monotonic()
+        return now - self._last_prewarm_attempt_at >= self.prewarm_retry_cooldown_seconds
+
+    @staticmethod
+    def _parse_ollama_timestamp(value: str) -> datetime | None:
+        if not value:
+            return None
+        normalized = value.replace("Z", "+00:00")
+        try:
+            return datetime.fromisoformat(normalized)
+        except ValueError:
+            return None
 
     def _build_openclaw_connection_plan(
         self,

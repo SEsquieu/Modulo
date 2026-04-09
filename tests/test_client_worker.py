@@ -106,8 +106,10 @@ class MutableLoadedModelsDiscovery:
 class SuccessfulPrewarmer:
     def __init__(self, loaded_discovery: MutableLoadedModelsDiscovery) -> None:
         self.loaded_discovery = loaded_discovery
+        self.calls = 0
 
     def prewarm(self, model_id: str) -> HostingPrewarmResult:
+        self.calls += 1
         self.loaded_discovery.loaded_models = (
             LoadedOllamaModel(
                 model_id=model_id,
@@ -124,7 +126,11 @@ class SuccessfulPrewarmer:
 
 
 class FailedPrewarmer:
+    def __init__(self) -> None:
+        self.calls = 0
+
     def prewarm(self, model_id: str) -> HostingPrewarmResult:
+        self.calls += 1
         return HostingPrewarmResult(
             ok=False,
             summary=f"Prewarm failed for {model_id}.",
@@ -447,6 +453,26 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertEqual("WARM_FAILED", status.hosting_setup.warm_state_badge)
         self.assertIn("prewarm failed", status.hosting_setup.warm_summary.lower())
         self.assertIn("fake prewarm failure", "\n".join(status.hosting_setup.warm_details).lower())
+
+    def test_hosting_cycle_rewarms_selected_model_after_it_cools_off(self) -> None:
+        self.bridge.executor = NoopRealExecutor()
+        loaded_discovery = MutableLoadedModelsDiscovery()
+        prewarmer = SuccessfulPrewarmer(loaded_discovery)
+        self.client.ollama_loaded_models_discovery = loaded_discovery
+        self.client.hosting_prewarmer = prewarmer
+        self.client.hosting_runtime_probe = FakeHostingRuntimeProbe()
+        self.client.prewarm_retry_cooldown_seconds = 0.0
+
+        started = self.client.start_hosting()
+        self.assertEqual("WARM", started.hosting_setup.warm_state_badge)
+        self.assertEqual(1, prewarmer.calls)
+
+        loaded_discovery.loaded_models = ()
+        cycled = self.client.run_hosting_cycle()
+
+        self.assertEqual(2, prewarmer.calls)
+        self.assertEqual("WARM", cycled.hosting_setup.warm_state_badge)
+        self.assertIn("prewarm requested", cycled.hosting_setup.warm_summary.lower())
 
     def test_hosting_preflight_fails_when_selected_model_is_missing(self) -> None:
         class MissingModelDiscovery:
