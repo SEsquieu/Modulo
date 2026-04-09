@@ -117,6 +117,7 @@ class LocalPrototypeHarness:
     hosting_runtime_probe: OllamaHostingRuntimeProbe | None = None
     selected_executor_mode: str = field(init=False, default="prototype")
     selected_executor_summary: str = field(init=False, default="")
+    _explicit_executor_override: bool = field(init=False, default=False)
     service: InMemoryModuloService = field(init=False)
     cloud_runtime: InMemoryWorkerRuntime = field(init=False)
     app: ModuloHTTPApp = field(init=False)
@@ -149,16 +150,21 @@ class LocalPrototypeHarness:
             hosting_runtime_probe=self.hosting_runtime_probe or OllamaHostingRuntimeProbe(),
             smoke_test_runner=self,
             activity_provider=self,
+            hosting_model_changed_hook=self._on_hosting_model_changed,
         )
 
     def _select_executor(self) -> WorkerExecutor:
         if self.executor is not None:
+            self._explicit_executor_override = True
             self.selected_executor_mode = "explicit"
             self.selected_executor_summary = "Prototype harness is using an explicitly supplied executor."
             return self.executor
 
+        return self._executor_for_model(self.model_id)
+
+    def _executor_for_model(self, model_id: str) -> WorkerExecutor:
         runtime_probe = self.hosting_runtime_probe or OllamaHostingRuntimeProbe()
-        probe_status = runtime_probe.probe(self.model_id)
+        probe_status = runtime_probe.probe(model_id)
         self.hosting_runtime_probe = runtime_probe
         if probe_status.reachable and probe_status.model_ready:
             self.selected_executor_mode = "real"
@@ -170,7 +176,21 @@ class LocalPrototypeHarness:
 
         self.selected_executor_mode = "prototype"
         self.selected_executor_summary = probe_status.summary
-        return StubExecutor()
+        stub_executor = StubExecutor()
+        stub_executor.register_worker(self.worker_id, self.stub_response_text)
+        return stub_executor
+
+    def _current_model_id(self) -> str:
+        enabled_models = self.client.worker_bridge.config.enabled_models
+        if enabled_models:
+            return enabled_models[0]
+        return self.model_id
+
+    def _on_hosting_model_changed(self, model_id: str) -> None:
+        self.model_id = model_id
+        if self._explicit_executor_override:
+            return
+        self.client.worker_bridge.executor = self._executor_for_model(model_id)
 
     def boot(self) -> ClientStatus:
         return self.client.start_hosting()
@@ -183,9 +203,10 @@ class LocalPrototypeHarness:
             self.boot()
 
         effective_buyer_id = buyer_id or self.buyer_id
+        current_model_id = self._current_model_id()
         job = self.service.submit_chat(
             ChatRequest(
-                model_id=self.model_id,
+                model_id=current_model_id,
                 execution_mode=ExecutionMode.NETWORK,
                 buyer_id=effective_buyer_id,
                 messages=(ChatMessage(role="user", content=user_message),),

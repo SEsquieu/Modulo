@@ -40,7 +40,7 @@ class FakeOllamaDiscovery:
         return OllamaDiscoveryStatus(
             available=True,
             installed_model_ids=("llama3.1:8b", "qwen3.5:4b"),
-            summary="Ollama is available with 1 local model.",
+            summary="Ollama is available with 2 local models.",
             details="fake discovery",
         )
 
@@ -288,13 +288,13 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
     def test_configure_worker_keeps_transport_and_status_in_sync(self) -> None:
         self.client.start_hosting()
 
-        status = self.client.set_hosting_model("llama3.1:8b")
+        status = self.client.set_hosting_model("qwen3.5:4b")
 
-        self.assertEqual(("llama3.1:8b",), self.bridge.config.enabled_models)
-        self.assertEqual(("llama3.1:8b",), self.transport.config.enabled_models)
+        self.assertEqual(("qwen3.5:4b",), self.bridge.config.enabled_models)
+        self.assertEqual(("qwen3.5:4b",), self.transport.config.enabled_models)
         self.assertTrue(status.hosting_enabled)
         self.assertIsNotNone(status.hosting_setup)
-        self.assertEqual("llama3.1:8b", status.hosting_setup.selected_model_id)
+        self.assertEqual("qwen3.5:4b", status.hosting_setup.selected_model_id)
 
     def test_client_status_includes_session_bridge_platform_state(self) -> None:
         status = self.client.get_status()
@@ -313,6 +313,10 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         status = self.client.get_status()
 
         self.assertTrue(status.hosting_setup.ollama_available)
+        self.assertEqual(
+            ("llama3.1:8b", "qwen3.5:4b"),
+            status.hosting_setup.available_model_ids,
+        )
         self.assertEqual(("llama3.1:8b", "qwen3.5:4b"), status.hosting_setup.installed_model_ids)
         self.assertEqual(("llama3.1:8b",), status.hosting_setup.supported_installed_model_ids)
         self.assertEqual((), status.hosting_setup.supported_missing_model_ids)
@@ -322,6 +326,15 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertTrue(status.hosting_setup.can_enable_hosting)
         self.assertIn("Readiness result: Hosting preflight passed", status.hosting_setup.readiness_details)
         self.assertIn("Ollama is available", status.hosting_setup.readiness_details)
+
+    def test_hosting_setup_accepts_installed_local_model_outside_curated_catalog(self) -> None:
+        status = self.client.set_hosting_model("qwen3.5:4b")
+
+        self.assertEqual("qwen3.5:4b", status.hosting_setup.selected_model_id)
+        self.assertTrue(status.hosting_setup.preflight.ok)
+        self.assertEqual("", status.hosting_setup.preflight.failure_reason)
+        self.assertTrue(status.hosting_setup.can_enable_hosting)
+        self.assertIn("Installed local Ollama model", status.hosting_setup.readiness_details)
 
     def test_hosting_preflight_fails_when_selected_model_is_missing(self) -> None:
         class MissingModelDiscovery:

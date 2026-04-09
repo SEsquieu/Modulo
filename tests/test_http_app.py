@@ -39,6 +39,28 @@ class ModuloHTTPAppTests(unittest.TestCase):
         self.assertEqual(200, status)
         self.assertEqual("llama3.1:8b", payload["models"][0]["name"])
 
+    def test_get_tags_includes_healthy_advertised_uncurated_models(self) -> None:
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="network-qwen",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="qwen3.5:4b",
+                        runtime_identity="qwen3.5:4b",
+                    ),
+                ),
+            )
+        )
+
+        status, payload = self.app.handle("GET", "/api/tags")
+
+        self.assertEqual(200, status)
+        advertised_ids = {model["name"] for model in payload["models"]}
+        self.assertIn("qwen3.5:4b", advertised_ids)
+
     def test_post_chat_returns_ollama_shaped_response(self) -> None:
         status, payload = self.app.handle(
             "POST",

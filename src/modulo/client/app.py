@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import time
-from typing import Protocol
+from typing import Callable, Protocol
 
 from modulo.common.catalog import SUPPORTED_MODELS
 from modulo.client.openclaw_discovery import OpenClawDiscovery, OpenClawDiscoveryStatus
@@ -197,6 +197,7 @@ class ModuloClientSupervisor:
     hosting_runtime_probe: ClientHostingRuntimeProbe = field(default_factory=OllamaHostingRuntimeProbe)
     smoke_test_runner: ClientSmokeTestRunner | None = None
     activity_provider: ClientActivityProvider | None = None
+    hosting_model_changed_hook: Callable[[str], None] | None = None
     readiness_cache_ttl_seconds: float = 5.0
     _last_smoke_test: SmokeTestResult | None = None
     _cached_ollama_discovery: OllamaDiscoveryStatus | None = None
@@ -232,7 +233,11 @@ class ModuloClientSupervisor:
             max_concurrency=config.max_concurrency,
             kind=config.kind,
         )
-        return self.configure_worker(next_config)
+        status = self.configure_worker(next_config)
+        if self.hosting_model_changed_hook is not None:
+            self.hosting_model_changed_hook(model_id)
+            status = self.get_status()
+        return status
 
     def stage_openclaw_connection(self) -> ClientStatus:
         self._staged_openclaw_plan = self._build_openclaw_connection_plan(
@@ -393,9 +398,8 @@ class ModuloClientSupervisor:
     def get_hosting_setup_status(self) -> HostingSetupStatus:
         selected_model_id = self.worker_bridge.config.enabled_models[0] if self.worker_bridge.config.enabled_models else ""
         discovery = self.get_ollama_discovery_status()
-        available_models = tuple(SUPPORTED_MODELS.values())
-        labels = tuple(f"{model.display_name} ({model.model_id})" for model in available_models)
-        supported_model_ids = tuple(model.model_id for model in available_models)
+        supported_models = tuple(SUPPORTED_MODELS.values())
+        supported_model_ids = tuple(model.model_id for model in supported_models)
         installed_model_ids = discovery.installed_model_ids
         supported_installed_model_ids = tuple(
             model_id for model_id in supported_model_ids if model_id in installed_model_ids
@@ -406,11 +410,16 @@ class ModuloClientSupervisor:
         unsupported_installed_model_ids = tuple(
             model_id for model_id in installed_model_ids if model_id not in supported_model_ids
         )
+        available_model_ids = supported_model_ids + unsupported_installed_model_ids
+        available_model_labels = tuple(
+            self._hosting_model_label(model_id)
+            for model_id in available_model_ids
+        )
         prototype_hosting_available = self._prototype_hosting_available()
         preflight = self._hosting_preflight_status(
             selected_model_id=selected_model_id,
             discovery=discovery,
-            supported_installed_model_ids=supported_installed_model_ids,
+            installed_model_ids=installed_model_ids,
             runtime_probe=self.get_hosting_runtime_probe_status(selected_model_id),
         )
         readiness_summary = self._hosting_readiness_summary(
@@ -419,8 +428,8 @@ class ModuloClientSupervisor:
         )
         return HostingSetupStatus(
             selected_model_id=selected_model_id,
-            available_model_ids=supported_model_ids,
-            available_model_labels=labels,
+            available_model_ids=available_model_ids,
+            available_model_labels=available_model_labels,
             installed_model_ids=installed_model_ids,
             supported_installed_model_ids=supported_installed_model_ids,
             supported_missing_model_ids=supported_missing_model_ids,
@@ -468,8 +477,6 @@ class ModuloClientSupervisor:
         if not selected_model_id:
             return "No model is selected for hosting yet."
         model = SUPPORTED_MODELS.get(selected_model_id)
-        if model is None:
-            return "The selected model is outside the curated v1 catalog."
         supported_installed_line = (
             ", ".join(supported_installed_model_ids)
             if supported_installed_model_ids
@@ -485,14 +492,21 @@ class ModuloClientSupervisor:
             if unsupported_installed_model_ids
             else "None"
         )
+        selected_label = model.display_name if model is not None else selected_model_id
+        selected_kind = (
+            "Curated host model"
+            if model is not None
+            else "Installed local Ollama model"
+        )
         mode_line = (
             "Hosting mode: prototype-safe demo path."
             if prototype_hosting_available
             else "Hosting mode: real local readiness required."
         )
         return (
-            f"Selected model: {model.display_name}\n"
-            f"Runtime identity: {model.ollama_runtime_name}\n"
+            f"Selected model: {selected_label}\n"
+            f"Model source: {selected_kind}\n"
+            f"Runtime identity: {selected_model_id}\n"
             f"Supported and installed: {supported_installed_line}\n"
             f"Supported but missing: {supported_missing_line}\n"
             f"Installed but not curated: {unsupported_installed_line}\n"
@@ -507,17 +521,18 @@ class ModuloClientSupervisor:
         *,
         selected_model_id: str,
         discovery: OllamaDiscoveryStatus,
-        supported_installed_model_ids: tuple[str, ...],
+        installed_model_ids: tuple[str, ...],
         runtime_probe: HostingRuntimeProbeStatus,
     ) -> HostingPreflightStatus:
         checks: list[HostingPreflightCheck] = []
+        curated = selected_model_id in SUPPORTED_MODELS
 
         has_model_selection = bool(selected_model_id)
         checks.append(
             HostingPreflightCheck(
                 key="model_selected",
                 ok=has_model_selection,
-                summary="A curated hosting model is selected.",
+                summary="A hostable Ollama model is selected.",
                 detail=selected_model_id or "No curated model selected.",
             )
         )
@@ -531,12 +546,16 @@ class ModuloClientSupervisor:
             )
         )
 
-        model_installed = selected_model_id in supported_installed_model_ids if selected_model_id else False
+        model_installed = selected_model_id in installed_model_ids if selected_model_id else False
         checks.append(
             HostingPreflightCheck(
                 key="selected_model_installed",
                 ok=model_installed,
-                summary="The selected curated model is installed locally.",
+                summary=(
+                    "The selected curated model is installed locally."
+                    if curated
+                    else "The selected local Ollama model is installed locally."
+                ),
                 detail=selected_model_id or "No selected model.",
             )
         )
@@ -555,7 +574,11 @@ class ModuloClientSupervisor:
         if failed_check is not None:
             return HostingPreflightStatus(
                 ok=False,
-                summary=HostingPreflightStatusSummary.for_check(failed_check, selected_model_id),
+                summary=HostingPreflightStatusSummary.for_check(
+                    failed_check,
+                    selected_model_id,
+                    curated=curated,
+                ),
                 failure_reason=failed_check.detail or failed_check.summary,
                 checks=tuple(checks),
             )
@@ -608,6 +631,13 @@ class ModuloClientSupervisor:
 
     def _prototype_hosting_available(self) -> bool:
         return isinstance(self.worker_bridge.executor, StubExecutor)
+
+    @staticmethod
+    def _hosting_model_label(model_id: str) -> str:
+        canonical = SUPPORTED_MODELS.get(model_id)
+        if canonical is not None:
+            return f"{canonical.display_name} ({canonical.model_id})"
+        return f"{model_id} (Installed local model)"
 
     def get_platform_session_status(self) -> PlatformSessionStatus:
         if self.session_bridge is None:
@@ -699,13 +729,15 @@ class ModuloClientSupervisor:
 
 class HostingPreflightStatusSummary:
     @staticmethod
-    def for_check(check: HostingPreflightCheck, selected_model_id: str) -> str:
+    def for_check(check: HostingPreflightCheck, selected_model_id: str, *, curated: bool) -> str:
         if check.key == "model_selected":
-            return "Select a curated model to prepare hosting."
+            return "Select a local Ollama model to prepare hosting."
         if check.key == "ollama_available":
             return "Ollama is not available yet, so hosting is not ready."
         if check.key == "selected_model_installed":
-            return f"{selected_model_id} is curated by Modulo but is not installed locally."
+            if curated:
+                return f"{selected_model_id} is curated by Modulo but is not installed locally."
+            return f"{selected_model_id} is not installed locally."
         if check.key == "runtime_model_probe":
             return f"The local Ollama runtime could not resolve {selected_model_id}."
         return "Hosting preflight did not pass."

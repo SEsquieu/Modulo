@@ -84,14 +84,26 @@ class ModuloHTTPApp:
         return payload
 
     def _handle_tags(self) -> dict[str, Any]:
+        models_by_id: dict[str, dict[str, Any]] = {
+            model.model_id: {
+                "name": model.model_id,
+                "model": model.model_id,
+            }
+            for model in SUPPORTED_MODELS.values()
+        }
+        for worker in self.service.registry.list_workers():
+            if not worker.healthy:
+                continue
+            for advertised_model in worker.advertised_models:
+                models_by_id.setdefault(
+                    advertised_model.model_id,
+                    {
+                        "name": advertised_model.model_id,
+                        "model": advertised_model.model_id,
+                    },
+                )
         return {
-            "models": [
-                {
-                    "name": model.model_id,
-                    "model": model.model_id,
-                }
-                for model in SUPPORTED_MODELS.values()
-            ]
+            "models": list(models_by_id.values())
         }
 
     def _handle_chat(self, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:

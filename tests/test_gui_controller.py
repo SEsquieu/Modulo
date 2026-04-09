@@ -15,8 +15,8 @@ class FakeGuiOllamaDiscovery:
     def discover(self) -> OllamaDiscoveryStatus:
         return OllamaDiscoveryStatus(
             available=True,
-            installed_model_ids=(),
-            summary="Ollama is available, but no local models were found.",
+            installed_model_ids=("qwen3.5:4b",),
+            summary="Ollama is available with 1 local model.",
             details="fake gui discovery",
         )
 
@@ -131,16 +131,16 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertEqual(("No network models available yet.",), state.buyer_network_models)
         self.assertTrue(state.buyer_cloud_models)
         self.assertEqual("llama3.1:8b", state.hosting_selected_model_id)
-        self.assertEqual(("llama3.1:8b",), state.hosting_available_model_ids)
+        self.assertEqual(("llama3.1:8b", "qwen3.5:4b"), state.hosting_available_model_ids)
         self.assertEqual((), state.hosting_supported_installed_model_ids)
         self.assertEqual(("llama3.1:8b",), state.hosting_supported_missing_model_ids)
-        self.assertEqual((), state.hosting_unsupported_installed_model_ids)
+        self.assertEqual(("qwen3.5:4b",), state.hosting_unsupported_installed_model_ids)
         self.assertEqual("PROTOTYPE", state.hosting_mode_badge)
         self.assertEqual("PROTOTYPE", state.execution_mode_badge)
         self.assertIn("prototype-safe", state.execution_summary)
         self.assertEqual("AVAILABLE", state.ollama_status_badge)
         self.assertIn("Ollama is available locally", state.ollama_summary)
-        self.assertIn("0 supported model(s) installed", state.ollama_inventory_summary)
+        self.assertIn("1 installed model(s) outside the curated catalog", state.ollama_inventory_summary)
         self.assertTrue(state.hosting_setup_action_enabled)
         self.assertEqual("BLOCKED", state.hosting_readiness_badge)
         self.assertIn("not installed locally", state.hosting_preflight_summary)
@@ -280,11 +280,18 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertEqual("CONFIGURED", configured.openclaw_status_badge)
 
     def test_select_hosting_model_updates_setup_state(self) -> None:
-        state = self.controller.select_hosting_model("llama3.1:8b")
+        self.controller = GuiAppController(
+            harness=LocalPrototypeHarness(
+                openclaw_discovery=FakeGuiOpenClawDiscovery(),
+                ollama_discovery=FakeGuiOllamaDiscovery(),
+                hosting_runtime_probe=ReadyGuiHostingRuntimeProbe(),
+            )
+        )
+        state = self.controller.select_hosting_model("qwen3.5:4b")
 
-        self.assertEqual("llama3.1:8b", state.hosting_selected_model_id)
-        self.assertEqual("BLOCKED", state.hosting_readiness_badge)
-        self.assertIn("Prototype hosting is available", state.hosting_setup_summary)
+        self.assertEqual("qwen3.5:4b", state.hosting_selected_model_id)
+        self.assertEqual("READY", state.hosting_readiness_badge)
+        self.assertIn("Hosting preflight passed", state.hosting_setup_summary)
 
 
 if __name__ == "__main__":

@@ -97,6 +97,29 @@ class TrustRouterTests(unittest.TestCase):
                 ChatRequest(model_id="qwen2.5-coder:7b", execution_mode=ExecutionMode.NETWORK)
             )
 
+    def test_routes_exact_match_worker_for_uncurated_advertised_model(self) -> None:
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="network-qwen",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="qwen3.5:4b",
+                        runtime_identity="qwen3.5:4b",
+                    ),
+                ),
+            )
+        )
+
+        decision = self.service.route_chat(
+            ChatRequest(model_id="qwen3.5:4b", execution_mode=ExecutionMode.NETWORK)
+        )
+
+        self.assertEqual("network-qwen", decision.worker_id)
+        self.assertEqual("qwen3.5:4b", decision.model_id)
+
     def test_rejects_streaming_in_v1(self) -> None:
         self.service.register_worker(
             WorkerSnapshot(

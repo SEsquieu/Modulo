@@ -10,6 +10,7 @@ from modulo.client.openclaw_discovery import OpenClawDiscoveryStatus
 from modulo.worker.errors import WorkerExecutionError
 from modulo.worker.executors import OllamaExecutor, StubExecutor
 from modulo.prototype import LocalPrototypeHarness
+from modulo.client.ollama_discovery import OllamaDiscoveryStatus
 
 
 class FailingExecutor:
@@ -37,6 +38,16 @@ class ReadyRuntimeProbe:
             model_ready=True,
             summary=f"Ollama runtime resolved {model_id} successfully.",
             detail="ready runtime probe",
+        )
+
+
+class InstalledQwenDiscovery:
+    def discover(self) -> OllamaDiscoveryStatus:
+        return OllamaDiscoveryStatus(
+            available=True,
+            installed_model_ids=("qwen3.5:4b",),
+            summary="Ollama is available with 1 local model.",
+            details="installed qwen discovery",
         )
 
 
@@ -142,6 +153,23 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertIsNotNone(completed_job)
         self.assertEqual(JobStatus.COMPLETED, completed_job.status)
         self.assertEqual("real prototype hello", completed_job.request.messages[0].content)
+
+    def test_round_trip_uses_selected_installed_local_host_model(self) -> None:
+        harness = LocalPrototypeHarness(
+            openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_discovery=InstalledQwenDiscovery(),
+            hosting_runtime_probe=ReadyRuntimeProbe(),
+            ollama_http_client=FakeOllamaHTTPClient(),
+        )
+
+        harness.client.set_hosting_model("qwen3.5:4b")
+        result = harness.run_round_trip("local qwen hello")
+
+        self.assertEqual("qwen3.5:4b", result.model_id)
+        self.assertEqual("real", result.execution_mode)
+        completed_job = harness.service.get_job(result.job_id)
+        self.assertIsNotNone(completed_job)
+        self.assertEqual("qwen3.5:4b", completed_job.request.model_id)
 
     def test_client_smoke_test_reports_success_through_client_surface(self) -> None:
         harness = LocalPrototypeHarness(openclaw_discovery=FakePrototypeOpenClawDiscovery())

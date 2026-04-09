@@ -22,6 +22,7 @@ This file is the quickest way to regain context when switching workstations.
 
 - local Ollama discovery
 - hosting readiness preflight
+- host-side model selection from installed local Ollama models, not only curated catalog entries
 - session-bridge-backed platform state in the client
 - OpenClaw install/config discovery
 - real local execution through the supervised smoke-test path when runtime readiness passes
@@ -59,6 +60,7 @@ That matters because the main workstation stores the primary model under `agents
 - footer: `Modulo <status> | Hosting <status> | Worker <status>`
 
 The GUI now explicitly tells the truth about whether the current worker path and latest smoke test are using `REAL` or `PROTOTYPE` execution.
+The host selector can now choose installed local Ollama models outside the curated catalog when they are present locally.
 
 ## Next recommended starting point
 

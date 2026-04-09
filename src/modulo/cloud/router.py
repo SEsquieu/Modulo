@@ -29,7 +29,11 @@ class TrustRouter:
         exclude_worker_ids: set[str] | None = None,
     ) -> RouteDecision:
         model = get_model(request.model_id)
-        if self.policy.require_curated_supported_model and model is None:
+        if (
+            self.policy.require_curated_supported_model
+            and model is None
+            and not self._has_advertised_exact_match(request.model_id, workers)
+        ):
             raise RoutingError(f"Unsupported model for v1: {request.model_id}")
 
         if request.stream and not self.policy.streaming_enabled:
@@ -110,6 +114,10 @@ class TrustRouter:
 
         eligible_workers.sort(key=lambda item: item[0], reverse=True)
         return [worker for _, worker in eligible_workers]
+
+    @staticmethod
+    def _has_advertised_exact_match(model_id: str, workers: list[WorkerSnapshot]) -> bool:
+        return any(worker.supports_model(model_id) is not None for worker in workers)
 
     @staticmethod
     def _score_worker(worker_id: str, max_concurrency: int, model_state) -> float:
