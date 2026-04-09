@@ -17,6 +17,7 @@ Current source of truth:
 - [real_execution_roadmap.md](./real_execution_roadmap.md): mini roadmap for real Ollama-backed execution
 - [host_warm_state_roadmap.md](./host_warm_state_roadmap.md): mini roadmap for host-side warm-state visibility and prewarm lifecycle
 - [productization_checklist.md](./productization_checklist.md): compact gated checklist for packaging and trust polish
+- [private_networks_design.md](./private_networks_design.md): architectural note for access-controlled private Modulo networks inside an org boundary
 
 Recommended next docs to add:
 

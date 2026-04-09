@@ -10,6 +10,7 @@ This file is the quickest way to regain context when switching workstations.
 - a host-side warm-state refinement roadmap is now active before packaging
 - current warm-state roadmap progress: `Slice 1`, `Slice 2`, and `Slice 3` completed
 - the active next step is [productization_checklist.md](./productization_checklist.md)
+- a new architecture note exists for enterprise-facing private networks: [private_networks_design.md](./private_networks_design.md)
 
 ## What exists today
 
@@ -120,6 +121,10 @@ Primary sequencing doc:
 Active implementation doc:
 
 - [productization_checklist.md](./productization_checklist.md)
+
+Current architecture discussion:
+
+- [private_networks_design.md](./private_networks_design.md)
 
 ## Working preferences
 
