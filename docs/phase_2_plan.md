@@ -38,7 +38,7 @@ Summary:
 
 Roadmap:
 
-- [ollama_discovery_roadmap.md](/Users/16096/Desktop/Projects/Modulo/docs/ollama_discovery_roadmap.md)
+- [ollama_discovery_roadmap.md](./ollama_discovery_roadmap.md)
 
 Why first:
 
@@ -60,11 +60,11 @@ Summary:
 
 Roadmap:
 
-- [hosting_readiness_roadmap.md](/Users/16096/Desktop/Projects/Modulo/docs/hosting_readiness_roadmap.md)
+- [hosting_readiness_roadmap.md](./hosting_readiness_roadmap.md)
 
 Why second:
 
-- once local discovery is real, the app can move from “configured” to “actually ready”
+- once local discovery is real, the app can move from "configured" to "actually ready"
 
 Completion gate:
 
@@ -83,7 +83,7 @@ Summary:
 
 Roadmap:
 
-- [session_bridge_roadmap.md](/Users/16096/Desktop/Projects/Modulo/docs/session_bridge_roadmap.md)
+- [session_bridge_roadmap.md](./session_bridge_roadmap.md)
 
 Why third:
 
@@ -105,7 +105,7 @@ Summary:
 
 Roadmap:
 
-- [openclaw_integration_roadmap.md](/Users/16096/Desktop/Projects/Modulo/docs/openclaw_integration_roadmap.md)
+- [openclaw_integration_roadmap.md](./openclaw_integration_roadmap.md)
 
 Why fourth:
 
@@ -127,7 +127,7 @@ Summary:
 
 Roadmap:
 
-- [real_execution_roadmap.md](/Users/16096/Desktop/Projects/Modulo/docs/real_execution_roadmap.md)
+- [real_execution_roadmap.md](./real_execution_roadmap.md)
 
 Why fifth:
 
@@ -143,7 +143,7 @@ Status: not started
 
 Checklist:
 
-- [productization_checklist.md](/Users/16096/Desktop/Projects/Modulo/docs/productization_checklist.md)
+- [productization_checklist.md](./productization_checklist.md)
 
 Why checklist format instead of a full roadmap:
 

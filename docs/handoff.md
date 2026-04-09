@@ -6,36 +6,37 @@ This file is the quickest way to regain context when switching workstations.
 
 - backend phase-0 roadmap is completed
 - GUI phase-0 roadmap is completed
-- Phase 2 is active
-- current Phase 2 step: `Step 6: Productization checklist`
-- current mini-roadmap status: [real_execution_roadmap.md](./real_execution_roadmap.md) is completed
+- Phase 2 integration work is completed through `Step 5: Real local execution`
+- the active next step is `Step 6: Productization checklist`
+- the current starting doc for tomorrow is [productization_checklist.md](./productization_checklist.md)
 
 ## What exists today
 
-- `cloud` owns routing, job lifecycle, retry behavior, and buyer continuity leases
+- `cloud` owns routing, job lifecycle, retry behavior, worker health, and buyer continuity leases
 - `worker` owns registration, heartbeat, claiming, execution, and result reporting
-- `client` owns supervision, readiness checks, session bridge state, and local discovery
+- `client` owns supervision, readiness checks, session-bridge state, local discovery, and buyer-facing setup truth
 - `gui` is a light PySide6 desktop shell split into `Host`, `Buyer`, and `Diagnostics`
-- `session bridge` is always client-owned and separate from the worker inference bridge
+- `session bridge` remains client-owned and separate from the worker inference bridge
 
-## What is real vs prototype-safe
-
-Real today:
+## What is real today
 
 - local Ollama discovery
 - hosting readiness preflight
 - session-bridge-backed platform state in the client
 - OpenClaw install/config discovery
+- real local execution through the supervised smoke-test path when runtime readiness passes
+- GUI truth for execution mode, including `REAL` versus `PROTOTYPE`
 
-Still prototype-safe:
+## What is still prototype-safe
 
 - buyer model selection and routing setup
-- actual OpenClaw config mutation flow
-- packaging and install polish
+- actual OpenClaw config mutation and rollback flow
+- packaging, installer, and first-run polish
+- broader trust-and-recovery polish beyond the main surfaced errors
 
 ## Latest OpenClaw truth
 
-The OpenClaw discovery seam now reads:
+The OpenClaw discovery seam currently reads:
 
 - install presence
 - config-path presence
@@ -48,14 +49,26 @@ It supports both:
 - `model.primary`
 - `agents.defaults.model.primary`
 
-This matters because the local OpenClaw config on the main workstation stores the primary model under `agents.defaults.model.primary`.
+That matters because the main workstation stores the primary model under `agents.defaults.model.primary`.
 
-## GUI shape
+## Latest GUI truth
 
-- `Host` tab: hosting model selection, hosting readiness, hosting controls, worker state
-- `Buyer` tab: OpenClaw config state plus session-bridge-backed buyer/platform state
-- `Diagnostics` tab: smoke test and recent activity
-- anchored footer: `Modulo <status> | Hosting <status> | Worker <status>`
+- `Host` tab: hosting model selection, readiness, execution-path truth, hosting controls, worker state
+- `Buyer` tab: OpenClaw config truth plus session-bridge-backed buyer/platform state
+- `Diagnostics` tab: smoke test, execution result truth, recent activity, and continuity hints
+- footer: `Modulo <status> | Hosting <status> | Worker <status>`
+
+The GUI now explicitly tells the truth about whether the current worker path and latest smoke test are using `REAL` or `PROTOTYPE` execution.
+
+## Next recommended starting point
+
+Start with `Checkpoint 1: Windows packaging path` in [productization_checklist.md](./productization_checklist.md).
+
+The most likely first useful slice is:
+
+- document and prove a repeatable packaged Windows build path for the PySide app
+- keep the current client/worker/cloud boundary intact
+- update docs with the packaging command path and any known startup/resource caveats
 
 ## Run commands
 
@@ -99,16 +112,11 @@ Active implementation doc:
 
 - [productization_checklist.md](./productization_checklist.md)
 
-Next intended slice:
-
-- `Step 6: Productization checklist`
-- goal: start tightening packaging, local install posture, and trust-facing rough edges now that the core Phase 2 integrations are complete
-
 ## Working preferences
 
 - keep development explicit and documented
 - finish one slice before starting the next
-- prefer roadmap-aligned work over offhand feature canonization
+- update the relevant roadmap or checklist when a slice is complete
 - keep `host` and `buyer` concerns separate
 - keep OpenClaw config buyer-related, not hosting-related
 - keep the GUI light and low-noise
@@ -118,12 +126,11 @@ Next intended slice:
 
 Recent meaningful commits:
 
+- `b25a33e` `Complete GUI real execution truth slice`
 - `092b6c2` `Complete real execution proof slice`
 - `5157a60` `Complete real executor selection slice`
 - `f9bb05e` `Complete OpenClaw GUI connection slice`
 - `027b2fc` `Complete OpenClaw staged connection slice`
-- `62b2344` `Complete client session bridge layer`
-- `51cefa3` `Add OpenClaw discovery seam`
 
 If resuming cold, start by reading:
 

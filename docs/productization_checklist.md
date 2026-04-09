@@ -6,7 +6,7 @@ It uses checklist format instead of a full mini roadmap because these steps are 
 
 ## Use rule
 
-- do not start this checklist until the four integration mini roadmaps are completed
+- do not start this checklist until the Phase 2 integration roadmaps are completed
 - complete each checkpoint in order
 - add a short note under each checkpoint when it is done
 
