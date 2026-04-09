@@ -432,6 +432,8 @@ class ModuloMainWindow(QMainWindow):
             self._action_in_flight = True
             self._ui_notice = busy_message
             self._active_action_kind = action_kind
+            if self._latest_state is not None:
+                self._apply_state(self._latest_state)
         else:
             self._poll_in_flight = True
 
