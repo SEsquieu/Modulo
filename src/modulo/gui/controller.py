@@ -284,8 +284,8 @@ class GuiAppController:
     @staticmethod
     def _home_subtitle(onboarding: OnboardingStatus) -> str:
         if onboarding.hosting_enabled:
-            return "Use the Host, Buyer, and Diagnostics tabs to manage each side of Modulo separately."
-        return "Host, buyer routing, and diagnostics are managed separately in this client."
+            return "Use the Use, Host, and Diagnostics tabs to manage each side of Modulo separately."
+        return "Use, hosting, and diagnostics are managed separately in this client."
 
     @staticmethod
     def _connection_summary(onboarding: OnboardingStatus) -> str:
@@ -341,7 +341,7 @@ class GuiAppController:
         smoke_test: SmokeTestResult | None,
     ) -> str:
         if smoke_test is None:
-            return "Run a smoke test to capture a buyer-to-worker confidence check."
+            return "Run a smoke test to capture an end-to-end confidence check."
         if smoke_test.ok:
             return "Smoke test passed and the latest diagnostics look healthy."
         if onboarding.last_worker_error:
@@ -401,10 +401,10 @@ class GuiAppController:
     @staticmethod
     def _activity_lines(status: ClientStatus) -> tuple[str, ...]:
         if not status.activity.recent_activity:
-            return ("No recent buyer activity yet.",)
+            return ("No recent activity yet.",)
         lines: list[str] = []
         for entry in status.activity.recent_activity:
-            buyer_label = entry.buyer_id or "anonymous buyer"
+            buyer_label = entry.buyer_id or "anonymous request"
             lines.append(
                 f"{entry.job_id}: {buyer_label} -> {entry.worker_id} "
                 f"[{entry.status}] | {entry.continuity_hint}"
@@ -448,12 +448,12 @@ class GuiAppController:
         if status.openclaw.error:
             return "Modulo found the OpenClaw config, but it could not parse it cleanly."
         if status.openclaw.configured:
-            return "Buyer routing is staged in Modulo. Review the detected state or continue with buyer setup."
+            return "Use routing is staged in Modulo. Review the detected state or continue with setup."
         if status.openclaw.connection_plan.apply_ready:
-            return "Review the staged buyer-routing plan, then apply it when you are comfortable."
+            return "Review the staged routing plan, then apply it when you are comfortable."
         if status.openclaw.installed:
             return "OpenClaw is present locally. Review the detected state before staging a routing plan."
-        return "Install OpenClaw first, then return here to stage the buyer-routing connection."
+        return "Install OpenClaw first, then return here to stage the routing connection."
 
     @staticmethod
     def _openclaw_next_steps(status: ClientStatus) -> tuple[str, ...]:
@@ -461,12 +461,12 @@ class GuiAppController:
             return (
                 "Fix the config parse/read issue shown below.",
                 "Refresh or reopen Modulo after correcting the local OpenClaw config.",
-                "Stage the buyer-routing plan again once the config reads cleanly.",
+                "Stage the routing plan again once the config reads cleanly.",
             )
         if status.openclaw.configured:
             return (
                 "Review the detected provider and base URL for sanity.",
-                "Choose a buyer model once that selector is available.",
+                "Choose a model once that selector is available.",
                 "Use Diagnostics to run a smoke test through the current prototype path.",
             )
         if status.openclaw.connection_plan.apply_ready:
@@ -478,13 +478,13 @@ class GuiAppController:
         if status.openclaw.installed:
             return (
                 "Review the detected OpenClaw config details below.",
-                "Stage a buyer-routing plan to preview what Modulo would change.",
+                "Stage a routing plan to preview what Modulo would change.",
                 "Do not hand-edit local files unless you intend to bypass the staged flow.",
             )
         return (
             "Install OpenClaw on this machine.",
             "Launch Modulo again so it can rediscover the local install.",
-            "Stage the buyer-routing plan once OpenClaw is present.",
+            "Stage the routing plan once OpenClaw is present.",
         )
 
     @staticmethod

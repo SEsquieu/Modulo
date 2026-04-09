@@ -230,7 +230,7 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertIn("Run a smoke test", state.diagnostics_summary)
         self.assertIn("Last worker error: None", state.diagnostics_details)
         self.assertIn("No buyer continuity activity yet.", state.continuity_summary)
-        self.assertEqual(("No recent buyer activity yet.",), state.activity_lines)
+        self.assertEqual(("No recent activity yet.",), state.activity_lines)
         self.assertEqual("Enable Hosting", state.secondary_action_label)
         self.assertEqual("stopped", state.worker_runtime_state)
         self.assertEqual("No smoke test run yet.", state.smoke_test_summary)
@@ -255,7 +255,7 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertEqual("Review OpenClaw Setup", started.openclaw_action_label)
         self.assertEqual("CONFIGURED", started.openclaw_status_badge)
         self.assertEqual("READY", started.openclaw_guidance_badge)
-        self.assertIn("buyer routing is staged", started.openclaw_guidance_summary.lower())
+        self.assertIn("use routing is staged", started.openclaw_guidance_summary.lower())
         self.assertIn("configured", started.openclaw_summary.lower())
         self.assertIn("without editing local OpenClaw files", started.openclaw_details)
         self.assertTrue(started.buyer_network_models)
@@ -323,7 +323,7 @@ class GuiAppControllerTests(unittest.TestCase):
 
         self.assertFalse(staged.openclaw_configured)
         self.assertEqual("READY TO APPLY", staged.openclaw_guidance_badge)
-        self.assertIn("review the staged buyer-routing plan", staged.openclaw_guidance_summary.lower())
+        self.assertIn("review the staged routing plan", staged.openclaw_guidance_summary.lower())
         self.assertIn("plan", staged.openclaw_plan_summary.lower())
         self.assertTrue(staged.openclaw_plan_changes)
 

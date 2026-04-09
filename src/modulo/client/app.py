@@ -419,7 +419,7 @@ class ModuloClientSupervisor:
                 safety_note=(
                     "Staged apply mode: Modulo is still not changing local OpenClaw files in this "
                     "slice, but the explicit routing plan has been reviewed and applied inside "
-                    "Modulo's buyer setup flow."
+                    "Modulo's use setup flow."
                     if self.openclaw_configured and not discovery.configured_for_modulo
                     else "Discovery mode: Modulo is reading local OpenClaw state but is not changing "
                     "local OpenClaw files in this slice."
@@ -437,7 +437,7 @@ class ModuloClientSupervisor:
                     "routing configuration without editing local OpenClaw files or settings."
                 ),
                 safety_note=(
-                    "Safe prototype mode: this marks the buyer route as configured inside Modulo, "
+                    "Safe prototype mode: this marks the use route as configured inside Modulo, "
                     "but it does not wrap or rewrite a local OpenClaw install."
                 ),
                 connection_plan=connection_plan,
