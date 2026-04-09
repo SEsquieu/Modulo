@@ -184,6 +184,8 @@ class ModuloMainWindow(QMainWindow):
 
         self.host_toggle_button = QPushButton("Enable Hosting")
         self.host_toggle_button.clicked.connect(self._toggle_hosting_async)
+        self.host_toggle_button.setMinimumWidth(120)
+        self.host_toggle_button.setMinimumHeight(40)
 
         self.restart_button = QPushButton("Refresh Host")
         self.restart_button.clicked.connect(self._restart_hosting_async)
@@ -504,6 +506,44 @@ class ModuloMainWindow(QMainWindow):
             return "unavailable"
         return "unknown"
 
+    def _apply_host_toggle_style(self, *, hosting_enabled: bool) -> None:
+        if hosting_enabled:
+            self.host_toggle_button.setStyleSheet(
+                """
+                QPushButton {
+                    background-color: #b91c1c;
+                    color: white;
+                    border: 1px solid #ef4444;
+                    border-radius: 8px;
+                    font-weight: 700;
+                    padding: 8px 18px;
+                }
+                QPushButton:disabled {
+                    background-color: #3f3f46;
+                    color: #a1a1aa;
+                    border: 1px solid #52525b;
+                }
+                """
+            )
+            return
+        self.host_toggle_button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #166534;
+                color: white;
+                border: 1px solid #22c55e;
+                border-radius: 8px;
+                font-weight: 700;
+                padding: 8px 18px;
+            }
+            QPushButton:disabled {
+                background-color: #3f3f46;
+                color: #a1a1aa;
+                border: 1px solid #52525b;
+            }
+            """
+        )
+
     def _run_async_state_action(
         self,
         fn,
@@ -596,7 +636,8 @@ class ModuloMainWindow(QMainWindow):
         self.apply_openclaw_button.setText(state.openclaw_plan_apply_label)
         self.apply_openclaw_button.setEnabled(state.openclaw_plan_apply_enabled and controls_enabled)
         self.hosting_model_combo.setEnabled(state.hosting_setup_action_enabled and controls_enabled)
-        self.host_toggle_button.setText("Unhost" if state.hosting_enabled else "Host")
+        self.host_toggle_button.setText("Stop" if state.hosting_enabled else "Host")
+        self._apply_host_toggle_style(hosting_enabled=state.hosting_enabled)
         self.host_toggle_button.setEnabled(
             (state.start_action_enabled or state.stop_action_enabled) and controls_enabled
         )
