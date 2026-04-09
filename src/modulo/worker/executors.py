@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import socket
 from dataclasses import dataclass, field
 from typing import Protocol
 from urllib import error, request
@@ -44,6 +45,10 @@ class UrllibOllamaHTTPClient:
         try:
             with request.urlopen(req, timeout=self.timeout_seconds) as response:
                 body = response.read().decode("utf-8")
+        except TimeoutError as exc:
+            raise WorkerExecutionError("Ollama request timed out") from exc
+        except socket.timeout as exc:
+            raise WorkerExecutionError("Ollama request timed out") from exc
         except error.URLError as exc:
             raise WorkerExecutionError(f"Ollama request failed: {exc.reason}") from exc
 

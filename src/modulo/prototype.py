@@ -215,7 +215,15 @@ class LocalPrototypeHarness:
         status = self.client.run_hosting_cycle()
         completed_job = self.service.get_job(job.job_id)
         if completed_job is None or not completed_job.response_text:
-            raise RuntimeError(f"Prototype job {job.job_id} did not complete successfully")
+            worker_error = ""
+            if status.worker is not None and status.worker.last_error:
+                worker_error = status.worker.last_error
+            elif completed_job is not None and completed_job.failure_reason:
+                worker_error = completed_job.failure_reason
+            detail = f": {worker_error}" if worker_error else ""
+            raise RuntimeError(
+                f"Prototype job {job.job_id} did not complete successfully{detail}"
+            )
 
         return PrototypeRoundTripResult(
             job_id=completed_job.job_id,

@@ -1,12 +1,15 @@
 import unittest
 from pathlib import Path
 import sys
+import socket
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from modulo.common.contracts import ChatMessage, ChatRequest, ExecutionMode
 from modulo.worker.errors import WorkerExecutionError
 from modulo.worker.executors import OllamaExecutor, StubExecutor
+from modulo.worker.executors import UrllibOllamaHTTPClient
 
 
 class FakeOllamaHTTPClient:
@@ -70,6 +73,30 @@ class WorkerExecutorTests(unittest.TestCase):
                     messages=(ChatMessage(role="user", content="say hi"),),
                 ),
             )
+
+    def test_urllib_ollama_http_client_converts_timeout_error(self) -> None:
+        client = UrllibOllamaHTTPClient(timeout_seconds=0.01)
+
+        with mock.patch(
+            "modulo.worker.executors.request.urlopen",
+            side_effect=TimeoutError("timed out"),
+        ):
+            with self.assertRaises(WorkerExecutionError) as exc:
+                client.chat("http://127.0.0.1:11434", {"model": "qwen3.5:4b"})
+
+        self.assertIn("timed out", str(exc.exception).lower())
+
+    def test_urllib_ollama_http_client_converts_socket_timeout(self) -> None:
+        client = UrllibOllamaHTTPClient(timeout_seconds=0.01)
+
+        with mock.patch(
+            "modulo.worker.executors.request.urlopen",
+            side_effect=socket.timeout("timed out"),
+        ):
+            with self.assertRaises(WorkerExecutionError) as exc:
+                client.chat("http://127.0.0.1:11434", {"model": "qwen3.5:4b"})
+
+        self.assertIn("timed out", str(exc.exception).lower())
 
 
 if __name__ == "__main__":

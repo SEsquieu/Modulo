@@ -1,6 +1,7 @@
 import unittest
 from pathlib import Path
 import sys
+import socket
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -72,6 +73,12 @@ class FailingOllamaHTTPClient:
     def chat(self, base_url: str, payload: dict) -> dict:
         del base_url, payload
         raise WorkerExecutionError("real ollama request failed")
+
+
+class TimeoutOllamaHTTPClient:
+    def chat(self, base_url: str, payload: dict) -> dict:
+        del base_url, payload
+        raise WorkerExecutionError("Ollama request timed out")
 
 
 class LocalPrototypeHarnessTests(unittest.TestCase):
@@ -240,6 +247,24 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertEqual("real", status.smoke_test.execution_mode)
         self.assertIn("resolved", status.smoke_test.execution_summary)
         self.assertIn("did not complete successfully", status.smoke_test.error)
+        self.assertFalse(onboarding.worker_healthy)
+        self.assertFalse(onboarding.smoke_test_ok)
+
+    def test_real_execution_timeout_surfaces_as_clean_smoke_test_failure(self) -> None:
+        harness = LocalPrototypeHarness(
+            openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            hosting_runtime_probe=ReadyRuntimeProbe(),
+            ollama_http_client=TimeoutOllamaHTTPClient(),
+        )
+
+        harness.boot()
+        status = harness.client.run_smoke_test("real timeout")
+        onboarding = harness.client.get_onboarding_status()
+
+        self.assertIsNotNone(status.smoke_test)
+        self.assertFalse(status.smoke_test.ok)
+        self.assertEqual("real", status.smoke_test.execution_mode)
+        self.assertIn("timed out", status.smoke_test.error.lower())
         self.assertFalse(onboarding.worker_healthy)
         self.assertFalse(onboarding.smoke_test_ok)
 
