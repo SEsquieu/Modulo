@@ -136,6 +136,10 @@ class ModuloMainWindow(QMainWindow):
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Fixed,
         )
+        self.diagnostics_state_badge_label = QLabel()
+        self.diagnostics_state_badge_label.setStyleSheet("font-size: 18px; font-weight: 700;")
+        self.diagnostics_card_value = QLabel()
+        self.diagnostics_card_value.setWordWrap(True)
         self.buyer_model_notice_label = QLabel()
         self.buyer_model_notice_label.setWordWrap(True)
         self.buyer_platform_summary_label = QLabel()
@@ -299,18 +303,28 @@ class ModuloMainWindow(QMainWindow):
         use_box.setLayout(use_layout)
 
         diagnostics_box = QGroupBox("Diagnostics")
-        smoke_layout = QVBoxLayout()
-        smoke_layout.addWidget(self.smoke_button)
-        smoke_layout.addWidget(self.smoke_activity_label)
-        smoke_layout.addWidget(self.smoke_activity_bar)
-        smoke_layout.addWidget(self.smoke_result_label)
-        smoke_layout.addWidget(self.smoke_summary_label)
-        smoke_layout.addWidget(self.smoke_details_box)
-        smoke_layout.addWidget(self.diagnostics_summary_label)
-        smoke_layout.addWidget(self.diagnostics_details_box)
-        smoke_layout.addWidget(self.continuity_summary_label)
-        smoke_layout.addWidget(self.activity_box)
-        diagnostics_box.setLayout(smoke_layout)
+        diagnostics_box.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Maximum,
+        )
+        diagnostics_layout = QVBoxLayout()
+        diagnostics_header_row = QHBoxLayout()
+        diagnostics_header_row.addWidget(self.diagnostics_state_badge_label, 1)
+        diagnostics_header_row.addWidget(self.smoke_button, 0)
+        diagnostics_layout.addLayout(diagnostics_header_row)
+        diagnostics_layout.addWidget(self.smoke_activity_label)
+        diagnostics_layout.addWidget(self.smoke_activity_bar)
+        diagnostics_layout.addWidget(self._build_host_card("Latest Check", self.diagnostics_card_value))
+        self.diagnostics_detail_tabs = QTabWidget()
+        self.diagnostics_detail_tabs.addTab(self._build_diagnostics_smoke_page(), "Smoke")
+        self.diagnostics_detail_tabs.addTab(self._build_diagnostics_activity_page(), "Activity")
+        self.diagnostics_detail_tabs.addTab(self._build_diagnostics_errors_page(), "Errors")
+        self.diagnostics_detail_tabs.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Maximum,
+        )
+        diagnostics_layout.addWidget(self.diagnostics_detail_tabs)
+        diagnostics_box.setLayout(diagnostics_layout)
 
         host_tab = QWidget()
         host_tab_layout = QVBoxLayout()
@@ -610,6 +624,40 @@ class ModuloMainWindow(QMainWindow):
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
         layout.addWidget(self.use_cloud_models_label)
+        layout.addStretch(1)
+        page.setLayout(layout)
+        return page
+
+    def _build_diagnostics_smoke_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout()
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(6)
+        layout.addWidget(self.smoke_result_label)
+        layout.addWidget(self.smoke_summary_label)
+        layout.addWidget(self.smoke_details_box)
+        layout.addStretch(1)
+        page.setLayout(layout)
+        return page
+
+    def _build_diagnostics_activity_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout()
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(6)
+        layout.addWidget(self.continuity_summary_label)
+        layout.addWidget(self.activity_box)
+        layout.addStretch(1)
+        page.setLayout(layout)
+        return page
+
+    def _build_diagnostics_errors_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout()
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(6)
+        layout.addWidget(self.diagnostics_summary_label)
+        layout.addWidget(self.diagnostics_details_box)
         layout.addStretch(1)
         page.setLayout(layout)
         return page
@@ -935,6 +983,23 @@ class ModuloMainWindow(QMainWindow):
                     f"State: {state.hosting_warm_state_badge.title()}",
                     f"Host: {state.hosting_mode_badge}",
                     f"Expires: {self._host_card_expiry_text(state)}",
+                )
+            )
+        )
+
+        diagnostics_badge = "Diagnostics: Ready"
+        if state.smoke_test_result_label == "Fail" or state.last_worker_error:
+            diagnostics_badge = "Diagnostics: Attention"
+        elif state.smoke_test_result_label == "Not run yet":
+            diagnostics_badge = "Diagnostics: Idle"
+        self.diagnostics_state_badge_label.setText(diagnostics_badge)
+        self.diagnostics_card_value.setText(
+            "\n".join(
+                (
+                    "Probe: Constrained GUI smoke probe",
+                    f"Result: {state.smoke_test_result_label}",
+                    f"Path: {state.execution_mode_badge}",
+                    f"Status: {state.diagnostics_summary}",
                 )
             )
         )
