@@ -210,7 +210,7 @@ class ModuloMainWindow(QMainWindow):
         host_layout.addWidget(self._build_host_card("Hosted Model", self.host_card_model_value))
 
         self.host_detail_toolbox = QToolBox()
-        self.host_detail_toolbox.addItem(self._build_host_details_page(), "Warm Details")
+        self.host_detail_toolbox.addItem(self._build_host_details_page(), "Loaded Model Details")
         self.host_detail_toolbox.addItem(self._build_readiness_page(), "Readiness and Ollama")
         self.host_detail_toolbox.addItem(self._build_worker_details_page(), "Worker Details")
         host_layout.addWidget(self.host_detail_toolbox)
@@ -333,8 +333,6 @@ class ModuloMainWindow(QMainWindow):
         layout = QVBoxLayout()
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
-        layout.addWidget(self.hosting_mode_label)
-        layout.addWidget(self.hosting_warm_state_label)
         layout.addWidget(self.hosting_warm_summary_label)
         layout.addWidget(self.hosting_warm_details_label)
         page.setLayout(layout)
