@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from modulo.gui.controller import GuiAppController, GuiShellState
 
 try:
@@ -17,7 +19,6 @@ try:
         QPlainTextEdit,
         QScrollArea,
         QTabWidget,
-        QToolBox,
         QVBoxLayout,
         QWidget,
     )
@@ -195,25 +196,24 @@ class ModuloMainWindow(QMainWindow):
 
         host_box = QGroupBox("Hosting")
         host_layout = QVBoxLayout()
-        host_layout.addWidget(self.host_state_badge_label)
+        host_header_row = QHBoxLayout()
+        host_header_row.addWidget(self.host_state_badge_label, 1)
+        host_header_row.addWidget(self.host_toggle_button, 0)
+        host_layout.addLayout(host_header_row)
         host_layout.addWidget(self.host_state_summary_label)
         hosting_setup_prompt_row = QHBoxLayout()
-        hosting_setup_prompt_row.addWidget(QLabel("Hosting model"))
-        hosting_setup_prompt_row.addWidget(self.hosting_model_combo)
+        hosting_setup_prompt_row.addWidget(QLabel("Model"))
+        hosting_setup_prompt_row.addWidget(self.hosting_model_combo, 1)
         host_layout.addLayout(hosting_setup_prompt_row)
-        hosting_controls_row = QHBoxLayout()
-        hosting_controls_row.addWidget(self.host_toggle_button)
-        hosting_controls_row.addWidget(self.restart_button)
-        host_layout.addLayout(hosting_controls_row)
         host_layout.addWidget(self.host_activity_label)
         host_layout.addWidget(self.host_activity_bar)
-        host_layout.addWidget(self._build_host_card("Hosted Model", self.host_card_model_value))
+        host_layout.addWidget(self._build_host_card("Loaded Model", self.host_card_model_value))
 
-        self.host_detail_toolbox = QToolBox()
-        self.host_detail_toolbox.addItem(self._build_host_details_page(), "Loaded Model Details")
-        self.host_detail_toolbox.addItem(self._build_readiness_page(), "Readiness and Ollama")
-        self.host_detail_toolbox.addItem(self._build_worker_details_page(), "Worker Details")
-        host_layout.addWidget(self.host_detail_toolbox)
+        self.host_detail_tabs = QTabWidget()
+        self.host_detail_tabs.addTab(self._build_host_details_page(), "Details")
+        self.host_detail_tabs.addTab(self._build_readiness_page(), "Model")
+        self.host_detail_tabs.addTab(self._build_worker_details_page(), "Worker")
+        host_layout.addWidget(self.host_detail_tabs)
         host_box.setLayout(host_layout)
 
         buyer_box = QGroupBox("Buyer Routing")
@@ -333,7 +333,6 @@ class ModuloMainWindow(QMainWindow):
         layout = QVBoxLayout()
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
-        layout.addWidget(self.hosting_warm_summary_label)
         layout.addWidget(self.hosting_warm_details_label)
         page.setLayout(layout)
         return page
@@ -360,6 +359,7 @@ class ModuloMainWindow(QMainWindow):
         layout = QVBoxLayout()
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
+        layout.addWidget(self.restart_button)
         layout.addWidget(self.worker_registration_label)
         layout.addWidget(self.worker_health_summary_label)
         layout.addWidget(self.worker_activity_label)
@@ -466,6 +466,33 @@ class ModuloMainWindow(QMainWindow):
         self._apply_state(state)
         self.scroll_area.verticalScrollBar().setValue(previous_value)
 
+    @staticmethod
+    def _host_card_expiry_text(state: GuiShellState) -> str:
+        for detail in state.hosting_warm_details:
+            if not detail.startswith("Expires at: "):
+                continue
+            expires_raw = detail.removeprefix("Expires at: ").strip()
+            try:
+                expires_at = datetime.fromisoformat(expires_raw.replace("Z", "+00:00"))
+            except ValueError:
+                return expires_raw
+            remaining_seconds = int((expires_at - datetime.now(timezone.utc)).total_seconds())
+            if remaining_seconds <= 0:
+                return "expired"
+            if remaining_seconds < 60:
+                return f"{remaining_seconds}s"
+            minutes = remaining_seconds // 60
+            return f"{minutes}m"
+
+        warm_state = state.hosting_warm_state_badge.upper()
+        if warm_state == "WARMING":
+            return "warming"
+        if warm_state in {"COLD", "NO MODEL"}:
+            return "not loaded"
+        if warm_state == "WARM_FAILED":
+            return "unavailable"
+        return "unknown"
+
     def _run_async_state_action(
         self,
         fn,
@@ -558,9 +585,7 @@ class ModuloMainWindow(QMainWindow):
         self.apply_openclaw_button.setText(state.openclaw_plan_apply_label)
         self.apply_openclaw_button.setEnabled(state.openclaw_plan_apply_enabled and controls_enabled)
         self.hosting_model_combo.setEnabled(state.hosting_setup_action_enabled and controls_enabled)
-        self.host_toggle_button.setText(
-            "Disable Hosting" if state.hosting_enabled else "Enable Hosting"
-        )
+        self.host_toggle_button.setText("Unhost" if state.hosting_enabled else "Host")
         self.host_toggle_button.setEnabled(
             (state.start_action_enabled or state.stop_action_enabled) and controls_enabled
         )
@@ -580,23 +605,26 @@ class ModuloMainWindow(QMainWindow):
         self.smoke_activity_bar.setVisible(smoke_busy)
 
         host_state_badge = (
-            "HOSTING ACTIVE"
+            "Host: Active"
             if state.hosting_enabled and state.worker_healthy
-            else "HOSTING NEEDS ATTENTION"
+            else "Host: Attention"
             if state.hosting_enabled
-            else "HOSTING IDLE"
+            else "Host: Idle"
         )
         self.host_state_badge_label.setText(host_state_badge)
-        self.host_state_summary_label.setText(
-            f"{state.hosting_summary} {state.worker_health_summary}"
+        self.host_state_summary_label.setText(state.hosting_summary)
+        selected_model_text = (
+            self.hosting_model_combo.currentText()
+            or state.hosting_selected_model_id
+            or "No model selected"
         )
-        selected_model_text = self.hosting_model_combo.currentText() or state.hosting_selected_model_id or "No model selected"
         self.host_card_model_value.setText(
             "\n".join(
                 (
                     f"Model: {selected_model_text}",
                     f"State: {state.hosting_warm_state_badge.title()}",
                     f"Host: {state.hosting_mode_badge}",
+                    f"Expires: {self._host_card_expiry_text(state)}",
                 )
             )
         )
@@ -649,10 +677,13 @@ class ModuloMainWindow(QMainWindow):
             self.hosting_model_combo.setCurrentIndex(selected_index)
             self.hosting_model_combo.blockSignals(False)
 
-        self.hosting_mode_label.setText(f"Hosting mode: {state.hosting_mode_badge}")
-        self.hosting_warm_state_label.setText(f"Model state: {state.hosting_warm_state_badge}")
-        self.hosting_warm_summary_label.setText(state.hosting_warm_summary)
-        self.hosting_warm_details_label.setText("\n".join(state.hosting_warm_details))
+        self.hosting_mode_label.setText(f"Host: {state.hosting_mode_badge}")
+        self.hosting_warm_state_label.setText(f"State: {state.hosting_warm_state_badge}")
+        detail_lines = []
+        if state.hosting_warm_summary:
+            detail_lines.append(state.hosting_warm_summary)
+        detail_lines.extend(state.hosting_warm_details)
+        self.hosting_warm_details_label.setText("\n".join(detail_lines))
         self.execution_mode_label.setText(f"Execution path: {state.execution_mode_badge}")
         self.execution_summary_label.setText(state.execution_summary)
         self.ollama_status_label.setText(f"Ollama: {state.ollama_status_badge}")
