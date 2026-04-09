@@ -602,12 +602,6 @@ class ModuloMainWindow(QMainWindow):
                 )
             )
         )
-        self.host_card_warm_value.setText(
-            f"{state.hosting_warm_state_badge}\n{state.hosting_warm_summary}"
-        )
-        self.host_card_runtime_value.setText(
-            f"{state.execution_mode_badge}\n{state.execution_summary}"
-        )
 
         self.openclaw_status_label.setText(
             f"Status: {state.openclaw_status_badge}"
