@@ -500,13 +500,23 @@ class ModuloMainWindow(QMainWindow):
         card = QFrame()
         card.setFrameShape(QFrame.StyledPanel)
         card.setStyleSheet(
-            "QFrame { border: 1px solid #3f3f46; border-radius: 8px; padding: 8px; }"
+            """
+            QFrame {
+                background-color: #0b130e;
+                border: 1px solid #1f6b39;
+                border-radius: 4px;
+                padding: 6px;
+            }
+            """
         )
         layout = QVBoxLayout()
-        layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(4)
+        layout.setContentsMargins(12, 10, 12, 10)
+        layout.setSpacing(6)
         title_label = QLabel(title)
-        title_label.setStyleSheet("font-size: 11px; color: #a1a1aa; text-transform: uppercase;")
+        title_label.setStyleSheet(
+            "font-size: 10px; color: #5fd98f; letter-spacing: 1px; text-transform: uppercase;"
+        )
+        value_label.setStyleSheet("color: #d7ffe3; background: transparent;")
         layout.addWidget(title_label)
         layout.addWidget(value_label)
         card.setLayout(layout)
