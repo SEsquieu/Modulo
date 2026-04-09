@@ -81,15 +81,13 @@ This launches the barebones PySide6 desktop shell against the current live clien
 
 The GUI currently includes:
 
-- an onboarding-oriented home screen
-- a dedicated OpenClaw connection panel with explicit staged review/apply messaging
-- buyer guidance badges and next-step messaging for detected OpenClaw states and parse failures
-- a hosting setup panel that shows the selected curated model and local readiness guidance
-- explicit execution-path truth in the host and diagnostics views so `real` and `prototype-safe` runs are clearly labeled
-- hosting start, stop, and restart controls
-- a worker panel with live registration, health, activity, and error summaries
-- a prompt-driven smoke-test and diagnostics panel backed by the current prototype harness
-- an activity panel with recent jobs and buyer continuity hints
+- a `Use / Host / Diagnostics` shell with consistent nested-tab navigation
+- a `Use` tab with active route summary, OpenClaw route truth, and local/network/cloud source visibility
+- a `Host` tab with local-only model selection, warm-state card, host toggle, and worker/runtime detail tabs
+- a `Diagnostics` tab with smoke-test summary, activity, and error views
+- explicit execution-path truth in host and diagnostics views so `REAL` and `PROTOTYPE` runs are clearly labeled
+- async host actions and smoke tests so long Ollama calls do not freeze the UI
+- a split footer with left-side shell status and right-side transient notices
 
 Planned next host refinement:
 

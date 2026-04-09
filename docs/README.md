@@ -22,5 +22,5 @@ Current source of truth:
 Recommended next docs to add:
 
 - `api.md`: Ollama-facing and worker-facing HTTP contracts
-- `onboarding.md`: buyer and worker flows from the tray client
+- `onboarding.md`: use-side and host-side flows from the tray client
 - `operations.md`: health, logging, and deployment expectations

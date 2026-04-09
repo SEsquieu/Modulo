@@ -14,7 +14,7 @@ This structure is intentional. It keeps the repository aligned with the eventual
 1. the user installs the client
 2. the client performs onboarding and configuration
 3. the client can enable or supervise the worker bridge locally
-4. the cloud accepts buyer requests and routes them to workers
+4. the cloud accepts use-side requests and routes them to workers
 
 ## Current implementation status
 
@@ -29,7 +29,7 @@ Today the strongest part of the repo is the `cloud` package. It currently contai
 
 The `worker` package currently contains the beginnings of the worker runtime boundary and configuration surface.
 
-The `client` package currently contains only lightweight placeholders to keep the repo shaped correctly for the future tray app and onboarding UX.
+The `client` package now contains the real supervision, readiness, session-bridge, OpenClaw discovery, and local host-truth surfaces that the desktop shell is built on.
 
 ## Boundary rules
 
@@ -49,7 +49,7 @@ These rules should guide implementation order:
 - prioritize slices that move the end-to-end demo closer to real proof
 - keep `client` and `worker` aligned through shared contracts rather than duplicated behavior
 - avoid widening the surface area unless the new behavior clearly supports the roadmap
-- treat buyer continuity and warm-path UX as router concerns inside `cloud`, not `client` shortcuts
+- treat request continuity and warm-path UX as router concerns inside `cloud`, not `client` shortcuts
 
 The current slice order and completion summaries live in [roadmap.md](/Users/16096/Desktop/Projects/Modulo/docs/roadmap.md).
 The GUI-specific build path lives in [gui_roadmap.md](/Users/16096/Desktop/Projects/Modulo/docs/gui_roadmap.md).
@@ -57,13 +57,13 @@ The first GUI screen/state inventory lives in [gui_state_map.md](/Users/16096/De
 
 ## Development sequencing
 
-The repo is intentionally backend-heavy right now because the routing and worker protocol need to be real before the tray client can be built around them confidently.
+The repo is intentionally backend-first, but the PySide client shell is now far enough along that productization and future scope-aware routing can be discussed against a real interface instead of placeholder screens.
 
 Near-term sequence:
 
-1. keep hardening the `cloud` and `worker` seam
-2. scaffold the real worker bridge against the worker HTTP endpoints
-3. expose smoke-test and onboarding-friendly APIs for the client
-4. build the tray-first client on top of those stable contracts
+1. keep the `cloud` and `worker` seams truthful and scope-ready
+2. package the current PySide shell cleanly on Windows
+3. preserve the `Use / Host / Diagnostics` client shape while adding product polish
+4. keep future private-network work architecture-led instead of bolted onto the public path later
 
-As routing evolves, prefer continuity-preserving behavior such as short-lived buyer leases on healthy workers when that reduces cold-start thrash without hiding failures.
+As routing evolves, prefer continuity-preserving behavior such as short-lived request leases on healthy workers when that reduces cold-start thrash without hiding failures.

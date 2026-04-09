@@ -7,17 +7,16 @@ This file is the quickest way to regain context when switching workstations.
 - backend phase-0 roadmap is completed
 - GUI phase-0 roadmap is completed
 - Phase 2 integration work is completed through `Step 5: Real local execution`
-- a host-side warm-state refinement roadmap is now active before packaging
-- current warm-state roadmap progress: `Slice 1`, `Slice 2`, and `Slice 3` completed
+- the host-side warm-state roadmap is completed
 - the active next step is [productization_checklist.md](./productization_checklist.md)
-- a new architecture note exists for enterprise-facing private networks: [private_networks_design.md](./private_networks_design.md)
+- the current architecture discussion is [private_networks_design.md](./private_networks_design.md), which now narrows the product-facing source model to `Local / Private / Public / Cloud`
 
 ## What exists today
 
 - `cloud` owns routing, job lifecycle, retry behavior, worker health, and buyer continuity leases
-- `worker` owns registration, heartbeat, claiming, execution, and result reporting
-- `client` owns supervision, readiness checks, session-bridge state, local discovery, and buyer-facing setup truth
-- `gui` is a light PySide6 desktop shell split into `Host`, `Buyer`, and `Diagnostics`
+- `worker` owns registration, heartbeat, claiming, execution, prewarm execution path, and result reporting
+- `client` owns supervision, readiness checks, session-bridge state, local discovery, host warm maintenance, and use-facing setup truth
+- `gui` is a light PySide6 desktop shell split into `Use`, `Host`, and `Diagnostics`
 - `session bridge` remains client-owned and separate from the worker inference bridge
 
 ## What is real today
@@ -35,10 +34,15 @@ This file is the quickest way to regain context when switching workstations.
 - host-side prewarm lifecycle that can warm the selected model when hosting starts and surface `warming`, `warm`, and `warm_failed`
 - host-side warm maintenance that refreshes the selected model when hosting stays enabled and local warmth drops away
 - GUI host actions and smoke tests now run asynchronously so long local Ollama calls do not freeze the client shell
+- the GUI shell has been tightened into a consistent pattern:
+  - top-level tabs: `Use / Host / Diagnostics`
+  - compact header + primary action + summary card + nested detail tabs
+  - terminal-styled theme with calmer shared card styling
+  - static overview copy and a split left/right footer
 
 ## What is still prototype-safe
 
-- buyer model selection and routing setup
+- use-side model selection and routing setup
 - actual OpenClaw config mutation and rollback flow
 - packaging, installer, and first-run polish
 - broader trust-and-recovery polish beyond the main surfaced errors
@@ -62,13 +66,13 @@ That matters because the main workstation stores the primary model under `agents
 
 ## Latest GUI truth
 
-- `Host` tab: hosting model selection, readiness, execution-path truth, hosting controls, worker state
-- `Buyer` tab: OpenClaw config truth plus session-bridge-backed buyer/platform state
-- `Diagnostics` tab: smoke test, execution result truth, recent activity, and continuity hints
-- footer: `Modulo <status> | Hosting <status> | Worker <status>`
+- `Use` tab: model source selection shell, active route card, nested `Route / Local / Network / Cloud` sections, OpenClaw route truth
+- `Host` tab: hosting model selection, warm-state card, execution-path truth, host toggle, worker/runtime details
+- `Diagnostics` tab: smoke test summary card plus nested `Smoke / Activity / Errors`
+- footer: left-aligned `Modulo / Hosting / Worker` key:value status with colored values, plus right-aligned transient notices
 
 The GUI now explicitly tells the truth about whether the current worker path and latest smoke test are using `REAL` or `PROTOTYPE` execution.
-The host selector can now choose installed local Ollama models outside the curated catalog when they are present locally.
+The host selector only shows local installable models, and the startup path now syncs the actual hosted model to that visible local inventory instead of carrying a hidden default behind the dropdown.
 
 ## Next recommended starting point
 
@@ -78,7 +82,11 @@ The most likely first useful slice is:
 
 - prove the PySide client launches cleanly from a packaged Windows build
 - capture packaging commands and any startup/resource caveats in the repo
-- keep productization grounded in the now-stabilized Host, Buyer, and Diagnostics shell
+- keep productization grounded in the now-stabilized Use, Host, and Diagnostics shell
+
+If resuming in architecture mode instead of productization mode, the current non-implementation discussion is:
+
+- [private_networks_design.md](./private_networks_design.md)
 
 ## Run commands
 
@@ -131,7 +139,7 @@ Current architecture discussion:
 - keep development explicit and documented
 - finish one slice before starting the next
 - update the relevant roadmap or checklist when a slice is complete
-- keep `host` and `buyer` concerns separate
+- keep `host` and `use` concerns separate
 - keep OpenClaw config buyer-related, not hosting-related
 - keep the GUI light and low-noise
 - commit and push after every repo change
@@ -140,14 +148,17 @@ Current architecture discussion:
 
 Recent meaningful commits:
 
-- `b25a33e` `Complete GUI real execution truth slice`
-- `092b6c2` `Complete real execution proof slice`
-- `5157a60` `Complete real executor selection slice`
-- `f9bb05e` `Complete OpenClaw GUI connection slice`
-- `027b2fc` `Complete OpenClaw staged connection slice`
+- `da37572` `Refine private networks source and scope model`
+- `755d0ca` `Add private networks architecture note`
+- `a8efbf2` `Stabilize overview copy and split footer status`
+- `bc6865a` `Reshape diagnostics tab to match shell layout`
+- `9134ddf` `Increase host toggle button text size`
+- `2cbc0f8` `Blend host toggle into terminal theme`
+- `a9e5563` `Refine info card styling for sleek terminal UI`
+- `14bd1b6` `Sync initial host model to local inventory`
 
 If resuming cold, start by reading:
 
 1. [handoff.md](./handoff.md)
-2. [phase_2_plan.md](./phase_2_plan.md)
-3. [productization_checklist.md](./productization_checklist.md)
+2. [productization_checklist.md](./productization_checklist.md)
+3. [private_networks_design.md](./private_networks_design.md)
