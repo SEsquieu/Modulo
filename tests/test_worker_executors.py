@@ -57,6 +57,7 @@ class WorkerExecutorTests(unittest.TestCase):
         self.assertEqual("http://127.0.0.1:11434", http_client.last_payload["base_url"])
         self.assertEqual("llama3.1:8b", http_client.last_payload["payload"]["model"])
         self.assertEqual("say hi", http_client.last_payload["payload"]["messages"][0]["content"])
+        self.assertFalse(http_client.last_payload["payload"]["think"])
 
     def test_ollama_executor_raises_on_missing_content(self) -> None:
         executor = OllamaExecutor(

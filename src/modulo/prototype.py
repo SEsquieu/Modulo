@@ -24,7 +24,7 @@ from modulo.cloud.router import TrustRouter
 from modulo.cloud.runtime import InMemoryModuloService
 from modulo.common.catalog import SUPPORTED_MODELS
 from modulo.common.contracts import ChatMessage, ChatRequest, ExecutionMode, JobStatus, WorkerBridgeConfig
-from modulo.worker.executors import OllamaExecutor, OllamaHTTPClient, StubExecutor
+from modulo.worker.executors import OllamaExecutor, OllamaHTTPClient, StubExecutor, UrllibOllamaHTTPClient
 from modulo.worker.errors import WorkerExecutionError
 from modulo.worker.runtime import InMemoryWorkerRuntime, WorkerBridgeRuntime, WorkerExecutor
 from modulo.worker.transport import InProcessWorkerHTTPTransport
@@ -111,6 +111,7 @@ class LocalPrototypeSessionBridge(ClientSessionBridge):
 class LocalOllamaModelPrewarmer:
     base_url: str = "http://127.0.0.1:11434"
     keep_alive: str = "10m"
+    timeout_seconds: float = 60.0
 
     def prewarm(self, model_id: str) -> HostingPrewarmResult:
         endpoint = f"{self.base_url.rstrip('/')}/api/generate"
@@ -128,7 +129,7 @@ class LocalOllamaModelPrewarmer:
             method="POST",
         )
         try:
-            with request.urlopen(req, timeout=15) as response:
+            with request.urlopen(req, timeout=self.timeout_seconds) as response:
                 response.read()
         except Exception as exc:
             raise WorkerExecutionError(f"Ollama prewarm failed: {exc}") from exc
@@ -150,6 +151,7 @@ class LocalPrototypeHarness:
     executor: WorkerExecutor | None = None
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_http_client: OllamaHTTPClient | None = None
+    ollama_timeout_seconds: float = 120.0
     openclaw_discovery: OpenClawDiscovery | None = None
     ollama_discovery: OllamaDiscovery | None = None
     ollama_loaded_models_discovery: OllamaLoadedModelsDiscovery | None = None
@@ -213,7 +215,7 @@ class LocalPrototypeHarness:
             self.selected_executor_summary = probe_status.summary
             return OllamaExecutor(
                 base_url=self.ollama_base_url,
-                http_client=self.ollama_http_client or OllamaExecutor().http_client,
+                http_client=self.ollama_http_client or UrllibOllamaHTTPClient(timeout_seconds=self.ollama_timeout_seconds),
             )
 
         self.selected_executor_mode = "prototype"

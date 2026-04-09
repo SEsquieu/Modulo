@@ -32,7 +32,7 @@ class StubExecutor:
 
 @dataclass(frozen=True)
 class UrllibOllamaHTTPClient:
-    timeout_seconds: float = 30.0
+    timeout_seconds: float = 120.0
 
     def chat(self, base_url: str, payload: dict) -> dict:
         endpoint = f"{base_url.rstrip('/')}/api/chat"
@@ -65,6 +65,7 @@ class UrllibOllamaHTTPClient:
 class OllamaExecutor:
     base_url: str = "http://127.0.0.1:11434"
     http_client: OllamaHTTPClient = UrllibOllamaHTTPClient()
+    think: bool | str | None = False
 
     def execute(self, worker_id: str, request: ChatRequest) -> str:
         del worker_id
@@ -76,6 +77,8 @@ class OllamaExecutor:
             ],
             "stream": request.stream,
         }
+        if self.think is not None:
+            payload["think"] = self.think
         response = self.http_client.chat(self.base_url, payload)
         message = response.get("message")
         if not isinstance(message, dict):

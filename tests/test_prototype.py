@@ -159,6 +159,19 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertEqual("real", harness.selected_executor_mode)
         self.assertIn("resolved", harness.selected_executor_summary)
 
+    def test_default_real_executor_uses_extended_timeout_budget(self) -> None:
+        harness = LocalPrototypeHarness(
+            openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
+            hosting_runtime_probe=ReadyRuntimeProbe(),
+        )
+
+        self.assertIsInstance(harness.client.worker_bridge.executor, OllamaExecutor)
+        self.assertEqual(
+            120.0,
+            harness.client.worker_bridge.executor.http_client.timeout_seconds,
+        )
+
     def test_falls_back_to_stub_executor_when_runtime_probe_is_blocked(self) -> None:
         harness = LocalPrototypeHarness(
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
