@@ -155,6 +155,9 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertEqual(("llama3.1:8b",), state.hosting_supported_missing_model_ids)
         self.assertEqual(("qwen3.5:4b",), state.hosting_unsupported_installed_model_ids)
         self.assertEqual("PROTOTYPE", state.hosting_mode_badge)
+        self.assertEqual("WARM", state.hosting_warm_state_badge)
+        self.assertIn("currently loaded", state.hosting_warm_summary)
+        self.assertTrue(state.hosting_warm_details)
         self.assertEqual("PROTOTYPE", state.execution_mode_badge)
         self.assertIn("prototype-safe", state.execution_summary)
         self.assertEqual("AVAILABLE", state.ollama_status_badge)
@@ -212,6 +215,7 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertTrue(started.restart_action_enabled)
         self.assertTrue(started.smoke_action_enabled)
         self.assertIn("Hosting is enabled", started.hosting_summary)
+        self.assertEqual("WARM", started.hosting_warm_state_badge)
         self.assertTrue(smoked.smoke_test_ok)
         self.assertEqual("PASS", smoked.smoke_status_badge)
         self.assertIn("Smoke test passed", smoked.smoke_test_summary)
@@ -244,6 +248,7 @@ class GuiAppControllerTests(unittest.TestCase):
         smoked = self.controller.run_smoke_test("real gui smoke")
 
         self.assertEqual("REAL", initial.hosting_mode_badge)
+        self.assertEqual("WARM", initial.hosting_warm_state_badge)
         self.assertEqual("REAL", initial.execution_mode_badge)
         self.assertIn("ready for real local execution", initial.execution_summary.lower())
         self.assertTrue(smoked.smoke_test_ok)
@@ -316,6 +321,7 @@ class GuiAppControllerTests(unittest.TestCase):
 
         self.assertEqual("qwen3.5:4b", state.hosting_selected_model_id)
         self.assertEqual("READY", state.hosting_readiness_badge)
+        self.assertEqual("COLD", state.hosting_warm_state_badge)
         self.assertIn("Hosting preflight passed", state.hosting_setup_summary)
 
 

@@ -38,25 +38,23 @@ Proof added to repo:
 
 ### Slice 2: Host GUI warm-state visibility
 
-Status: in progress
+Status: completed
 
-Goal:
+Summary:
 
-- represent host model state clearly in the Host tab
-- show a compact runtime details block for loaded-model metadata
-
-Done when:
-
-- the Host tab shows a clear state such as `COLD`, `WARMING`, `WARM`, or `FAILED`
-- the Host tab shows a concise runtime detail panel for the selected model
+- surfaced host model warm-state directly in the Host tab with a dedicated model-state line, summary, and compact runtime details
+- kept the presentation scoped to host operations so warm-state truth does not leak into Buyer or Diagnostics
+- verified both warm and cold cases through the GUI controller layer
 
 Proof added to repo:
 
-- 
+- GUI controller state now includes host warm-state badge, summary, and detail lines
+- Host tab renders model state and compact loaded-model details alongside hosting readiness
+- GUI tests cover warm default state and cold selected-model state
 
 ### Slice 3: Hosting prewarm lifecycle
 
-Status: not started
+Status: in progress
 
 Goal:
 

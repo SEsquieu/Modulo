@@ -49,6 +49,9 @@ class GuiShellState:
     hosting_supported_missing_model_ids: tuple[str, ...] = ()
     hosting_unsupported_installed_model_ids: tuple[str, ...] = ()
     hosting_mode_badge: str = "REAL"
+    hosting_warm_state_badge: str = "UNKNOWN"
+    hosting_warm_summary: str = ""
+    hosting_warm_details: tuple[str, ...] = ()
     ollama_status_badge: str = "UNAVAILABLE"
     ollama_summary: str = ""
     ollama_inventory_summary: str = ""
@@ -191,6 +194,9 @@ class GuiAppController:
             hosting_supported_missing_model_ids=status.hosting_setup.supported_missing_model_ids,
             hosting_unsupported_installed_model_ids=status.hosting_setup.unsupported_installed_model_ids,
             hosting_mode_badge=status.hosting_setup.hosting_mode_label.upper(),
+            hosting_warm_state_badge=status.hosting_setup.warm_state_badge,
+            hosting_warm_summary=status.hosting_setup.warm_summary,
+            hosting_warm_details=status.hosting_setup.warm_details,
             ollama_status_badge=(
                 "AVAILABLE" if status.hosting_setup.ollama_available else "UNAVAILABLE"
             ),
