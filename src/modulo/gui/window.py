@@ -199,12 +199,15 @@ class ModuloMainWindow(QMainWindow):
         overview_box.setLayout(overview_layout)
 
         host_box = QGroupBox("Hosting")
+        host_box.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Maximum,
+        )
         host_layout = QVBoxLayout()
         host_header_row = QHBoxLayout()
         host_header_row.addWidget(self.host_state_badge_label, 1)
         host_header_row.addWidget(self.host_toggle_button, 0)
         host_layout.addLayout(host_header_row)
-        host_layout.addWidget(self.host_state_summary_label)
         hosting_setup_prompt_row = QHBoxLayout()
         hosting_setup_prompt_row.addWidget(QLabel("Model"))
         hosting_setup_prompt_row.addWidget(self.hosting_model_combo, 1)
@@ -264,6 +267,7 @@ class ModuloMainWindow(QMainWindow):
         host_tab_layout.setContentsMargins(0, 0, 0, 0)
         host_tab_layout.setSpacing(12)
         host_tab_layout.addWidget(host_box)
+        host_tab_layout.addStretch(1)
         host_tab.setLayout(host_tab_layout)
 
         buyer_tab = QWidget()
@@ -619,7 +623,7 @@ class ModuloMainWindow(QMainWindow):
             else "Host: Idle"
         )
         self.host_state_badge_label.setText(host_state_badge)
-        self.host_state_summary_label.setText(state.hosting_summary)
+        self.host_state_summary_label.setText("")
         selected_model_text = (
             self.hosting_model_combo.currentText()
             or state.hosting_selected_model_id
