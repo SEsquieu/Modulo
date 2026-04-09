@@ -763,6 +763,7 @@ class ModuloMainWindow(QMainWindow):
                     border: 2px solid #b14d3f;
                     border-radius: 0px;
                     font-weight: 700;
+                    font-size: 14px;
                     padding: 8px 18px;
                 }
                 QPushButton:hover {
@@ -785,6 +786,7 @@ class ModuloMainWindow(QMainWindow):
                 border: 2px solid #2bd66b;
                 border-radius: 0px;
                 font-weight: 700;
+                font-size: 14px;
                 padding: 8px 18px;
             }
             QPushButton:hover {
