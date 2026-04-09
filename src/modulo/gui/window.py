@@ -12,6 +12,7 @@ try:
         QHBoxLayout,
         QLabel,
         QMainWindow,
+        QProgressBar,
         QPushButton,
         QPlainTextEdit,
         QScrollArea,
@@ -53,6 +54,7 @@ class ModuloMainWindow(QMainWindow):
         self._action_in_flight = False
         self._poll_in_flight = False
         self._ui_notice = ""
+        self._active_action_kind = ""
         self._latest_state: GuiShellState | None = None
         self._active_tasks: list[_AsyncGuiTask] = []
         self.setWindowTitle("Modulo")
@@ -77,9 +79,21 @@ class ModuloMainWindow(QMainWindow):
         self.worker_jobs_label = QLabel()
         self.worker_last_job_label = QLabel()
         self.worker_error_label = QLabel()
+        self.host_activity_label = QLabel()
+        self.host_activity_label.setWordWrap(True)
+        self.host_activity_bar = QProgressBar()
+        self.host_activity_bar.setRange(0, 0)
+        self.host_activity_bar.setTextVisible(False)
+        self.host_activity_bar.hide()
 
         self.smoke_summary_label = QLabel()
         self.smoke_result_label = QLabel()
+        self.smoke_activity_label = QLabel()
+        self.smoke_activity_label.setWordWrap(True)
+        self.smoke_activity_bar = QProgressBar()
+        self.smoke_activity_bar.setRange(0, 0)
+        self.smoke_activity_bar.setTextVisible(False)
+        self.smoke_activity_bar.hide()
         self.smoke_details_box = QPlainTextEdit()
         self.smoke_details_box.setReadOnly(True)
         self.smoke_details_box.setMinimumHeight(120)
@@ -203,6 +217,8 @@ class ModuloMainWindow(QMainWindow):
         hosting_controls_row.addWidget(self.stop_button)
         hosting_controls_row.addWidget(self.restart_button)
         worker_layout.addLayout(hosting_controls_row)
+        worker_layout.addWidget(self.host_activity_label)
+        worker_layout.addWidget(self.host_activity_bar)
         worker_layout.addWidget(self.worker_registration_label)
         worker_layout.addWidget(self.worker_health_summary_label)
         worker_layout.addWidget(self.worker_activity_label)
@@ -239,6 +255,8 @@ class ModuloMainWindow(QMainWindow):
         diagnostics_box = QGroupBox("Diagnostics")
         smoke_layout = QVBoxLayout()
         smoke_layout.addWidget(self.smoke_button)
+        smoke_layout.addWidget(self.smoke_activity_label)
+        smoke_layout.addWidget(self.smoke_activity_bar)
         smoke_layout.addWidget(self.smoke_result_label)
         smoke_layout.addWidget(self.smoke_summary_label)
         smoke_layout.addWidget(self.smoke_details_box)
@@ -336,6 +354,7 @@ class ModuloMainWindow(QMainWindow):
         self._run_async_state_action(
             self.controller.run_smoke_test,
             busy_message="Running constrained smoke probe...",
+            action_kind="smoke_test",
             action=True,
         )
 
@@ -343,6 +362,7 @@ class ModuloMainWindow(QMainWindow):
         self._run_async_state_action(
             self.controller.configure_openclaw,
             busy_message="Refreshing OpenClaw configuration state...",
+            action_kind="openclaw",
             action=True,
         )
 
@@ -350,6 +370,7 @@ class ModuloMainWindow(QMainWindow):
         self._run_async_state_action(
             self.controller.apply_openclaw_connection,
             busy_message="Applying staged OpenClaw plan...",
+            action_kind="openclaw",
             action=True,
         )
 
@@ -361,6 +382,7 @@ class ModuloMainWindow(QMainWindow):
             self._run_async_state_action(
                 lambda: self.controller.select_hosting_model(model_id),
                 busy_message=f"Switching host model to {model_id}...",
+                action_kind="host_warm",
                 action=True,
             )
 
@@ -368,6 +390,7 @@ class ModuloMainWindow(QMainWindow):
         self._run_async_state_action(
             self.controller.start_hosting,
             busy_message="Starting hosting and warming the selected model...",
+            action_kind="host_warm",
             action=True,
         )
 
@@ -375,6 +398,7 @@ class ModuloMainWindow(QMainWindow):
         self._run_async_state_action(
             self.controller.stop_hosting,
             busy_message="Stopping hosting...",
+            action_kind="host_warm",
             action=True,
         )
 
@@ -382,6 +406,7 @@ class ModuloMainWindow(QMainWindow):
         self._run_async_state_action(
             self.controller.restart_hosting,
             busy_message="Restarting hosting and refreshing warm state...",
+            action_kind="host_warm",
             action=True,
         )
 
@@ -395,6 +420,7 @@ class ModuloMainWindow(QMainWindow):
         *,
         on_success=None,
         busy_message: str,
+        action_kind: str = "",
         action: bool,
     ) -> None:
         if action and self._action_in_flight:
@@ -405,6 +431,7 @@ class ModuloMainWindow(QMainWindow):
         if action:
             self._action_in_flight = True
             self._ui_notice = busy_message
+            self._active_action_kind = action_kind
         else:
             self._poll_in_flight = True
 
@@ -432,6 +459,7 @@ class ModuloMainWindow(QMainWindow):
         if action:
             self._action_in_flight = False
             self._ui_notice = ""
+            self._active_action_kind = ""
         else:
             self._poll_in_flight = False
 
@@ -444,6 +472,7 @@ class ModuloMainWindow(QMainWindow):
         self._discard_task(task)
         if action:
             self._action_in_flight = False
+            self._active_action_kind = ""
         else:
             self._poll_in_flight = False
         self._ui_notice = f"Action failed: {message}"
@@ -479,6 +508,18 @@ class ModuloMainWindow(QMainWindow):
         self.stop_button.setEnabled(state.stop_action_enabled and controls_enabled)
         self.restart_button.setEnabled(state.restart_action_enabled and controls_enabled)
         self.smoke_button.setEnabled(state.smoke_action_enabled and controls_enabled)
+        host_busy = self._action_in_flight and self._active_action_kind == "host_warm"
+        smoke_busy = self._action_in_flight and self._active_action_kind == "smoke_test"
+        self.host_activity_label.setText(
+            "Working: preparing host model and refreshing warm state..." if host_busy else ""
+        )
+        self.host_activity_label.setVisible(host_busy)
+        self.host_activity_bar.setVisible(host_busy)
+        self.smoke_activity_label.setText(
+            "Working: running constrained smoke probe..." if smoke_busy else ""
+        )
+        self.smoke_activity_label.setVisible(smoke_busy)
+        self.smoke_activity_bar.setVisible(smoke_busy)
 
         self.openclaw_status_label.setText(
             f"Status: {state.openclaw_status_badge}"
