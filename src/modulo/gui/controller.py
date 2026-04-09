@@ -59,6 +59,8 @@ class GuiShellState:
     hosting_setup_summary: str = ""
     hosting_setup_details: str = ""
     hosting_setup_action_enabled: bool = True
+    execution_mode_badge: str = "PROTOTYPE"
+    execution_summary: str = ""
     start_action_enabled: bool = True
     stop_action_enabled: bool = False
     restart_action_enabled: bool = False
@@ -203,6 +205,8 @@ class GuiAppController:
             hosting_setup_summary=status.hosting_setup.readiness_summary,
             hosting_setup_details=status.hosting_setup.readiness_details,
             hosting_setup_action_enabled=bool(status.hosting_setup.available_model_ids),
+            execution_mode_badge=self._execution_mode_badge(status, smoke_test),
+            execution_summary=self._execution_summary(status, smoke_test),
             start_action_enabled=(not onboarding.hosting_enabled and status.hosting_setup.can_enable_hosting),
             stop_action_enabled=onboarding.hosting_enabled,
             restart_action_enabled=onboarding.hosting_enabled,
@@ -234,20 +238,29 @@ class GuiAppController:
     def _smoke_test_summary(smoke_test: SmokeTestResult | None) -> str:
         if smoke_test is None:
             return "No smoke test run yet."
+        mode_suffix = (
+            f" via {smoke_test.execution_mode.upper()} execution"
+            if smoke_test.execution_mode
+            else ""
+        )
         if smoke_test.ok:
-            return f"Smoke test passed on {smoke_test.model_id or 'unknown model'}."
-        return f"Smoke test failed: {smoke_test.error or 'unknown error'}"
+            return f"Smoke test passed on {smoke_test.model_id or 'unknown model'}{mode_suffix}."
+        return f"Smoke test failed{mode_suffix}: {smoke_test.error or 'unknown error'}"
 
     @staticmethod
     def _smoke_test_details(smoke_test: SmokeTestResult | None) -> str:
         if smoke_test is None:
             return ""
+        lines = [f"Prompt: {smoke_test.user_message}"]
+        if smoke_test.execution_mode:
+            lines.append(f"Execution mode: {smoke_test.execution_mode.upper()}")
+        if smoke_test.execution_summary:
+            lines.append(f"Execution summary: {smoke_test.execution_summary}")
         if smoke_test.ok:
-            return (
-                f"Prompt: {smoke_test.user_message}\n"
-                f"Response: {smoke_test.response_text}"
-            )
-        return f"Prompt: {smoke_test.user_message}\nError: {smoke_test.error}"
+            lines.append(f"Response: {smoke_test.response_text}")
+            return "\n".join(lines)
+        lines.append(f"Error: {smoke_test.error}")
+        return "\n".join(lines)
 
     @staticmethod
     def _smoke_test_result_label(smoke_test: SmokeTestResult | None) -> str:
@@ -333,11 +346,38 @@ class GuiAppController:
         ]
         if smoke_test is not None:
             lines.append(f"Prompt: {smoke_test.user_message}")
+            if smoke_test.execution_mode:
+                lines.append(f"Execution mode: {smoke_test.execution_mode.upper()}")
+            if smoke_test.execution_summary:
+                lines.append(f"Execution summary: {smoke_test.execution_summary}")
             if smoke_test.ok:
                 lines.append(f"Response: {smoke_test.response_text}")
             else:
                 lines.append(f"Smoke test error: {smoke_test.error or 'Unknown error'}")
         return "\n".join(lines)
+
+    @staticmethod
+    def _execution_mode_badge(
+        status: ClientStatus,
+        smoke_test: SmokeTestResult | None,
+    ) -> str:
+        if smoke_test is not None and smoke_test.execution_mode:
+            return smoke_test.execution_mode.upper()
+        return status.hosting_setup.hosting_mode_label.upper()
+
+    @staticmethod
+    def _execution_summary(
+        status: ClientStatus,
+        smoke_test: SmokeTestResult | None,
+    ) -> str:
+        if smoke_test is not None and smoke_test.execution_summary:
+            return smoke_test.execution_summary
+        if status.hosting_setup.hosting_mode_label == "prototype":
+            return (
+                "Current worker path is prototype-safe until the selected model passes "
+                "local runtime readiness."
+            )
+        return "Current worker path is ready for real local execution."
 
     @staticmethod
     def _activity_lines(status: ClientStatus) -> tuple[str, ...]:

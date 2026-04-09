@@ -67,12 +67,22 @@ Exit criteria:
 - the GUI can explain the execution mode and last real execution result
 - smoke tests and worker activity remain understandable
 
+Status: completed
+
+Summary:
+
+- added an explicit execution-path truth line to the GUI state so host and diagnostics surfaces can distinguish `real` from `prototype-safe`
+- made smoke-test summaries and diagnostics include execution mode and execution summary details
+- proved both prototype and real execution GUI states through controller tests without changing the current client-worker-cloud boundary
+
 ## Completion note
 
 Add a short summary here when complete:
 
-- summary: the supervised prototype path can now prove one real request and one real-path failure without changing the client-worker-cloud boundary, and both outcomes surface through the same client-facing smoke-test path.
+- summary: the GUI now tells the truth about the current execution path and the last smoke-test execution mode, so real and prototype-safe paths are clearly distinguishable through the same supervised client flow.
 - proof added to repo:
   - readiness-based executor selection in `src/modulo/prototype.py`
   - prototype tests covering real selection, stub fallback, and explicit override behavior
   - end-to-end prototype tests covering real execution success and real execution failure
+  - GUI controller state now carries execution-mode and execution-summary truth
+  - GUI controller tests cover both prototype and real execution presentation

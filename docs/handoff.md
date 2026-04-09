@@ -7,8 +7,8 @@ This file is the quickest way to regain context when switching workstations.
 - backend phase-0 roadmap is completed
 - GUI phase-0 roadmap is completed
 - Phase 2 is active
-- current Phase 2 step: `Step 5: Real local execution`
-- current mini-roadmap status: `Slice 2` of [real_execution_roadmap.md](./real_execution_roadmap.md) is completed
+- current Phase 2 step: `Step 6: Productization checklist`
+- current mini-roadmap status: [real_execution_roadmap.md](./real_execution_roadmap.md) is completed
 
 ## What exists today
 
@@ -31,7 +31,6 @@ Still prototype-safe:
 
 - buyer model selection and routing setup
 - actual OpenClaw config mutation flow
-- full real local execution from the GUI path
 - packaging and install polish
 
 ## Latest OpenClaw truth
@@ -98,12 +97,12 @@ Primary sequencing doc:
 
 Active implementation doc:
 
-- [real_execution_roadmap.md](./real_execution_roadmap.md)
+- [productization_checklist.md](./productization_checklist.md)
 
 Next intended slice:
 
-- `Slice 3: GUI truthfulness for real execution`
-- goal: make the GUI clearly indicate when execution is real versus prototype-safe
+- `Step 6: Productization checklist`
+- goal: start tightening packaging, local install posture, and trust-facing rough edges now that the core Phase 2 integrations are complete
 
 ## Working preferences
 
@@ -119,6 +118,7 @@ Next intended slice:
 
 Recent meaningful commits:
 
+- `092b6c2` `Complete real execution proof slice`
 - `5157a60` `Complete real executor selection slice`
 - `f9bb05e` `Complete OpenClaw GUI connection slice`
 - `027b2fc` `Complete OpenClaw staged connection slice`
@@ -129,4 +129,4 @@ If resuming cold, start by reading:
 
 1. [handoff.md](./handoff.md)
 2. [phase_2_plan.md](./phase_2_plan.md)
-3. [real_execution_roadmap.md](./real_execution_roadmap.md)
+3. [productization_checklist.md](./productization_checklist.md)

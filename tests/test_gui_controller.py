@@ -44,6 +44,26 @@ class FakeGuiOpenClawDiscovery:
         )
 
 
+class ReadyGuiHostingRuntimeProbe:
+    def probe(self, model_id: str) -> HostingRuntimeProbeStatus:
+        return HostingRuntimeProbeStatus(
+            reachable=True,
+            model_ready=True,
+            summary=f"runtime probe passed for {model_id}",
+            detail="local runtime is ready",
+        )
+
+
+class FakeGuiOllamaHTTPClient:
+    def chat(self, base_url: str, payload: dict) -> dict:
+        del base_url
+        return {
+            "message": {
+                "content": f"real gui response for {payload['model']}",
+            }
+        }
+
+
 class InstalledGuiOpenClawDiscovery:
     def discover(self) -> OpenClawDiscoveryStatus:
         return OpenClawDiscoveryStatus(
@@ -116,6 +136,8 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertEqual(("llama3.1:8b",), state.hosting_supported_missing_model_ids)
         self.assertEqual((), state.hosting_unsupported_installed_model_ids)
         self.assertEqual("PROTOTYPE", state.hosting_mode_badge)
+        self.assertEqual("PROTOTYPE", state.execution_mode_badge)
+        self.assertIn("prototype-safe", state.execution_summary)
         self.assertEqual("AVAILABLE", state.ollama_status_badge)
         self.assertIn("Ollama is available locally", state.ollama_summary)
         self.assertIn("0 supported model(s) installed", state.ollama_inventory_summary)
@@ -173,16 +195,42 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertTrue(smoked.smoke_test_ok)
         self.assertEqual("PASS", smoked.smoke_status_badge)
         self.assertIn("Smoke test passed", smoked.smoke_test_summary)
+        self.assertIn("via PROTOTYPE execution", smoked.smoke_test_summary)
         self.assertIn("gui smoke", smoked.smoke_test_details)
+        self.assertIn("Execution mode: PROTOTYPE", smoked.smoke_test_details)
         self.assertEqual("gui smoke", smoked.smoke_test_prompt)
         self.assertEqual("Pass", smoked.smoke_test_result_label)
         self.assertIn("diagnostics look healthy", smoked.diagnostics_summary)
         self.assertIn("Response:", smoked.diagnostics_details)
+        self.assertIn("Execution mode: PROTOTYPE", smoked.diagnostics_details)
         self.assertIn("Latest routing sent", smoked.continuity_summary)
         self.assertTrue(smoked.activity_lines)
         self.assertTrue(smoked.last_job_id)
         self.assertEqual("completed", smoked.last_job_status)
         self.assertIn("finished with status completed", smoked.worker_activity_summary)
+
+    def test_real_execution_mode_surfaces_in_gui_state(self) -> None:
+        self.controller = GuiAppController(
+            harness=LocalPrototypeHarness(
+                openclaw_discovery=InstalledGuiOpenClawDiscovery(),
+                ollama_discovery=FakeGuiOllamaDiscovery(),
+                hosting_runtime_probe=ReadyGuiHostingRuntimeProbe(),
+                ollama_http_client=FakeGuiOllamaHTTPClient(),
+            )
+        )
+
+        initial = self.controller.refresh()
+        smoked = self.controller.run_smoke_test("real gui smoke")
+
+        self.assertEqual("REAL", initial.hosting_mode_badge)
+        self.assertEqual("REAL", initial.execution_mode_badge)
+        self.assertIn("ready for real local execution", initial.execution_summary.lower())
+        self.assertTrue(smoked.smoke_test_ok)
+        self.assertIn("via REAL execution", smoked.smoke_test_summary)
+        self.assertIn("Execution mode: REAL", smoked.smoke_test_details)
+        self.assertIn("runtime probe passed", smoked.smoke_test_details)
+        self.assertEqual("REAL", smoked.execution_mode_badge)
+        self.assertIn("runtime probe passed", smoked.execution_summary)
 
     def test_configure_openclaw_stages_plan_before_apply(self) -> None:
         self.controller = GuiAppController(

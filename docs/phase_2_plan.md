@@ -117,12 +117,13 @@ Completion gate:
 
 ### Step 5: Real local execution
 
-Status: in progress
+Status: completed
 
 Summary:
 
 - completed Slice 1 of the real execution mini roadmap so the local app can now choose real versus stub execution based on runtime readiness
 - completed Slice 2 of the real execution mini roadmap so one real request and one real-path failure can now be exercised through the supervised prototype path
+- completed Slice 3 of the real execution mini roadmap so the GUI now shows whether the current or last smoke-test path was `real` or `prototype-safe`
 
 Roadmap:
 

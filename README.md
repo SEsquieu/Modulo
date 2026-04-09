@@ -84,6 +84,7 @@ The GUI currently includes:
 - a dedicated OpenClaw connection panel with explicit staged review/apply messaging
 - buyer guidance badges and next-step messaging for detected OpenClaw states and parse failures
 - a hosting setup panel that shows the selected curated model and local readiness guidance
+- explicit execution-path truth in the host and diagnostics views so `real` and `prototype-safe` runs are clearly labeled
 - hosting start, stop, and restart controls
 - a worker panel with live registration, health, activity, and error summaries
 - a prompt-driven smoke-test and diagnostics panel backed by the current prototype harness
