@@ -197,12 +197,9 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertEqual(("No network models available yet.",), state.buyer_network_models)
         self.assertTrue(state.buyer_cloud_models)
         self.assertEqual("llama3.1:8b", state.hosting_selected_model_id)
-        self.assertEqual(("llama3.1:8b", "qwen3.5:4b"), state.hosting_available_model_ids)
+        self.assertEqual(("qwen3.5:4b",), state.hosting_available_model_ids)
         self.assertEqual(
-            (
-                "☁ Llama 3.1 8B (llama3.1:8b, network)",
-                "🖥 qwen3.5:4b (local)",
-            ),
+            ("🖥 qwen3.5:4b (local)",),
             state.hosting_available_model_labels,
         )
         self.assertEqual((), state.hosting_supported_installed_model_ids)

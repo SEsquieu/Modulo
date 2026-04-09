@@ -474,7 +474,7 @@ class ModuloClientSupervisor:
         unsupported_installed_model_ids = tuple(
             model_id for model_id in installed_model_ids if model_id not in supported_model_ids
         )
-        available_model_ids = supported_model_ids + unsupported_installed_model_ids
+        available_model_ids = supported_installed_model_ids + unsupported_installed_model_ids
         available_model_labels = tuple(
             self._hosting_model_label(
                 model_id,
