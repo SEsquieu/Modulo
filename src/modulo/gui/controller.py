@@ -325,7 +325,7 @@ class GuiAppController:
         if status.openclaw.configured:
             return "Use: Ready"
         if status.openclaw.installed:
-            return "Use: Review"
+            return "Use: Configure"
         return "Use: Setup"
 
     @staticmethod
