@@ -27,6 +27,8 @@ class SmokeTestResult:
     user_message: str = ""
     response_text: str = ""
     error: str = ""
+    execution_mode: str = ""
+    execution_summary: str = ""
 
 
 @dataclass(frozen=True)

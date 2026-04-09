@@ -48,6 +48,14 @@ Exit criteria:
 - a real request succeeds through the end-to-end path
 - failure states are surfaced through the same client and GUI surfaces
 
+Status: completed
+
+Summary:
+
+- proved one real request through the supervised prototype path using the real executor seam
+- threaded execution mode/summary through prototype smoke-test results so real-path proof is explicit
+- added a matching real-path failure case that surfaces through the same smoke-test and onboarding status surfaces
+
 ### Slice 3: GUI truthfulness for real execution
 
 Goal:
@@ -63,7 +71,8 @@ Exit criteria:
 
 Add a short summary here when complete:
 
-- summary: the local app can now choose the real executor path when the runtime probe says the selected model is ready, while still falling back safely to the stub path when it is not.
+- summary: the supervised prototype path can now prove one real request and one real-path failure without changing the client-worker-cloud boundary, and both outcomes surface through the same client-facing smoke-test path.
 - proof added to repo:
   - readiness-based executor selection in `src/modulo/prototype.py`
   - prototype tests covering real selection, stub fallback, and explicit override behavior
+  - end-to-end prototype tests covering real execution success and real execution failure

@@ -8,7 +8,7 @@ This file is the quickest way to regain context when switching workstations.
 - GUI phase-0 roadmap is completed
 - Phase 2 is active
 - current Phase 2 step: `Step 5: Real local execution`
-- current mini-roadmap status: `Slice 1` of [real_execution_roadmap.md](./real_execution_roadmap.md) is completed
+- current mini-roadmap status: `Slice 2` of [real_execution_roadmap.md](./real_execution_roadmap.md) is completed
 
 ## What exists today
 
@@ -102,8 +102,8 @@ Active implementation doc:
 
 Next intended slice:
 
-- `Slice 2: End-to-end real execution proof`
-- goal: prove one real request through the supervised runtime path
+- `Slice 3: GUI truthfulness for real execution`
+- goal: make the GUI clearly indicate when execution is real versus prototype-safe
 
 ## Working preferences
 
@@ -119,6 +119,7 @@ Next intended slice:
 
 Recent meaningful commits:
 
+- `5157a60` `Complete real executor selection slice`
 - `f9bb05e` `Complete OpenClaw GUI connection slice`
 - `027b2fc` `Complete OpenClaw staged connection slice`
 - `62b2344` `Complete client session bridge layer`

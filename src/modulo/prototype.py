@@ -33,6 +33,8 @@ class PrototypeRoundTripResult:
     assigned_worker_id: str
     user_message: str
     response_text: str
+    execution_mode: str
+    execution_summary: str
     client_status: ClientStatus
 
 
@@ -201,6 +203,8 @@ class LocalPrototypeHarness:
             assigned_worker_id=completed_job.assigned_worker_id,
             user_message=user_message,
             response_text=completed_job.response_text,
+            execution_mode=self.selected_executor_mode,
+            execution_summary=self.selected_executor_summary,
             client_status=status,
         )
 
@@ -212,12 +216,16 @@ class LocalPrototypeHarness:
                 ok=False,
                 user_message=user_message,
                 error=str(exc),
+                execution_mode=self.selected_executor_mode,
+                execution_summary=self.selected_executor_summary,
             )
         return SmokeTestResult(
             ok=True,
             model_id=result.model_id,
             user_message=result.user_message,
             response_text=result.response_text,
+            execution_mode=result.execution_mode,
+            execution_summary=result.execution_summary,
         )
 
     def get_activity_visibility(self) -> ActivityVisibilityStatus:

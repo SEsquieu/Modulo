@@ -57,6 +57,12 @@ class FakeOllamaHTTPClient:
         return {"message": {"role": "assistant", "content": "hello from real ollama"}}
 
 
+class FailingOllamaHTTPClient:
+    def chat(self, base_url: str, payload: dict) -> dict:
+        del base_url, payload
+        raise WorkerExecutionError("real ollama request failed")
+
+
 class LocalPrototypeHarnessTests(unittest.TestCase):
     def test_selects_real_executor_when_runtime_probe_is_ready(self) -> None:
         harness = LocalPrototypeHarness(
@@ -117,6 +123,26 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertEqual(JobStatus.COMPLETED, completed_job.status)
         self.assertEqual("prototype hello", completed_job.request.messages[0].content)
 
+    def test_real_round_trip_completes_through_supervised_path(self) -> None:
+        harness = LocalPrototypeHarness(
+            openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            hosting_runtime_probe=ReadyRuntimeProbe(),
+            ollama_http_client=FakeOllamaHTTPClient(),
+        )
+
+        result = harness.run_round_trip("real prototype hello")
+
+        self.assertEqual("real", result.execution_mode)
+        self.assertIn("resolved", result.execution_summary)
+        self.assertEqual("hello from real ollama", result.response_text)
+        self.assertIsNotNone(result.client_status.worker)
+        self.assertEqual(JobStatus.COMPLETED, result.client_status.worker.last_job_status)
+
+        completed_job = harness.service.get_job(result.job_id)
+        self.assertIsNotNone(completed_job)
+        self.assertEqual(JobStatus.COMPLETED, completed_job.status)
+        self.assertEqual("real prototype hello", completed_job.request.messages[0].content)
+
     def test_client_smoke_test_reports_success_through_client_surface(self) -> None:
         harness = LocalPrototypeHarness(openclaw_discovery=FakePrototypeOpenClawDiscovery())
 
@@ -166,6 +192,25 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
 
         self.assertIsNotNone(status.smoke_test)
         self.assertFalse(status.smoke_test.ok)
+        self.assertIn("did not complete successfully", status.smoke_test.error)
+        self.assertFalse(onboarding.worker_healthy)
+        self.assertFalse(onboarding.smoke_test_ok)
+
+    def test_real_execution_failure_surfaces_through_smoke_test_and_onboarding(self) -> None:
+        harness = LocalPrototypeHarness(
+            openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            hosting_runtime_probe=ReadyRuntimeProbe(),
+            ollama_http_client=FailingOllamaHTTPClient(),
+        )
+
+        harness.boot()
+        status = harness.client.run_smoke_test("real prototype failure")
+        onboarding = harness.client.get_onboarding_status()
+
+        self.assertIsNotNone(status.smoke_test)
+        self.assertFalse(status.smoke_test.ok)
+        self.assertEqual("real", status.smoke_test.execution_mode)
+        self.assertIn("resolved", status.smoke_test.execution_summary)
         self.assertIn("did not complete successfully", status.smoke_test.error)
         self.assertFalse(onboarding.worker_healthy)
         self.assertFalse(onboarding.smoke_test_ok)

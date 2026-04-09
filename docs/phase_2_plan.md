@@ -122,6 +122,7 @@ Status: in progress
 Summary:
 
 - completed Slice 1 of the real execution mini roadmap so the local app can now choose real versus stub execution based on runtime readiness
+- completed Slice 2 of the real execution mini roadmap so one real request and one real-path failure can now be exercised through the supervised prototype path
 
 Roadmap:
 
