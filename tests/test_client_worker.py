@@ -406,6 +406,13 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertEqual(("llama3.1:8b",), status.hosting_setup.supported_installed_model_ids)
         self.assertEqual((), status.hosting_setup.supported_missing_model_ids)
         self.assertEqual(("qwen3.5:4b",), status.hosting_setup.unsupported_installed_model_ids)
+        self.assertEqual(
+            (
+                "🖥 Llama 3.1 8B (llama3.1:8b, local)",
+                "🖥 qwen3.5:4b (local)",
+            ),
+            status.hosting_setup.available_model_labels,
+        )
         self.assertTrue(status.hosting_setup.preflight.ok)
         self.assertEqual("", status.hosting_setup.preflight.failure_reason)
         self.assertTrue(status.hosting_setup.can_enable_hosting)

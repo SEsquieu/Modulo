@@ -476,7 +476,10 @@ class ModuloClientSupervisor:
         )
         available_model_ids = supported_model_ids + unsupported_installed_model_ids
         available_model_labels = tuple(
-            self._hosting_model_label(model_id)
+            self._hosting_model_label(
+                model_id,
+                installed_model_ids=installed_model_ids,
+            )
             for model_id in available_model_ids
         )
         prototype_hosting_available = self._prototype_hosting_available()
@@ -719,11 +722,21 @@ class ModuloClientSupervisor:
         return isinstance(self.worker_bridge.executor, StubExecutor)
 
     @staticmethod
-    def _hosting_model_label(model_id: str) -> str:
+    def _hosting_model_label(
+        model_id: str,
+        *,
+        installed_model_ids: tuple[str, ...],
+    ) -> str:
+        is_installed_locally = model_id in installed_model_ids
         canonical = SUPPORTED_MODELS.get(model_id)
         if canonical is not None:
-            return f"{canonical.display_name} ({canonical.model_id})"
-        return f"{model_id} (Installed local model)"
+            source_label = "local" if is_installed_locally else "network"
+            source_icon = "🖥" if is_installed_locally else "☁"
+            return (
+                f"{source_icon} {canonical.display_name} "
+                f"({canonical.model_id}, {source_label})"
+            )
+        return f"🖥 {model_id} (local)"
 
     def get_platform_session_status(self) -> PlatformSessionStatus:
         if self.session_bridge is None:
