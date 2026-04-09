@@ -758,17 +758,21 @@ class ModuloMainWindow(QMainWindow):
             self.host_toggle_button.setStyleSheet(
                 """
                 QPushButton {
-                    background-color: #b91c1c;
-                    color: white;
-                    border: 1px solid #ef4444;
-                    border-radius: 8px;
+                    background-color: #2a120f;
+                    color: #ffb4a8;
+                    border: 2px solid #b14d3f;
+                    border-radius: 0px;
                     font-weight: 700;
                     padding: 8px 18px;
                 }
+                QPushButton:hover {
+                    background-color: #341613;
+                    color: #ffd2ca;
+                }
                 QPushButton:disabled {
-                    background-color: #3f3f46;
-                    color: #a1a1aa;
-                    border: 1px solid #52525b;
+                    background-color: #101712;
+                    color: #4d7658;
+                    border: 2px solid #31503a;
                 }
                 """
             )
@@ -776,17 +780,21 @@ class ModuloMainWindow(QMainWindow):
         self.host_toggle_button.setStyleSheet(
             """
             QPushButton {
-                background-color: #166534;
-                color: white;
-                border: 1px solid #22c55e;
-                border-radius: 8px;
+                background-color: #102015;
+                color: #b8ff65;
+                border: 2px solid #2bd66b;
+                border-radius: 0px;
                 font-weight: 700;
                 padding: 8px 18px;
             }
+            QPushButton:hover {
+                background-color: #16291b;
+                color: #e1ffae;
+            }
             QPushButton:disabled {
-                background-color: #3f3f46;
-                color: #a1a1aa;
-                border: 1px solid #52525b;
+                background-color: #101712;
+                color: #4d7658;
+                border: 2px solid #31503a;
             }
             """
         )
