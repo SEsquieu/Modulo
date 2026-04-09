@@ -92,10 +92,6 @@ class ModuloMainWindow(QMainWindow):
         self.host_activity_bar.hide()
         self.host_card_model_value = QLabel()
         self.host_card_model_value.setWordWrap(True)
-        self.host_card_warm_value = QLabel()
-        self.host_card_warm_value.setWordWrap(True)
-        self.host_card_runtime_value = QLabel()
-        self.host_card_runtime_value.setWordWrap(True)
 
         self.smoke_summary_label = QLabel()
         self.smoke_result_label = QLabel()
@@ -211,11 +207,7 @@ class ModuloMainWindow(QMainWindow):
         host_layout.addLayout(hosting_controls_row)
         host_layout.addWidget(self.host_activity_label)
         host_layout.addWidget(self.host_activity_bar)
-        host_cards_row = QHBoxLayout()
-        host_cards_row.addWidget(self._build_host_card("Selected Model", self.host_card_model_value))
-        host_cards_row.addWidget(self._build_host_card("Model State", self.host_card_warm_value))
-        host_cards_row.addWidget(self._build_host_card("Execution Path", self.host_card_runtime_value))
-        host_layout.addLayout(host_cards_row)
+        host_layout.addWidget(self._build_host_card("Hosted Model", self.host_card_model_value))
 
         self.host_detail_toolbox = QToolBox()
         self.host_detail_toolbox.addItem(self._build_host_details_page(), "Warm Details")
@@ -600,8 +592,15 @@ class ModuloMainWindow(QMainWindow):
         self.host_state_summary_label.setText(
             f"{state.hosting_summary} {state.worker_health_summary}"
         )
+        selected_model_text = self.hosting_model_combo.currentText() or state.hosting_selected_model_id or "No model selected"
         self.host_card_model_value.setText(
-            self.hosting_model_combo.currentText() or state.hosting_selected_model_id or "No model selected"
+            "\n".join(
+                (
+                    f"Model: {selected_model_text}",
+                    f"State: {state.hosting_warm_state_badge.title()}",
+                    f"Host: {state.hosting_mode_badge}",
+                )
+            )
         )
         self.host_card_warm_value.setText(
             f"{state.hosting_warm_state_badge}\n{state.hosting_warm_summary}"

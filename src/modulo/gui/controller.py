@@ -52,7 +52,7 @@ class GuiShellState:
     hosting_supported_installed_model_ids: tuple[str, ...] = ()
     hosting_supported_missing_model_ids: tuple[str, ...] = ()
     hosting_unsupported_installed_model_ids: tuple[str, ...] = ()
-    hosting_mode_badge: str = "REAL"
+    hosting_mode_badge: str = "OLLAMA"
     hosting_warm_state_badge: str = "UNKNOWN"
     hosting_warm_summary: str = ""
     hosting_warm_details: tuple[str, ...] = ()
@@ -200,7 +200,7 @@ class GuiAppController:
             hosting_supported_installed_model_ids=status.hosting_setup.supported_installed_model_ids,
             hosting_supported_missing_model_ids=status.hosting_setup.supported_missing_model_ids,
             hosting_unsupported_installed_model_ids=status.hosting_setup.unsupported_installed_model_ids,
-            hosting_mode_badge=status.hosting_setup.hosting_mode_label.upper(),
+            hosting_mode_badge=self._hosting_mode_badge(status),
             hosting_warm_state_badge=status.hosting_setup.warm_state_badge,
             hosting_warm_summary=status.hosting_setup.warm_summary,
             hosting_warm_details=status.hosting_setup.warm_details,
@@ -391,6 +391,12 @@ class GuiAppController:
                 "local runtime readiness."
             )
         return "Current worker path is ready for real local execution."
+
+    @staticmethod
+    def _hosting_mode_badge(status: ClientStatus) -> str:
+        if status.hosting_setup.hosting_mode_label == "prototype":
+            return "Prototype"
+        return "Ollama"
 
     @staticmethod
     def _activity_lines(status: ClientStatus) -> tuple[str, ...]:
