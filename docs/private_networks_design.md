@@ -23,15 +23,23 @@ This is a fundamentally different product shape than "public marketplace only."
 
 ## Product stance
 
-Modulo should eventually support three routing domains:
+Modulo should eventually support four user-facing source domains:
 
-1. `local`
-2. `private network`
-3. `public network / trusted cloud`
+1. `Local`
+2. `Private`
+3. `Public`
+4. `Cloud`
 
 That means the platform cannot assume all non-local traffic belongs to a single public pool.
 
 Private networks should feel first-class, not like a policy wrapper around the public network.
+
+The important distinction is:
+
+- `Local / Private / Public / Cloud` is the product-facing vocabulary
+- access-controlled scopes and routing policy remain the backend enforcement model
+
+This keeps the client lightweight and approachable without weakening the architectural trust model.
 
 ## Core idea
 
@@ -53,6 +61,66 @@ That trust boundary should affect:
 - which models are visible
 - which jobs can cross org boundaries
 - which usage and ledger events are attributed to that org
+
+## UX versus enforcement
+
+The platform should separate:
+
+- `what the user sees`
+- `what the platform enforces`
+
+From the user's perspective, Modulo should feel simple:
+
+- `Local`
+- `Private`
+- `Public`
+- `Cloud`
+
+From the platform's perspective, those are backed by:
+
+- access-controlled scopes
+- visibility rules
+- routing policy
+- fallback policy
+
+This is how Modulo can remain fun and lightweight for personal use while still growing into enterprise-safe behavior later.
+
+### Why this matters
+
+The client should not feel like an enterprise administration tool.
+
+That means the UI should not center concepts like:
+
+- tenant
+- trust domain
+- governed boundary
+- org-scoped routing policy
+
+Instead, the client can present simple model-source choices, while the backend still enforces:
+
+- who can see `Private` models
+- who can route into a `Private` pool
+- who can host into a `Private` pool
+- whether `Public` or `Cloud` are allowed as fallback
+
+### Overlap is acceptable
+
+Source visibility can overlap.
+
+A user or session may be allowed to access multiple sources at once:
+
+- `Local`
+- `Local + Public`
+- `Local + Private`
+- `Local + Private + Public + Cloud`
+
+That overlap is fine as long as the backend still retains explicit policy for:
+
+- visible sources
+- allowed sources
+- fallback order
+
+This is important because overlap in the UI does not mean the routing boundary is weak.
 
 ## Architectural fit
 
@@ -153,6 +221,12 @@ The session bridge is the right home for future org membership, role, network vi
 
 The platform should not fork into two unrelated routing stacks. The same core worker/routing/health model should support multiple scopes.
 
+### 6. Friendly UX, strict enforcement
+
+The UI can say `Private`; the backend still needs to enforce the real org and policy boundary.
+
+Soft product language should not imply soft access control.
+
 ## What this likely changes in current assumptions
 
 Several current assumptions are okay for prototype work, but should not harden too far:
@@ -161,23 +235,23 @@ Several current assumptions are okay for prototype work, but should not harden t
 
 Today the UI and platform often talk about "the network" as if there is one pool. Long term, that likely becomes:
 
-- local
-- private network
-- public network
-- cloud
+- `Local`
+- `Private`
+- `Public`
+- `Cloud`
 
 ### Buyer/use routing is mostly public-platform-shaped
 
-Eventually the Use tab will need to make room for scoped visibility:
+Eventually the Use tab will need to make room for source-aware visibility:
 
 - models I can use locally
-- models I can use inside my org
+- models I can use privately
 - models I can use publicly
 - models I can use from trusted cloud providers
 
 ### Host visibility is globally meaningful
 
-Eventually a host's advertised models may only be meaningful inside an org boundary.
+Eventually a host's advertised models may only be meaningful inside a private boundary.
 
 ## Non-goals for now
 
@@ -192,25 +266,40 @@ This note is not yet deciding:
 
 Those belong in later design or roadmap documents.
 
+## Narrowed direction
+
+The current best-fit direction is:
+
+- product-facing sources are `Local / Private / Public / Cloud`
+- those sources may overlap in visibility
+- the backend remains scope-aware and policy-driven
+- `Private` is the lightweight UX label for access-controlled internal pools
+
+This gives Modulo:
+
+- a simple consumer-friendly mental model
+- an enterprise-safe enforcement model
+- room for remote inference use without making the product feel heavy
+
 ## Open questions
 
 These deserve deeper architectural discussion before implementation:
 
-1. Is org scope attached to the user session, the request, or both?
-2. Can one host participate in multiple private networks, or is scope one-to-one per host?
-3. Should private-network model listings be fully isolated, or optionally bridgeable through explicit policy?
-4. How should hybrid fallback work when a private network has no healthy worker for a requested model?
-5. What is the minimum trust and enrollment model for a host to join an org-scoped pool?
-6. How much of this needs to exist in the first enterprise-capable version versus a later policy layer?
+1. Is private-scope access attached to the session, the request, or both?
+2. Can one host participate in multiple private pools, or is scope one-to-one per host?
+3. Should `Private` model listings be fully isolated, or optionally bridgeable through explicit policy?
+4. How should fallback work when `Private` has no healthy worker for a requested model?
+5. What is the minimum trust and enrollment model for a host to join a private pool?
+6. How much of this needs to exist in the first access-controlled version versus a later policy layer?
 
 ## Recommended next move
 
 Before planning implementation slices, write one follow-up design doc that narrows:
 
-- org and network identity model
+- private-pool identity model
 - host enrollment model
 - scoped routing model
 - visibility and discovery rules
-- fallback policy between local, private, public, and cloud
+- fallback policy between `Local / Private / Public / Cloud`
 
 That should come before any roadmap for private-network implementation.
