@@ -30,7 +30,7 @@ from modulo.worker.transport import InProcessWorkerHTTPTransport
 
 
 class FakeSmokeTestRunner:
-    def run_smoke_test(self, user_message: str):
+    def run_smoke_test(self, user_message: str, *, system_message: str = ""):
         from modulo.client.app import SmokeTestResult
 
         return SmokeTestResult(
@@ -38,6 +38,7 @@ class FakeSmokeTestRunner:
             model_id="llama3.1:8b",
             user_message=user_message,
             response_text="smoke ok",
+            execution_summary=system_message,
         )
 
 

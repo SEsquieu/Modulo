@@ -4,7 +4,11 @@ from dataclasses import dataclass
 
 from modulo.client.app import ClientStatus, ModuloClientSupervisor, OnboardingStatus, SmokeTestResult
 from modulo.common.contracts import WorkerRuntimeState, WorkerStatusSnapshot
-from modulo.prototype import LocalPrototypeHarness
+from modulo.prototype import (
+    GUI_SMOKE_TEST_SYSTEM_PROMPT,
+    GUI_SMOKE_TEST_USER_PROMPT,
+    LocalPrototypeHarness,
+)
 
 
 @dataclass(frozen=True)
@@ -81,7 +85,7 @@ class GuiShellState:
     last_job_status: str = ""
     last_worker_error: str = ""
     smoke_test_ok: bool = False
-    smoke_test_prompt: str = "GUI smoke test request"
+    smoke_test_prompt: str = "Constrained GUI smoke probe"
     smoke_test_summary: str = "No smoke test run yet."
     smoke_test_details: str = ""
     smoke_test_result_label: str = "Not run yet"
@@ -94,7 +98,7 @@ class GuiShellState:
 @dataclass
 class GuiAppController:
     harness: LocalPrototypeHarness
-    _last_smoke_test_prompt: str = "GUI smoke test request"
+    _last_smoke_test_prompt: str = "Constrained GUI smoke probe"
     _selected_model_id: str = ""
 
     def __post_init__(self) -> None:
@@ -138,9 +142,12 @@ class GuiAppController:
             self.harness.client.run_hosting_cycle()
         return self.refresh()
 
-    def run_smoke_test(self, user_message: str = "GUI smoke test request") -> GuiShellState:
-        self._last_smoke_test_prompt = user_message
-        self.harness.client.run_smoke_test(user_message)
+    def run_smoke_test(self) -> GuiShellState:
+        self._last_smoke_test_prompt = "Constrained GUI smoke probe"
+        self.harness.client.run_smoke_test(
+            GUI_SMOKE_TEST_USER_PROMPT,
+            system_message=GUI_SMOKE_TEST_SYSTEM_PROMPT,
+        )
         return self.refresh()
 
     @staticmethod
@@ -257,7 +264,7 @@ class GuiAppController:
     def _smoke_test_details(smoke_test: SmokeTestResult | None) -> str:
         if smoke_test is None:
             return ""
-        lines = [f"Prompt: {smoke_test.user_message}"]
+        lines = ["Probe: Constrained GUI smoke probe"]
         if smoke_test.execution_mode:
             lines.append(f"Execution mode: {smoke_test.execution_mode.upper()}")
         if smoke_test.execution_summary:
@@ -351,7 +358,7 @@ class GuiAppController:
             f"Last worker error: {onboarding.last_worker_error or 'None'}",
         ]
         if smoke_test is not None:
-            lines.append(f"Prompt: {smoke_test.user_message}")
+            lines.append("Probe: Constrained GUI smoke probe")
             if smoke_test.execution_mode:
                 lines.append(f"Execution mode: {smoke_test.execution_mode.upper()}")
             if smoke_test.execution_summary:

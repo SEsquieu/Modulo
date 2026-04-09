@@ -178,7 +178,12 @@ class OnboardingStatus:
 
 
 class ClientSmokeTestRunner(Protocol):
-    def run_smoke_test(self, user_message: str) -> SmokeTestResult:
+    def run_smoke_test(
+        self,
+        user_message: str,
+        *,
+        system_message: str = "",
+    ) -> SmokeTestResult:
         """Run a smoke test through the client-facing prototype path."""
 
 
@@ -324,7 +329,12 @@ class ModuloClientSupervisor:
         self.worker_bridge.run_cycle()
         return self.get_status()
 
-    def run_smoke_test(self, user_message: str = "Smoke test request") -> ClientStatus:
+    def run_smoke_test(
+        self,
+        user_message: str = "Smoke test request",
+        *,
+        system_message: str = "",
+    ) -> ClientStatus:
         if self.smoke_test_runner is None:
             self._last_smoke_test = SmokeTestResult(
                 ok=False,
@@ -333,7 +343,10 @@ class ModuloClientSupervisor:
             )
             return self.get_status()
 
-        self._last_smoke_test = self.smoke_test_runner.run_smoke_test(user_message)
+        self._last_smoke_test = self.smoke_test_runner.run_smoke_test(
+            user_message,
+            system_message=system_message,
+        )
         return self.get_status()
 
     def get_onboarding_status(self) -> OnboardingStatus:

@@ -29,6 +29,13 @@ from modulo.worker.errors import WorkerExecutionError
 from modulo.worker.runtime import InMemoryWorkerRuntime, WorkerBridgeRuntime, WorkerExecutor
 from modulo.worker.transport import InProcessWorkerHTTPTransport
 
+GUI_SMOKE_TEST_USER_PROMPT = "Return the Modulo smoke test acknowledgment."
+GUI_SMOKE_TEST_SYSTEM_PROMPT = (
+    "You are responding to a Modulo GUI smoke test. "
+    "Do not ask follow-up questions. "
+    "Reply with exactly: MODULO_SMOKE_TEST_OK"
+)
+
 
 @dataclass(frozen=True)
 class PrototypeRoundTripResult:
@@ -242,18 +249,28 @@ class LocalPrototypeHarness:
     def shutdown(self) -> ClientStatus:
         return self.client.stop_hosting()
 
-    def run_round_trip(self, user_message: str, *, buyer_id: str | None = None) -> PrototypeRoundTripResult:
+    def run_round_trip(
+        self,
+        user_message: str,
+        *,
+        buyer_id: str | None = None,
+        system_message: str = "",
+    ) -> PrototypeRoundTripResult:
         if not self.client.get_status().hosting_enabled:
             self.boot()
 
         effective_buyer_id = buyer_id or self.buyer_id
         current_model_id = self._current_model_id()
+        messages = []
+        if system_message:
+            messages.append(ChatMessage(role="system", content=system_message))
+        messages.append(ChatMessage(role="user", content=user_message))
         job = self.service.submit_chat(
             ChatRequest(
                 model_id=current_model_id,
                 execution_mode=ExecutionMode.NETWORK,
                 buyer_id=effective_buyer_id,
-                messages=(ChatMessage(role="user", content=user_message),),
+                messages=tuple(messages),
             )
         )
         status = self.client.run_hosting_cycle()
@@ -281,9 +298,14 @@ class LocalPrototypeHarness:
             client_status=status,
         )
 
-    def run_smoke_test(self, user_message: str) -> SmokeTestResult:
+    def run_smoke_test(
+        self,
+        user_message: str,
+        *,
+        system_message: str = "",
+    ) -> SmokeTestResult:
         try:
-            result = self.run_round_trip(user_message)
+            result = self.run_round_trip(user_message, system_message=system_message)
         except RuntimeError as exc:
             return SmokeTestResult(
                 ok=False,

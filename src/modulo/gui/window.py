@@ -11,7 +11,6 @@ try:
         QGroupBox,
         QHBoxLayout,
         QLabel,
-        QLineEdit,
         QMainWindow,
         QPushButton,
         QPlainTextEdit,
@@ -55,8 +54,6 @@ class ModuloMainWindow(QMainWindow):
 
         self.smoke_summary_label = QLabel()
         self.smoke_result_label = QLabel()
-        self.smoke_prompt_input = QLineEdit()
-        self.smoke_prompt_input.setPlaceholderText("Enter a smoke-test prompt")
         self.smoke_details_box = QPlainTextEdit()
         self.smoke_details_box.setReadOnly(True)
         self.smoke_details_box.setMinimumHeight(120)
@@ -148,9 +145,7 @@ class ModuloMainWindow(QMainWindow):
         )
 
         self.smoke_button = QPushButton("Run Smoke Test")
-        self.smoke_button.clicked.connect(
-            self._run_smoke_test_from_input
-        )
+        self.smoke_button.clicked.connect(self._run_smoke_test)
 
         overview_box = QGroupBox("Overview")
         overview_layout = QVBoxLayout()
@@ -221,10 +216,6 @@ class ModuloMainWindow(QMainWindow):
 
         diagnostics_box = QGroupBox("Diagnostics")
         smoke_layout = QVBoxLayout()
-        prompt_row = QHBoxLayout()
-        prompt_row.addWidget(QLabel("Prompt"))
-        prompt_row.addWidget(self.smoke_prompt_input)
-        smoke_layout.addLayout(prompt_row)
         smoke_layout.addWidget(self.smoke_button)
         smoke_layout.addWidget(self.smoke_result_label)
         smoke_layout.addWidget(self.smoke_summary_label)
@@ -312,9 +303,8 @@ class ModuloMainWindow(QMainWindow):
         self._apply_state(self.controller.poll_worker())
         scrollbar.setValue(previous_value)
 
-    def _run_smoke_test_from_input(self) -> None:
-        prompt = self.smoke_prompt_input.text().strip() or "GUI smoke test request"
-        self._apply_state(self.controller.run_smoke_test(prompt))
+    def _run_smoke_test(self) -> None:
+        self._apply_state(self.controller.run_smoke_test())
 
     def _run_openclaw_action(self) -> None:
         self._apply_state(self.controller.configure_openclaw())
@@ -447,8 +437,6 @@ class ModuloMainWindow(QMainWindow):
 
         self.smoke_summary_label.setText(state.smoke_test_summary)
         self.smoke_result_label.setText(f"Result: {state.smoke_test_result_label}")
-        if self.smoke_prompt_input.text() != state.smoke_test_prompt:
-            self.smoke_prompt_input.setText(state.smoke_test_prompt)
         self.smoke_details_box.setPlainText(state.smoke_test_details)
         self.diagnostics_summary_label.setText(state.diagnostics_summary)
         self.diagnostics_details_box.setPlainText(state.diagnostics_details)
