@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from modulo.common.contracts import JobStatus, WorkerRuntimeState
 from modulo.client.hosting_readiness import HostingRuntimeProbeStatus
+from modulo.client.app import HostingPrewarmResult
 from modulo.client.ollama_loaded_models import LoadedOllamaModel, OllamaLoadedModelsStatus
 from modulo.client.openclaw_discovery import OpenClawDiscoveryStatus
 from modulo.worker.errors import WorkerExecutionError
@@ -67,6 +68,52 @@ class FakeLoadedModelsDiscovery:
             ),
             summary="1 Ollama model is currently loaded in memory.",
             details="fake loaded discovery",
+        )
+
+
+class MutableLoadedModelsDiscovery:
+    def __init__(self) -> None:
+        self.loaded_models: tuple[LoadedOllamaModel, ...] = ()
+
+    def discover(self) -> OllamaLoadedModelsStatus:
+        return OllamaLoadedModelsStatus(
+            available=True,
+            loaded_models=self.loaded_models,
+            summary=(
+                "No Ollama models are currently loaded in memory."
+                if not self.loaded_models
+                else f"{len(self.loaded_models)} Ollama model(s) are currently loaded in memory."
+            ),
+            details="mutable loaded discovery",
+        )
+
+
+class SuccessfulPrewarmer:
+    def __init__(self, loaded_discovery: MutableLoadedModelsDiscovery) -> None:
+        self.loaded_discovery = loaded_discovery
+
+    def prewarm(self, model_id: str) -> HostingPrewarmResult:
+        self.loaded_discovery.loaded_models = (
+            LoadedOllamaModel(
+                model_id=model_id,
+                display_name=model_id,
+                expires_at="2099-01-01T00:00:00Z",
+                size_vram_bytes=2048,
+            ),
+        )
+        return HostingPrewarmResult(
+            ok=True,
+            summary=f"Prewarm requested for {model_id}.",
+            detail="fake prototype prewarm success",
+        )
+
+
+class FailedPrewarmer:
+    def prewarm(self, model_id: str) -> HostingPrewarmResult:
+        return HostingPrewarmResult(
+            ok=False,
+            summary=f"Prewarm failed for {model_id}.",
+            detail="fake prototype prewarm failure",
         )
 
 
@@ -188,6 +235,36 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertIsNotNone(completed_job)
         self.assertEqual(JobStatus.COMPLETED, completed_job.status)
         self.assertEqual("real prototype hello", completed_job.request.messages[0].content)
+
+    def test_boot_prewarms_real_model_when_prewarm_succeeds(self) -> None:
+        loaded_discovery = MutableLoadedModelsDiscovery()
+        harness = LocalPrototypeHarness(
+            openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_loaded_models_discovery=loaded_discovery,
+            hosting_runtime_probe=ReadyRuntimeProbe(),
+            hosting_prewarmer=SuccessfulPrewarmer(loaded_discovery),
+            ollama_http_client=FakeOllamaHTTPClient(),
+        )
+
+        status = harness.boot()
+
+        self.assertEqual("WARM", status.hosting_setup.warm_state_badge)
+        self.assertIn("prewarm requested", status.hosting_setup.warm_summary.lower())
+
+    def test_boot_surfaces_warm_failed_when_prewarm_fails(self) -> None:
+        loaded_discovery = MutableLoadedModelsDiscovery()
+        harness = LocalPrototypeHarness(
+            openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_loaded_models_discovery=loaded_discovery,
+            hosting_runtime_probe=ReadyRuntimeProbe(),
+            hosting_prewarmer=FailedPrewarmer(),
+            ollama_http_client=FakeOllamaHTTPClient(),
+        )
+
+        status = harness.boot()
+
+        self.assertEqual("WARM_FAILED", status.hosting_setup.warm_state_badge)
+        self.assertIn("prewarm failed", status.hosting_setup.warm_summary.lower())
 
     def test_round_trip_uses_selected_installed_local_host_model(self) -> None:
         harness = LocalPrototypeHarness(

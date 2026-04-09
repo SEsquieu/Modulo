@@ -54,26 +54,23 @@ Proof added to repo:
 
 ### Slice 3: Hosting prewarm lifecycle
 
-Status: in progress
+Status: completed
 
-Goal:
+Summary:
 
-- optionally prewarm the selected host model when hosting starts
-- track warmup transitions and failures explicitly
-
-Done when:
-
-- hosting start can trigger a lightweight prewarm poke for the selected model
-- the client and GUI reflect `warming`, `warm`, and `warm_failed` truthfully
-- warmup failures are surfaced as normal operator-facing state instead of raw exceptions
+- added an optional host-side prewarm lifecycle that triggers when hosting starts or a live host switches models
+- tracked prewarm state in the client so the Host tab can distinguish `warming`, `warm`, and `warm_failed` from simple loaded-model visibility
+- kept failures operator-facing and normal by surfacing them as warm-state truth instead of letting warmup errors escape as raw exceptions
 
 Proof added to repo:
 
-- 
+- `HostingPrewarmResult` and `ClientHostingPrewarmer` in the client layer
+- `LocalOllamaModelPrewarmer` in the prototype harness using Ollama prewarm requests against the selected host model
+- client, prototype, and GUI tests covering successful prewarm and warm-failed host states
 
 ## Completion note
 
 Add a short summary here when complete:
 
-- summary:
-- proof added to repo:
+- summary: the Host side now shows both whether a model is loaded and whether Modulo explicitly warmed it as part of hosting lifecycle, which makes local resource use and cold-start avoidance much more transparent
+- proof added to repo: warm-state lifecycle now spans loaded-model discovery, optional prewarm requests, Host-tab visibility, and automated coverage for success and failure paths

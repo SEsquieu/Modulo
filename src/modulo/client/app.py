@@ -84,6 +84,13 @@ class HostingPreflightStatus:
 
 
 @dataclass(frozen=True)
+class HostingPrewarmResult:
+    ok: bool
+    summary: str = ""
+    detail: str = ""
+
+
+@dataclass(frozen=True)
 class HostingSetupStatus:
     selected_model_id: str = ""
     available_model_ids: tuple[str, ...] = ()
@@ -200,6 +207,11 @@ class ClientOllamaLoadedModelsDiscovery(Protocol):
         """Detect which Ollama models are currently loaded in local memory."""
 
 
+class ClientHostingPrewarmer(Protocol):
+    def prewarm(self, model_id: str) -> HostingPrewarmResult:
+        """Request that the selected Ollama model be loaded and kept warm locally."""
+
+
 @dataclass
 class ModuloClientSupervisor:
     worker_bridge: WorkerBridgeRuntime
@@ -210,6 +222,7 @@ class ModuloClientSupervisor:
     ollama_discovery: OllamaDiscovery | None = None
     ollama_loaded_models_discovery: ClientOllamaLoadedModelsDiscovery | None = None
     hosting_runtime_probe: ClientHostingRuntimeProbe = field(default_factory=OllamaHostingRuntimeProbe)
+    hosting_prewarmer: ClientHostingPrewarmer | None = None
     smoke_test_runner: ClientSmokeTestRunner | None = None
     activity_provider: ClientActivityProvider | None = None
     hosting_model_changed_hook: Callable[[str], None] | None = None
@@ -225,6 +238,10 @@ class ModuloClientSupervisor:
     _cached_runtime_probe_model_id: str = ""
     _cached_runtime_probe_at: float = 0.0
     _staged_openclaw_plan: OpenClawConnectionPlan | None = None
+    _prewarm_model_id: str = ""
+    _prewarm_state: str = "idle"
+    _prewarm_summary: str = ""
+    _prewarm_detail: str = ""
 
     def configure_worker(self, config: WorkerBridgeConfig) -> ClientStatus:
         was_running = self.worker_bridge.get_status().desired_running
@@ -242,6 +259,7 @@ class ModuloClientSupervisor:
         return self.get_status()
 
     def set_hosting_model(self, model_id: str) -> ClientStatus:
+        self._reset_prewarm_state()
         config = self.worker_bridge.config
         next_config = WorkerBridgeConfig(
             modulo_url=config.modulo_url,
@@ -254,6 +272,8 @@ class ModuloClientSupervisor:
         if self.hosting_model_changed_hook is not None:
             self.hosting_model_changed_hook(model_id)
             status = self.get_status()
+        if status.hosting_enabled:
+            return self._prewarm_selected_model()
         return status
 
     def stage_openclaw_connection(self) -> ClientStatus:
@@ -284,13 +304,21 @@ class ModuloClientSupervisor:
         return self.get_status()
 
     def start_hosting(self) -> ClientStatus:
-        return self.apply_worker_command(WorkerSupervisorCommand.START)
+        status = self.apply_worker_command(WorkerSupervisorCommand.START)
+        if status.hosting_enabled:
+            return self._prewarm_selected_model()
+        return status
 
     def stop_hosting(self) -> ClientStatus:
+        self._reset_prewarm_state()
         return self.apply_worker_command(WorkerSupervisorCommand.STOP)
 
     def restart_hosting(self) -> ClientStatus:
-        return self.apply_worker_command(WorkerSupervisorCommand.RESTART)
+        self._reset_prewarm_state()
+        status = self.apply_worker_command(WorkerSupervisorCommand.RESTART)
+        if status.hosting_enabled:
+            return self._prewarm_selected_model()
+        return status
 
     def run_hosting_cycle(self) -> ClientStatus:
         self.worker_bridge.run_cycle()
@@ -699,8 +727,8 @@ class ModuloClientSupervisor:
         self._cached_runtime_probe_model_id = ""
         self._cached_runtime_probe_at = 0.0
 
-    @staticmethod
     def _hosting_warm_state(
+        self,
         *,
         selected_model_id: str,
         loaded_status: OllamaLoadedModelsStatus,
@@ -723,6 +751,34 @@ class ModuloClientSupervisor:
             None,
         )
         if loaded_model is None:
+            if (
+                selected_model_id == self._prewarm_model_id
+                and self._prewarm_state == "failed"
+            ):
+                detail_lines = [self._prewarm_detail or "The latest prewarm attempt failed."]
+                if loaded_status.loaded_models:
+                    detail_lines.append(
+                        f"Loaded models: {', '.join(model.model_id for model in loaded_status.loaded_models)}"
+                    )
+                return (
+                    "WARM_FAILED",
+                    self._prewarm_summary or f"Prewarm failed for {selected_model_id}.",
+                    tuple(detail_lines),
+                )
+            if (
+                selected_model_id == self._prewarm_model_id
+                and self._prewarm_state == "warming"
+            ):
+                detail_lines = [self._prewarm_detail or "The selected model is being warmed locally."]
+                if loaded_status.loaded_models:
+                    detail_lines.append(
+                        f"Loaded models: {', '.join(model.model_id for model in loaded_status.loaded_models)}"
+                    )
+                return (
+                    "WARMING",
+                    self._prewarm_summary or f"{selected_model_id} is warming locally.",
+                    tuple(detail_lines),
+                )
             return (
                 "COLD",
                 f"{selected_model_id} is not currently loaded in Ollama memory.",
@@ -732,7 +788,10 @@ class ModuloClientSupervisor:
                 ),
             )
 
-        detail_lines = [f"Loaded model: {loaded_model.model_id}"]
+        detail_lines = []
+        if selected_model_id == self._prewarm_model_id and self._prewarm_detail:
+            detail_lines.append(self._prewarm_detail)
+        detail_lines.append(f"Loaded model: {loaded_model.model_id}")
         if loaded_model.expires_at:
             detail_lines.append(f"Expires at: {loaded_model.expires_at}")
         if loaded_model.size_vram_bytes:
@@ -749,9 +808,66 @@ class ModuloClientSupervisor:
             detail_lines.append(f"Quantization: {loaded_model.quantization_level}")
         return (
             "WARM",
-            f"{selected_model_id} is currently loaded in Ollama memory.",
+            (
+                self._prewarm_summary
+                if selected_model_id == self._prewarm_model_id and self._prewarm_summary
+                else f"{selected_model_id} is currently loaded in Ollama memory."
+            ),
             tuple(detail_lines),
         )
+
+    def _prewarm_selected_model(self) -> ClientStatus:
+        selected_model_id = (
+            self.worker_bridge.config.enabled_models[0]
+            if self.worker_bridge.config.enabled_models
+            else ""
+        )
+        if not selected_model_id:
+            return self.get_status()
+        if self._prototype_hosting_available() or self.hosting_prewarmer is None:
+            return self.get_status()
+
+        self._prewarm_model_id = selected_model_id
+        self._prewarm_state = "warming"
+        self._prewarm_summary = f"Prewarming {selected_model_id} on the local Ollama runtime."
+        self._prewarm_detail = "Modulo requested a lightweight host-side warmup for the selected model."
+
+        try:
+            result = self.hosting_prewarmer.prewarm(selected_model_id)
+        except Exception as exc:
+            result = HostingPrewarmResult(
+                ok=False,
+                summary=f"Prewarm failed for {selected_model_id}.",
+                detail=str(exc),
+            )
+
+        self._cached_ollama_loaded_models = None
+        self._cached_ollama_loaded_models_at = 0.0
+        loaded_status = self.get_ollama_loaded_models_status()
+        loaded_model_ids = {model.model_id for model in loaded_status.loaded_models}
+
+        if result.ok and selected_model_id in loaded_model_ids:
+            self._prewarm_state = "success"
+            self._prewarm_summary = (
+                result.summary or f"{selected_model_id} was prewarmed and is now loaded locally."
+            )
+            self._prewarm_detail = result.detail or "The selected model is currently loaded in local memory."
+        elif result.ok:
+            self._prewarm_state = "warming"
+            self._prewarm_summary = result.summary or f"Prewarm is still settling for {selected_model_id}."
+            self._prewarm_detail = result.detail or "The prewarm request succeeded, but the loaded-model view has not updated yet."
+        else:
+            self._prewarm_state = "failed"
+            self._prewarm_summary = result.summary or f"Prewarm failed for {selected_model_id}."
+            self._prewarm_detail = result.detail or "The selected model could not be warmed locally."
+
+        return self.get_status()
+
+    def _reset_prewarm_state(self) -> None:
+        self._prewarm_model_id = ""
+        self._prewarm_state = "idle"
+        self._prewarm_summary = ""
+        self._prewarm_detail = ""
 
     def _build_openclaw_connection_plan(
         self,

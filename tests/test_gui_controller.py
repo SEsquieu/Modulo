@@ -5,6 +5,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from modulo.gui.controller import GuiAppController
+from modulo.client.app import HostingPrewarmResult
 from modulo.client.ollama_discovery import OllamaDiscoveryStatus
 from modulo.client.ollama_loaded_models import LoadedOllamaModel, OllamaLoadedModelsStatus
 from modulo.client.openclaw_discovery import OpenClawDiscoveryStatus
@@ -59,6 +60,52 @@ class FakeGuiLoadedModelsDiscovery:
             ),
             summary="1 Ollama model is currently loaded in memory.",
             details="fake gui loaded discovery",
+        )
+
+
+class MutableGuiLoadedModelsDiscovery:
+    def __init__(self) -> None:
+        self.loaded_models: tuple[LoadedOllamaModel, ...] = ()
+
+    def discover(self) -> OllamaLoadedModelsStatus:
+        return OllamaLoadedModelsStatus(
+            available=True,
+            loaded_models=self.loaded_models,
+            summary=(
+                "No Ollama models are currently loaded in memory."
+                if not self.loaded_models
+                else f"{len(self.loaded_models)} Ollama model(s) are currently loaded in memory."
+            ),
+            details="mutable gui loaded discovery",
+        )
+
+
+class SuccessfulGuiPrewarmer:
+    def __init__(self, loaded_discovery: MutableGuiLoadedModelsDiscovery) -> None:
+        self.loaded_discovery = loaded_discovery
+
+    def prewarm(self, model_id: str) -> HostingPrewarmResult:
+        self.loaded_discovery.loaded_models = (
+            LoadedOllamaModel(
+                model_id=model_id,
+                display_name=model_id,
+                expires_at="2099-01-01T00:00:00Z",
+                size_vram_bytes=2048,
+            ),
+        )
+        return HostingPrewarmResult(
+            ok=True,
+            summary=f"Prewarm requested for {model_id}.",
+            detail="fake gui prewarm success",
+        )
+
+
+class FailedGuiPrewarmer:
+    def prewarm(self, model_id: str) -> HostingPrewarmResult:
+        return HostingPrewarmResult(
+            ok=False,
+            summary=f"Prewarm failed for {model_id}.",
+            detail="fake gui prewarm failure",
         )
 
 
@@ -323,6 +370,24 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertEqual("READY", state.hosting_readiness_badge)
         self.assertEqual("COLD", state.hosting_warm_state_badge)
         self.assertIn("Hosting preflight passed", state.hosting_setup_summary)
+
+    def test_start_hosting_shows_warm_failed_when_prewarm_fails(self) -> None:
+        loaded_discovery = MutableGuiLoadedModelsDiscovery()
+        self.controller = GuiAppController(
+            harness=LocalPrototypeHarness(
+                openclaw_discovery=FakeGuiOpenClawDiscovery(),
+                ollama_discovery=FakeGuiOllamaDiscovery(),
+                ollama_loaded_models_discovery=loaded_discovery,
+                hosting_runtime_probe=ReadyGuiHostingRuntimeProbe(),
+                hosting_prewarmer=FailedGuiPrewarmer(),
+                ollama_http_client=FakeGuiOllamaHTTPClient(),
+            )
+        )
+
+        started = self.controller.start_hosting()
+
+        self.assertEqual("WARM_FAILED", started.hosting_warm_state_badge)
+        self.assertIn("prewarm failed", started.hosting_warm_summary.lower())
 
 
 if __name__ == "__main__":

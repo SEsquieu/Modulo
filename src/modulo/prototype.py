@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
+from urllib import request
 
 from modulo.client.app import (
     ActivityEntry,
     ActivityVisibilityStatus,
     ClientSessionBridge,
     ClientStatus,
+    HostingPrewarmResult,
     ModuloClientSupervisor,
     PlatformModelListing,
     PlatformSessionStatus,
@@ -22,6 +25,7 @@ from modulo.cloud.runtime import InMemoryModuloService
 from modulo.common.catalog import SUPPORTED_MODELS
 from modulo.common.contracts import ChatMessage, ChatRequest, ExecutionMode, JobStatus, WorkerBridgeConfig
 from modulo.worker.executors import OllamaExecutor, OllamaHTTPClient, StubExecutor
+from modulo.worker.errors import WorkerExecutionError
 from modulo.worker.runtime import InMemoryWorkerRuntime, WorkerBridgeRuntime, WorkerExecutor
 from modulo.worker.transport import InProcessWorkerHTTPTransport
 
@@ -103,6 +107,39 @@ class LocalPrototypeSessionBridge(ClientSessionBridge):
         )
 
 
+@dataclass(frozen=True)
+class LocalOllamaModelPrewarmer:
+    base_url: str = "http://127.0.0.1:11434"
+    keep_alive: str = "10m"
+
+    def prewarm(self, model_id: str) -> HostingPrewarmResult:
+        endpoint = f"{self.base_url.rstrip('/')}/api/generate"
+        payload = json.dumps(
+            {
+                "model": model_id,
+                "stream": False,
+                "keep_alive": self.keep_alive,
+            }
+        ).encode("utf-8")
+        req = request.Request(
+            endpoint,
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with request.urlopen(req, timeout=15) as response:
+                response.read()
+        except Exception as exc:
+            raise WorkerExecutionError(f"Ollama prewarm failed: {exc}") from exc
+
+        return HostingPrewarmResult(
+            ok=True,
+            summary=f"Prewarm requested for {model_id}.",
+            detail=f"Modulo asked Ollama to keep {model_id} warm for {self.keep_alive}.",
+        )
+
+
 @dataclass
 class LocalPrototypeHarness:
     model_id: str = "llama3.1:8b"
@@ -117,6 +154,7 @@ class LocalPrototypeHarness:
     ollama_discovery: OllamaDiscovery | None = None
     ollama_loaded_models_discovery: OllamaLoadedModelsDiscovery | None = None
     hosting_runtime_probe: OllamaHostingRuntimeProbe | None = None
+    hosting_prewarmer: LocalOllamaModelPrewarmer | None = None
     selected_executor_mode: str = field(init=False, default="prototype")
     selected_executor_summary: str = field(init=False, default="")
     _explicit_executor_override: bool = field(init=False, default=False)
@@ -151,6 +189,7 @@ class LocalPrototypeHarness:
             ollama_discovery=self.ollama_discovery or OllamaDiscovery(),
             ollama_loaded_models_discovery=self.ollama_loaded_models_discovery or OllamaLoadedModelsDiscovery(),
             hosting_runtime_probe=self.hosting_runtime_probe or OllamaHostingRuntimeProbe(),
+            hosting_prewarmer=self.hosting_prewarmer or LocalOllamaModelPrewarmer(base_url=self.ollama_base_url),
             smoke_test_runner=self,
             activity_provider=self,
             hosting_model_changed_hook=self._on_hosting_model_changed,

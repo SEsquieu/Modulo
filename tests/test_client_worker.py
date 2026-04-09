@@ -4,7 +4,12 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from modulo.client.app import ModuloClientSupervisor, PlatformModelListing, PlatformSessionStatus
+from modulo.client.app import (
+    HostingPrewarmResult,
+    ModuloClientSupervisor,
+    PlatformModelListing,
+    PlatformSessionStatus,
+)
 from modulo.client.hosting_readiness import HostingRuntimeProbeStatus
 from modulo.client.ollama_loaded_models import LoadedOllamaModel, OllamaLoadedModelsStatus
 from modulo.client.openclaw_discovery import OpenClawDiscoveryStatus
@@ -56,6 +61,12 @@ class FakeHostingRuntimeProbe:
         )
 
 
+class NoopRealExecutor:
+    def execute(self, worker_id: str, request) -> str:
+        del worker_id, request
+        return "noop real executor"
+
+
 class FakeLoadedModelsDiscovery:
     def discover(self) -> OllamaLoadedModelsStatus:
         return OllamaLoadedModelsStatus(
@@ -71,6 +82,52 @@ class FakeLoadedModelsDiscovery:
             ),
             summary="1 Ollama model is currently loaded in memory.",
             details="fake loaded-model discovery",
+        )
+
+
+class MutableLoadedModelsDiscovery:
+    def __init__(self) -> None:
+        self.loaded_models: tuple[LoadedOllamaModel, ...] = ()
+
+    def discover(self) -> OllamaLoadedModelsStatus:
+        return OllamaLoadedModelsStatus(
+            available=True,
+            loaded_models=self.loaded_models,
+            summary=(
+                "No Ollama models are currently loaded in memory."
+                if not self.loaded_models
+                else f"{len(self.loaded_models)} Ollama model(s) are currently loaded in memory."
+            ),
+            details="mutable loaded-model discovery",
+        )
+
+
+class SuccessfulPrewarmer:
+    def __init__(self, loaded_discovery: MutableLoadedModelsDiscovery) -> None:
+        self.loaded_discovery = loaded_discovery
+
+    def prewarm(self, model_id: str) -> HostingPrewarmResult:
+        self.loaded_discovery.loaded_models = (
+            LoadedOllamaModel(
+                model_id=model_id,
+                display_name=model_id,
+                expires_at="2099-01-01T00:00:00Z",
+                size_vram_bytes=2048,
+            ),
+        )
+        return HostingPrewarmResult(
+            ok=True,
+            summary=f"Prewarm requested for {model_id}.",
+            detail="fake prewarm success",
+        )
+
+
+class FailedPrewarmer:
+    def prewarm(self, model_id: str) -> HostingPrewarmResult:
+        return HostingPrewarmResult(
+            ok=False,
+            summary=f"Prewarm failed for {model_id}.",
+            detail="fake prewarm failure",
         )
 
 
@@ -361,6 +418,34 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertTrue(status.hosting_setup.can_enable_hosting)
         self.assertEqual("COLD", status.hosting_setup.warm_state_badge)
         self.assertIn("Installed local Ollama model", status.hosting_setup.readiness_details)
+
+    def test_start_hosting_prewarms_real_model_when_prewarmer_succeeds(self) -> None:
+        self.bridge.executor = NoopRealExecutor()
+        loaded_discovery = MutableLoadedModelsDiscovery()
+        self.client.ollama_loaded_models_discovery = loaded_discovery
+        self.client.hosting_prewarmer = SuccessfulPrewarmer(loaded_discovery)
+        self.client.hosting_runtime_probe = FakeHostingRuntimeProbe()
+
+        status = self.client.start_hosting()
+
+        self.assertTrue(status.hosting_enabled)
+        self.assertEqual("WARM", status.hosting_setup.warm_state_badge)
+        self.assertIn("prewarm requested", status.hosting_setup.warm_summary.lower())
+        self.assertIn("fake prewarm success", "\n".join(status.hosting_setup.warm_details).lower())
+
+    def test_start_hosting_surfaces_warm_failed_when_prewarm_fails(self) -> None:
+        self.bridge.executor = NoopRealExecutor()
+        loaded_discovery = MutableLoadedModelsDiscovery()
+        self.client.ollama_loaded_models_discovery = loaded_discovery
+        self.client.hosting_prewarmer = FailedPrewarmer()
+        self.client.hosting_runtime_probe = FakeHostingRuntimeProbe()
+
+        status = self.client.start_hosting()
+
+        self.assertTrue(status.hosting_enabled)
+        self.assertEqual("WARM_FAILED", status.hosting_setup.warm_state_badge)
+        self.assertIn("prewarm failed", status.hosting_setup.warm_summary.lower())
+        self.assertIn("fake prewarm failure", "\n".join(status.hosting_setup.warm_details).lower())
 
     def test_hosting_preflight_fails_when_selected_model_is_missing(self) -> None:
         class MissingModelDiscovery:
