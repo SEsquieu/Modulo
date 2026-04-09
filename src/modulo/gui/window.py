@@ -111,16 +111,31 @@ class ModuloMainWindow(QMainWindow):
         self.smoke_details_box = QPlainTextEdit()
         self.smoke_details_box.setReadOnly(True)
         self.smoke_details_box.setMinimumHeight(120)
+        self.smoke_details_box.setMaximumHeight(120)
+        self.smoke_details_box.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
         self.diagnostics_summary_label = QLabel()
         self.diagnostics_summary_label.setWordWrap(True)
         self.diagnostics_details_box = QPlainTextEdit()
         self.diagnostics_details_box.setReadOnly(True)
         self.diagnostics_details_box.setMinimumHeight(100)
+        self.diagnostics_details_box.setMaximumHeight(100)
+        self.diagnostics_details_box.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
         self.continuity_summary_label = QLabel()
         self.continuity_summary_label.setWordWrap(True)
         self.activity_box = QPlainTextEdit()
         self.activity_box.setReadOnly(True)
         self.activity_box.setMinimumHeight(110)
+        self.activity_box.setMaximumHeight(110)
+        self.activity_box.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
         self.buyer_model_notice_label = QLabel()
         self.buyer_model_notice_label.setWordWrap(True)
         self.buyer_platform_summary_label = QLabel()
@@ -325,6 +340,7 @@ class ModuloMainWindow(QMainWindow):
         self.tab_widget.addTab(use_tab, "Use")
         self.tab_widget.addTab(host_tab, "Host")
         self.tab_widget.addTab(diagnostics_tab, "Diagnostics")
+        self.tab_widget.currentChanged.connect(self._refresh_active_tab_layout)
 
         root = QWidget()
         root_layout = QVBoxLayout()
@@ -358,6 +374,7 @@ class ModuloMainWindow(QMainWindow):
         self._poll_timer.start()
 
         self._apply_state(self.controller.refresh())
+        self._refresh_active_tab_layout()
 
     def _apply_retro_theme(self) -> None:
         self.setStyleSheet(
@@ -595,6 +612,18 @@ class ModuloMainWindow(QMainWindow):
         target_width = min(920, max(720, available.width() - 120))
         target_height = min(760, max(520, available.height() - 120))
         self.resize(target_width, target_height)
+
+    def _refresh_active_tab_layout(self) -> None:
+        root = self.scroll_area.widget()
+        if root is None:
+            return
+        current_tab = self.tab_widget.currentWidget()
+        if current_tab is not None:
+            current_tab.adjustSize()
+        self.tab_widget.adjustSize()
+        root.adjustSize()
+        scrollbar = self.scroll_area.verticalScrollBar()
+        scrollbar.setValue(min(scrollbar.value(), scrollbar.maximum()))
 
     def _poll_state(self) -> None:
         if self._action_in_flight or self._poll_in_flight:
