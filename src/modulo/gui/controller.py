@@ -338,8 +338,6 @@ class GuiAppController:
 
     @staticmethod
     def _home_subtitle(onboarding: OnboardingStatus) -> str:
-        if onboarding.hosting_enabled:
-            return "Use the Use, Host, and Diagnostics tabs to manage each side of Modulo separately."
         return "Use, hosting, and diagnostics are managed separately in this client."
 
     @staticmethod

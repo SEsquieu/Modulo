@@ -73,9 +73,12 @@ class ModuloMainWindow(QMainWindow):
         self.title_label.setStyleSheet("font-size: 24px; font-weight: 700;")
         self.subtitle_label = QLabel()
         self.subtitle_label.setWordWrap(True)
-        self.status_strip = QLabel()
-        self.status_strip.setWordWrap(True)
-        self.status_strip.setStyleSheet("color: #a1a1aa; font-size: 13px;")
+        self.footer_status_label = QLabel()
+        self.footer_status_label.setTextFormat(Qt.TextFormat.RichText)
+        self.footer_status_label.setStyleSheet("font-size: 13px;")
+        self.footer_notice_label = QLabel()
+        self.footer_notice_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.footer_notice_label.setStyleSheet("color: #7ee787; font-size: 13px;")
 
         self.worker_id_label = QLabel()
         self.worker_state_label = QLabel()
@@ -376,7 +379,13 @@ class ModuloMainWindow(QMainWindow):
         container_layout.setContentsMargins(0, 0, 0, 0)
         container_layout.setSpacing(0)
         container_layout.addWidget(self.scroll_area, 1)
-        container_layout.addWidget(self.status_strip, 0)
+        footer_row = QHBoxLayout()
+        footer_row.setContentsMargins(12, 6, 12, 6)
+        footer_row.setSpacing(12)
+        footer_row.addWidget(self.footer_status_label, 0)
+        footer_row.addStretch(1)
+        footer_row.addWidget(self.footer_notice_label, 0)
+        container_layout.addLayout(footer_row)
         container.setLayout(container_layout)
         self.setCentralWidget(container)
 
@@ -924,16 +933,29 @@ class ModuloMainWindow(QMainWindow):
         self.title_label.setText(state.home_title)
         self.subtitle_label.setText(state.home_subtitle)
 
-        footer_parts = [
-            f"Modulo {'online' if state.connected_to_modulo else 'offline'}",
-            f"Hosting {'enabled' if state.hosting_enabled else 'disabled'}",
-            f"Worker {state.worker_status_badge.lower()}",
-        ]
-        if self._ui_notice:
-            footer_parts.append(self._ui_notice)
-        self.status_strip.setText(
-            " | ".join(footer_parts)
+        modulo_value = self._footer_status_html(
+            "online" if state.connected_to_modulo else "offline",
+            ok=state.connected_to_modulo,
         )
+        hosting_value = self._footer_status_html(
+            "enabled" if state.hosting_enabled else "disabled",
+            ok=state.hosting_enabled,
+        )
+        worker_ok = state.worker_status_badge.upper() == "HEALTHY"
+        worker_value = self._footer_status_html(
+            state.worker_status_badge.lower(),
+            ok=worker_ok,
+        )
+        self.footer_status_label.setText(
+            "  |  ".join(
+                (
+                    f"Modulo: {modulo_value}",
+                    f"Hosting: {hosting_value}",
+                    f"Worker: {worker_value}",
+                )
+            )
+        )
+        self.footer_notice_label.setText(self._ui_notice)
 
         self.connect_button.setText(state.openclaw_action_label)
         controls_enabled = not self._action_in_flight
@@ -1144,6 +1166,11 @@ class ModuloMainWindow(QMainWindow):
         self.diagnostics_details_box.setPlainText(state.diagnostics_details)
         self.continuity_summary_label.setText(state.continuity_summary)
         self.activity_box.setPlainText("\n".join(state.activity_lines))
+
+    @staticmethod
+    def _footer_status_html(value: str, *, ok: bool) -> str:
+        color = "#7ee787" if ok else "#ff7b72"
+        return f"<b><span style='color: {color};'>{value}</span></b>"
 
 
 def launch_gui(controller: GuiAppController | None = None) -> int:
