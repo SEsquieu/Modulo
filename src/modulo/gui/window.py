@@ -17,6 +17,7 @@ try:
         QPlainTextEdit,
         QScrollArea,
         QTabWidget,
+        QToolBox,
         QVBoxLayout,
         QWidget,
     )
@@ -79,12 +80,22 @@ class ModuloMainWindow(QMainWindow):
         self.worker_jobs_label = QLabel()
         self.worker_last_job_label = QLabel()
         self.worker_error_label = QLabel()
+        self.host_state_badge_label = QLabel()
+        self.host_state_badge_label.setStyleSheet("font-size: 18px; font-weight: 700;")
+        self.host_state_summary_label = QLabel()
+        self.host_state_summary_label.setWordWrap(True)
         self.host_activity_label = QLabel()
         self.host_activity_label.setWordWrap(True)
         self.host_activity_bar = QProgressBar()
         self.host_activity_bar.setRange(0, 0)
         self.host_activity_bar.setTextVisible(False)
         self.host_activity_bar.hide()
+        self.host_card_model_value = QLabel()
+        self.host_card_model_value.setWordWrap(True)
+        self.host_card_warm_value = QLabel()
+        self.host_card_warm_value.setWordWrap(True)
+        self.host_card_runtime_value = QLabel()
+        self.host_card_runtime_value.setWordWrap(True)
 
         self.smoke_summary_label = QLabel()
         self.smoke_result_label = QLabel()
@@ -188,6 +199,8 @@ class ModuloMainWindow(QMainWindow):
 
         host_box = QGroupBox("Hosting")
         host_layout = QVBoxLayout()
+        host_layout.addWidget(self.host_state_badge_label)
+        host_layout.addWidget(self.host_state_summary_label)
         hosting_setup_prompt_row = QHBoxLayout()
         hosting_setup_prompt_row.addWidget(QLabel("Hosting model"))
         hosting_setup_prompt_row.addWidget(self.hosting_model_combo)
@@ -198,29 +211,17 @@ class ModuloMainWindow(QMainWindow):
         host_layout.addLayout(hosting_controls_row)
         host_layout.addWidget(self.host_activity_label)
         host_layout.addWidget(self.host_activity_bar)
-        host_layout.addWidget(self.hosting_mode_label)
-        host_layout.addWidget(self.hosting_warm_state_label)
-        host_layout.addWidget(self.hosting_warm_summary_label)
-        host_layout.addWidget(self.hosting_warm_details_label)
-        host_layout.addWidget(self.execution_mode_label)
-        host_layout.addWidget(self.execution_summary_label)
-        host_layout.addWidget(self.ollama_status_label)
-        host_layout.addWidget(self.ollama_summary_label)
-        host_layout.addWidget(self.ollama_inventory_summary_label)
-        host_layout.addWidget(self.hosting_readiness_label)
-        host_layout.addWidget(self.hosting_preflight_summary_label)
-        host_layout.addWidget(self.hosting_preflight_reason_label)
-        host_layout.addWidget(self.hosting_inventory_label)
-        host_layout.addWidget(self.worker_registration_label)
-        host_layout.addWidget(self.worker_health_summary_label)
-        host_layout.addWidget(self.worker_activity_label)
-        host_layout.addWidget(self.worker_id_label)
-        host_layout.addWidget(self.worker_state_label)
-        host_layout.addWidget(self.worker_models_label)
-        host_layout.addWidget(self.worker_load_label)
-        host_layout.addWidget(self.worker_jobs_label)
-        host_layout.addWidget(self.worker_last_job_label)
-        host_layout.addWidget(self.worker_error_label)
+        host_cards_row = QHBoxLayout()
+        host_cards_row.addWidget(self._build_host_card("Selected Model", self.host_card_model_value))
+        host_cards_row.addWidget(self._build_host_card("Model State", self.host_card_warm_value))
+        host_cards_row.addWidget(self._build_host_card("Execution Path", self.host_card_runtime_value))
+        host_layout.addLayout(host_cards_row)
+
+        self.host_detail_toolbox = QToolBox()
+        self.host_detail_toolbox.addItem(self._build_host_details_page(), "Warm Details")
+        self.host_detail_toolbox.addItem(self._build_readiness_page(), "Readiness and Ollama")
+        self.host_detail_toolbox.addItem(self._build_worker_details_page(), "Worker Details")
+        host_layout.addWidget(self.host_detail_toolbox)
         host_box.setLayout(host_layout)
 
         buyer_box = QGroupBox("Buyer Routing")
@@ -318,6 +319,69 @@ class ModuloMainWindow(QMainWindow):
         self._poll_timer.start()
 
         self._apply_state(self.controller.refresh())
+
+    def _build_host_card(self, title: str, value_label: QLabel) -> QFrame:
+        card = QFrame()
+        card.setFrameShape(QFrame.StyledPanel)
+        card.setStyleSheet(
+            "QFrame { border: 1px solid #3f3f46; border-radius: 8px; padding: 8px; }"
+        )
+        layout = QVBoxLayout()
+        layout.setContentsMargins(10, 8, 10, 8)
+        layout.setSpacing(4)
+        title_label = QLabel(title)
+        title_label.setStyleSheet("font-size: 11px; color: #a1a1aa; text-transform: uppercase;")
+        layout.addWidget(title_label)
+        layout.addWidget(value_label)
+        card.setLayout(layout)
+        return card
+
+    def _build_host_details_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout()
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(6)
+        layout.addWidget(self.hosting_mode_label)
+        layout.addWidget(self.hosting_warm_state_label)
+        layout.addWidget(self.hosting_warm_summary_label)
+        layout.addWidget(self.hosting_warm_details_label)
+        page.setLayout(layout)
+        return page
+
+    def _build_readiness_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout()
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(6)
+        layout.addWidget(self.execution_mode_label)
+        layout.addWidget(self.execution_summary_label)
+        layout.addWidget(self.ollama_status_label)
+        layout.addWidget(self.ollama_summary_label)
+        layout.addWidget(self.ollama_inventory_summary_label)
+        layout.addWidget(self.hosting_readiness_label)
+        layout.addWidget(self.hosting_preflight_summary_label)
+        layout.addWidget(self.hosting_preflight_reason_label)
+        layout.addWidget(self.hosting_inventory_label)
+        page.setLayout(layout)
+        return page
+
+    def _build_worker_details_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout()
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(6)
+        layout.addWidget(self.worker_registration_label)
+        layout.addWidget(self.worker_health_summary_label)
+        layout.addWidget(self.worker_activity_label)
+        layout.addWidget(self.worker_id_label)
+        layout.addWidget(self.worker_state_label)
+        layout.addWidget(self.worker_models_label)
+        layout.addWidget(self.worker_load_label)
+        layout.addWidget(self.worker_jobs_label)
+        layout.addWidget(self.worker_last_job_label)
+        layout.addWidget(self.worker_error_label)
+        page.setLayout(layout)
+        return page
 
     def _apply_window_sizing(self) -> None:
         screen = self.screen() or QApplication.primaryScreen()
@@ -525,6 +589,27 @@ class ModuloMainWindow(QMainWindow):
         self.smoke_activity_label.setVisible(smoke_busy)
         self.smoke_activity_bar.setVisible(smoke_busy)
 
+        host_state_badge = (
+            "HOSTING ACTIVE"
+            if state.hosting_enabled and state.worker_healthy
+            else "HOSTING NEEDS ATTENTION"
+            if state.hosting_enabled
+            else "HOSTING IDLE"
+        )
+        self.host_state_badge_label.setText(host_state_badge)
+        self.host_state_summary_label.setText(
+            f"{state.hosting_summary} {state.worker_health_summary}"
+        )
+        self.host_card_model_value.setText(
+            self.hosting_model_combo.currentText() or state.hosting_selected_model_id or "No model selected"
+        )
+        self.host_card_warm_value.setText(
+            f"{state.hosting_warm_state_badge}\n{state.hosting_warm_summary}"
+        )
+        self.host_card_runtime_value.setText(
+            f"{state.execution_mode_badge}\n{state.execution_summary}"
+        )
+
         self.openclaw_status_label.setText(
             f"Status: {state.openclaw_status_badge}"
         )
@@ -572,6 +657,10 @@ class ModuloMainWindow(QMainWindow):
             self.hosting_model_combo.blockSignals(True)
             self.hosting_model_combo.setCurrentIndex(selected_index)
             self.hosting_model_combo.blockSignals(False)
+
+        self.host_card_model_value.setText(
+            self.hosting_model_combo.currentText() or state.hosting_selected_model_id or "No model selected"
+        )
 
         self.hosting_mode_label.setText(f"Hosting mode: {state.hosting_mode_badge}")
         self.hosting_warm_state_label.setText(f"Model state: {state.hosting_warm_state_badge}")
