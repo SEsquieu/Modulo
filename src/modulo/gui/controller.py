@@ -46,6 +46,17 @@ class GuiShellState:
     buyer_cloud_models: tuple[str, ...] = ()
     buyer_credits_summary: str = ""
     buyer_config_summary: str = ""
+    use_status_badge: str = "SETUP"
+    use_summary: str = ""
+    use_selected_model_id: str = ""
+    use_available_model_ids: tuple[str, ...] = ()
+    use_available_model_labels: tuple[str, ...] = ()
+    use_selected_model_label: str = ""
+    use_selected_model_source: str = ""
+    use_route_target: str = ""
+    use_provider_label: str = ""
+    use_route_details: tuple[str, ...] = ()
+    use_local_model_lines: tuple[str, ...] = ()
     hosting_selected_model_id: str = ""
     hosting_available_model_ids: tuple[str, ...] = ()
     hosting_available_model_labels: tuple[str, ...] = ()
@@ -100,6 +111,7 @@ class GuiAppController:
     harness: LocalPrototypeHarness
     _last_smoke_test_prompt: str = "Constrained GUI smoke probe"
     _selected_model_id: str = ""
+    _selected_use_model_id: str = ""
 
     def __post_init__(self) -> None:
         if not self._selected_model_id:
@@ -123,6 +135,10 @@ class GuiAppController:
     def select_hosting_model(self, model_id: str) -> GuiShellState:
         self._selected_model_id = model_id
         self.harness.client.set_hosting_model(model_id)
+        return self.refresh()
+
+    def select_use_model(self, model_id: str) -> GuiShellState:
+        self._selected_use_model_id = model_id
         return self.refresh()
 
     def start_hosting(self) -> GuiShellState:
@@ -157,6 +173,18 @@ class GuiAppController:
     def _build_state(self, *, status: ClientStatus, onboarding: OnboardingStatus) -> GuiShellState:
         worker = status.worker
         smoke_test = status.smoke_test
+        use_available_model_ids, use_available_model_labels = self._use_model_options(status)
+        if not self._selected_use_model_id or self._selected_use_model_id not in use_available_model_ids:
+            self._selected_use_model_id = self._initial_use_model_id(
+                status=status,
+                available_model_ids=use_available_model_ids,
+            )
+        use_selected_model_label = self._use_selected_model_label(
+            self._selected_use_model_id,
+            use_available_model_ids,
+            use_available_model_labels,
+        )
+        use_selected_model_source = self._use_model_source_label(self._selected_use_model_id)
 
         return GuiShellState(
             connected_to_modulo=onboarding.connected_to_modulo,
@@ -194,6 +222,17 @@ class GuiAppController:
             buyer_cloud_models=self._buyer_model_lines(status, source="cloud"),
             buyer_credits_summary=status.platform.credits_summary,
             buyer_config_summary=status.platform.buyer_config_summary,
+            use_status_badge=self._use_status_badge(status),
+            use_summary=self._use_summary(status),
+            use_selected_model_id=self._selected_use_model_id,
+            use_available_model_ids=use_available_model_ids,
+            use_available_model_labels=use_available_model_labels,
+            use_selected_model_label=use_selected_model_label,
+            use_selected_model_source=use_selected_model_source,
+            use_route_target=self._use_route_target(status),
+            use_provider_label=self._use_provider_label(status),
+            use_route_details=self._use_route_details(status),
+            use_local_model_lines=self._use_local_model_lines(status),
             hosting_selected_model_id=status.hosting_setup.selected_model_id,
             hosting_available_model_ids=status.hosting_setup.available_model_ids,
             hosting_available_model_labels=status.hosting_setup.available_model_labels,
@@ -280,6 +319,22 @@ class GuiAppController:
         if smoke_test is None:
             return "Not run yet"
         return "Pass" if smoke_test.ok else "Fail"
+
+    @staticmethod
+    def _use_status_badge(status: ClientStatus) -> str:
+        if status.openclaw.configured:
+            return "Use: Ready"
+        if status.openclaw.installed:
+            return "Use: Review"
+        return "Use: Setup"
+
+    @staticmethod
+    def _use_summary(status: ClientStatus) -> str:
+        if status.openclaw.configured:
+            return "Choose a model and Modulo will route through the configured OpenClaw path."
+        if status.openclaw.installed:
+            return "Choose a model, then review the route before applying any OpenClaw changes."
+        return "Choose a model, then set up the OpenClaw route."
 
     @staticmethod
     def _home_subtitle(onboarding: OnboardingStatus) -> str:
@@ -422,6 +477,104 @@ class GuiAppController:
             + (f" - {model.summary}" if model.summary else "")
             for model in models
         )
+
+    @staticmethod
+    def _use_model_options(status: ClientStatus) -> tuple[tuple[str, ...], tuple[str, ...]]:
+        option_ids: list[str] = []
+        option_labels: list[str] = []
+        for model_id in status.hosting_setup.installed_model_ids:
+            option_ids.append(f"local:{model_id}")
+            option_labels.append(f"🖥 {model_id} (local)")
+        for model in status.platform.network_models:
+            option_ids.append(f"network:{model.model_id}")
+            option_labels.append(f"◎ {model.display_name} (network)")
+        for model in status.platform.cloud_models:
+            option_ids.append(f"cloud:{model.model_id}")
+            option_labels.append(f"☁ {model.display_name} (cloud)")
+        return tuple(option_ids), tuple(option_labels)
+
+    @staticmethod
+    def _initial_use_model_id(
+        *,
+        status: ClientStatus,
+        available_model_ids: tuple[str, ...],
+    ) -> str:
+        primary = status.openclaw.current_primary_model
+        provider = status.openclaw.current_provider
+        if primary:
+            if "/" in primary:
+                provider, model_id = primary.split("/", 1)
+            else:
+                model_id = primary
+            scoped = f"{provider}:{model_id}" if provider else model_id
+            if scoped in available_model_ids:
+                return scoped
+            local_scoped = f"local:{model_id}"
+            if local_scoped in available_model_ids:
+                return local_scoped
+        return available_model_ids[0] if available_model_ids else ""
+
+    @staticmethod
+    def _use_selected_model_label(
+        selected_use_model_id: str,
+        available_model_ids: tuple[str, ...],
+        available_model_labels: tuple[str, ...],
+    ) -> str:
+        if not selected_use_model_id:
+            return "No model selected"
+        try:
+            index = available_model_ids.index(selected_use_model_id)
+        except ValueError:
+            return selected_use_model_id
+        return available_model_labels[index]
+
+    @staticmethod
+    def _use_model_source_label(selected_use_model_id: str) -> str:
+        if selected_use_model_id.startswith("local:"):
+            return "Local"
+        if selected_use_model_id.startswith("network:"):
+            return "Network"
+        if selected_use_model_id.startswith("cloud:"):
+            return "Cloud"
+        return "Unknown"
+
+    @staticmethod
+    def _use_route_target(status: ClientStatus) -> str:
+        if status.openclaw.configured:
+            return "OpenClaw"
+        if status.openclaw.connection_plan.apply_ready:
+            return "OpenClaw (staged)"
+        return "Not configured"
+
+    @staticmethod
+    def _use_provider_label(status: ClientStatus) -> str:
+        return status.openclaw.current_provider or "Unknown"
+
+    @staticmethod
+    def _use_route_details(status: ClientStatus) -> tuple[str, ...]:
+        details = [
+            f"Route: {GuiAppController._use_route_target(status)}",
+            f"Provider: {status.openclaw.current_provider or 'Unknown'}",
+        ]
+        if status.openclaw.current_base_url:
+            details.append(f"Base URL: {status.openclaw.current_base_url}")
+        if status.openclaw.current_primary_model:
+            details.append(f"Active OpenClaw model: {status.openclaw.current_primary_model}")
+        if status.platform.account_summary:
+            details.append(f"Account: {status.platform.account_summary}")
+        if status.platform.credits_summary:
+            details.append(f"Credits: {status.platform.credits_summary}")
+        if status.platform.buyer_config_summary:
+            details.append(f"Config: {status.platform.buyer_config_summary}")
+        if status.openclaw.connection_plan.apply_ready:
+            details.append(f"Plan: {status.openclaw.connection_plan.summary}")
+        return tuple(line for line in details if line)
+
+    @staticmethod
+    def _use_local_model_lines(status: ClientStatus) -> tuple[str, ...]:
+        if not status.hosting_setup.installed_model_ids:
+            return ("No local models available yet.",)
+        return tuple(f"🖥 {model_id}" for model_id in status.hosting_setup.installed_model_ids)
 
     @staticmethod
     def _openclaw_status_badge(status: ClientStatus) -> str:

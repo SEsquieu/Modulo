@@ -63,6 +63,9 @@ class OpenClawConfigurationStatus:
     safety_note: str = (
         "Safe prototype mode: the OpenClaw action only updates Modulo's setup state."
     )
+    current_provider: str = ""
+    current_primary_model: str = ""
+    current_base_url: str = ""
     connection_plan: OpenClawConnectionPlan = OpenClawConnectionPlan()
     error: str = ""
 
@@ -424,6 +427,9 @@ class ModuloClientSupervisor:
                     else "Discovery mode: Modulo is reading local OpenClaw state but is not changing "
                     "local OpenClaw files in this slice."
                 ),
+                current_provider=discovery.current_provider,
+                current_primary_model=discovery.current_primary_model,
+                current_base_url=discovery.current_base_url,
                 connection_plan=connection_plan,
                 error=discovery.error,
             )

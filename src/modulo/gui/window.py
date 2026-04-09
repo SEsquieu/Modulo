@@ -137,6 +137,25 @@ class ModuloMainWindow(QMainWindow):
         self.buyer_cloud_models_box = QPlainTextEdit()
         self.buyer_cloud_models_box.setReadOnly(True)
         self.buyer_cloud_models_box.setMinimumHeight(90)
+        self.use_state_badge_label = QLabel()
+        self.use_state_badge_label.setStyleSheet("font-size: 18px; font-weight: 700;")
+        self.use_summary_label = QLabel()
+        self.use_summary_label.setWordWrap(True)
+        self.use_model_combo = QComboBox()
+        combo_font = QFont("Consolas", 11)
+        self.use_model_combo.setFont(combo_font)
+        self.use_model_combo.view().setFont(combo_font)
+        self.use_model_combo.currentIndexChanged.connect(self._apply_selected_use_model)
+        self.use_card_value = QLabel()
+        self.use_card_value.setWordWrap(True)
+        self.use_route_details_label = QLabel()
+        self.use_route_details_label.setWordWrap(True)
+        self.use_local_models_label = QLabel()
+        self.use_local_models_label.setWordWrap(True)
+        self.use_network_models_label = QLabel()
+        self.use_network_models_label.setWordWrap(True)
+        self.use_cloud_models_label = QLabel()
+        self.use_cloud_models_label.setWordWrap(True)
         self.openclaw_status_label = QLabel()
         self.openclaw_status_label.setStyleSheet("font-weight: 600;")
         self.openclaw_summary_label = QLabel()
@@ -238,24 +257,30 @@ class ModuloMainWindow(QMainWindow):
         host_box.setLayout(host_layout)
 
         use_box = QGroupBox("Use")
+        use_box.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Maximum,
+        )
         use_layout = QVBoxLayout()
-        use_layout.addWidget(self.openclaw_status_label)
-        use_layout.addWidget(self.openclaw_summary_label)
-        use_layout.addWidget(self.openclaw_guidance_label)
-        use_layout.addWidget(self.openclaw_plan_summary_label)
-        use_layout.addWidget(self.buyer_model_notice_label)
-        use_layout.addWidget(self.buyer_platform_summary_label)
-        use_layout.addWidget(self.buyer_account_summary_label)
-        use_layout.addWidget(self.buyer_credits_label)
-        use_layout.addWidget(self.buyer_config_label)
-        use_layout.addWidget(QLabel("Network models"))
-        use_layout.addWidget(self.buyer_network_models_box)
-        use_layout.addWidget(QLabel("Cloud models"))
-        use_layout.addWidget(self.buyer_cloud_models_box)
-        use_layout.addWidget(self.openclaw_details_box)
-        use_layout.addWidget(self.openclaw_plan_box)
-        use_layout.addWidget(self.connect_button)
-        use_layout.addWidget(self.apply_openclaw_button)
+        use_header_row = QHBoxLayout()
+        use_header_row.addWidget(self.use_state_badge_label, 1)
+        use_header_row.addWidget(self.connect_button, 0)
+        use_layout.addLayout(use_header_row)
+        use_model_row = QHBoxLayout()
+        use_model_row.addWidget(QLabel("Model"))
+        use_model_row.addWidget(self.use_model_combo, 1)
+        use_layout.addLayout(use_model_row)
+        use_layout.addWidget(self._build_host_card("Active Route", self.use_card_value))
+        self.use_detail_tabs = QTabWidget()
+        self.use_detail_tabs.addTab(self._build_use_route_page(), "Route")
+        self.use_detail_tabs.addTab(self._build_use_local_page(), "Local")
+        self.use_detail_tabs.addTab(self._build_use_network_page(), "Network")
+        self.use_detail_tabs.addTab(self._build_use_cloud_page(), "Cloud")
+        self.use_detail_tabs.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Maximum,
+        )
+        use_layout.addWidget(self.use_detail_tabs)
         use_box.setLayout(use_layout)
 
         diagnostics_box = QGroupBox("Diagnostics")
@@ -514,6 +539,54 @@ class ModuloMainWindow(QMainWindow):
         page.setLayout(layout)
         return page
 
+    def _build_use_route_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout()
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(6)
+        layout.addWidget(self.openclaw_status_label)
+        layout.addWidget(self.openclaw_summary_label)
+        layout.addWidget(self.use_route_details_label)
+        layout.addWidget(self.openclaw_guidance_label)
+        layout.addWidget(self.openclaw_plan_summary_label)
+        route_actions = QHBoxLayout()
+        route_actions.addWidget(self.apply_openclaw_button, 0)
+        route_actions.addStretch(1)
+        layout.addLayout(route_actions)
+        layout.addStretch(1)
+        page.setLayout(layout)
+        return page
+
+    def _build_use_local_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout()
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(6)
+        layout.addWidget(self.use_local_models_label)
+        layout.addStretch(1)
+        page.setLayout(layout)
+        return page
+
+    def _build_use_network_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout()
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(6)
+        layout.addWidget(self.use_network_models_label)
+        layout.addStretch(1)
+        page.setLayout(layout)
+        return page
+
+    def _build_use_cloud_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout()
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(6)
+        layout.addWidget(self.use_cloud_models_label)
+        layout.addStretch(1)
+        page.setLayout(layout)
+        return page
+
     def _apply_window_sizing(self) -> None:
         screen = self.screen() or QApplication.primaryScreen()
         if screen is None:
@@ -571,6 +644,13 @@ class ModuloMainWindow(QMainWindow):
                 action_kind="host_warm",
                 action=True,
             )
+
+    def _apply_selected_use_model(self) -> None:
+        model_id = self.use_model_combo.currentData()
+        if isinstance(model_id, str) and model_id:
+            if self._latest_state is not None and model_id == self._latest_state.use_selected_model_id:
+                return
+            self._apply_state(self.controller.select_use_model(model_id))
 
     def _start_hosting_async(self) -> None:
         self._run_async_state_action(
@@ -763,6 +843,7 @@ class ModuloMainWindow(QMainWindow):
         self.connect_button.setEnabled(state.connect_action_enabled and controls_enabled)
         self.apply_openclaw_button.setText(state.openclaw_plan_apply_label)
         self.apply_openclaw_button.setEnabled(state.openclaw_plan_apply_enabled and controls_enabled)
+        self.use_model_combo.setEnabled(bool(state.use_available_model_ids) and controls_enabled)
         self.hosting_model_combo.setEnabled(state.hosting_setup_action_enabled and controls_enabled)
         self.host_toggle_button.setText("Stop" if state.hosting_enabled else "Host")
         self._apply_host_toggle_style(hosting_enabled=state.hosting_enabled)
@@ -809,32 +890,51 @@ class ModuloMainWindow(QMainWindow):
             )
         )
 
+        self.use_state_badge_label.setText(state.use_status_badge)
+        combo_use_model_ids = tuple(
+            self.use_model_combo.itemData(index)
+            for index in range(self.use_model_combo.count())
+        )
+        if combo_use_model_ids != state.use_available_model_ids:
+            self.use_model_combo.blockSignals(True)
+            self.use_model_combo.clear()
+            for label, model_id in zip(
+                state.use_available_model_labels,
+                state.use_available_model_ids,
+                strict=False,
+            ):
+                self.use_model_combo.addItem(label, model_id)
+            self.use_model_combo.blockSignals(False)
+        selected_use_index = self.use_model_combo.findData(state.use_selected_model_id)
+        if selected_use_index >= 0 and selected_use_index != self.use_model_combo.currentIndex():
+            self.use_model_combo.blockSignals(True)
+            self.use_model_combo.setCurrentIndex(selected_use_index)
+            self.use_model_combo.blockSignals(False)
+        self.use_card_value.setText(
+            "\n".join(
+                (
+                    f"Model: {state.use_selected_model_label or 'No model selected'}",
+                    f"Source: {state.use_selected_model_source or 'Unknown'}",
+                    f"Route: {state.use_route_target or 'Unknown'}",
+                    f"Provider: {state.use_provider_label or 'Unknown'}",
+                )
+            )
+        )
+
         self.openclaw_status_label.setText(
-            f"Status: {state.openclaw_status_badge}"
+            f"OpenClaw: {state.openclaw_status_badge}"
         )
-        self.openclaw_summary_label.setText(state.openclaw_summary)
-        next_steps = "\n".join(f"- {step}" for step in state.openclaw_next_steps)
-        self.openclaw_guidance_label.setText(
-            f"{state.openclaw_guidance_badge}: {state.openclaw_guidance_summary}\n{next_steps}"
+        self.openclaw_summary_label.setText(state.use_summary)
+        self.use_route_details_label.setText("\n".join(state.use_route_details))
+        self.openclaw_guidance_label.setText(f"Next: {state.openclaw_guidance_summary}")
+        self.openclaw_plan_summary_label.setText(
+            f"Plan: {state.openclaw_plan_summary}"
+            if state.openclaw_plan_summary and state.openclaw_plan_apply_enabled
+            else ""
         )
-        self.openclaw_plan_summary_label.setText(state.openclaw_plan_summary)
-        self.buyer_model_notice_label.setText(
-            "Model selection is a separate step. OpenClaw routing only matters after a model "
-            "has been chosen, and that selector is not implemented in the client yet."
-        )
-        self.buyer_platform_summary_label.setText(state.buyer_platform_summary)
-        self.buyer_account_summary_label.setText(state.buyer_account_summary)
-        self.buyer_credits_label.setText(f"Credits: {state.buyer_credits_summary}")
-        self.buyer_config_label.setText(f"Use config: {state.buyer_config_summary}")
-        self.buyer_network_models_box.setPlainText("\n".join(state.buyer_network_models))
-        self.buyer_cloud_models_box.setPlainText("\n".join(state.buyer_cloud_models))
-        self.openclaw_details_box.setPlainText(
-            f"{state.openclaw_details}\n\n{state.openclaw_safety_note}"
-        )
-        plan_lines = "\n".join(f"- {line}" for line in state.openclaw_plan_changes)
-        self.openclaw_plan_box.setPlainText(
-            f"{state.openclaw_plan_details}\n\nPlanned changes:\n{plan_lines or '- None'}"
-        )
+        self.use_local_models_label.setText("\n".join(state.use_local_model_lines))
+        self.use_network_models_label.setText("\n".join(state.buyer_network_models))
+        self.use_cloud_models_label.setText("\n".join(state.buyer_cloud_models))
 
         combo_model_ids = tuple(
             self.hosting_model_combo.itemData(index)
