@@ -64,6 +64,9 @@ class ModuloMainWindow(QMainWindow):
         self.setWindowTitle("Modulo")
         self.resize(880, 720)
         self.setMinimumSize(720, 520)
+        app_font = QFont("Consolas", 11)
+        app_font.setStyleHint(QFont.StyleHint.Monospace)
+        self.setFont(app_font)
         self._apply_retro_theme()
 
         self.title_label = QLabel()
@@ -338,7 +341,6 @@ class ModuloMainWindow(QMainWindow):
                 background-color: #09110c;
                 color: #8df7a6;
                 font-family: "Consolas", "Courier New", monospace;
-                font-size: 13px;
             }
             QMainWindow {
                 background-color: #09110c;
@@ -411,7 +413,6 @@ class ModuloMainWindow(QMainWindow):
                 border: 2px solid #2bd66b;
                 border-radius: 0px;
                 padding: 6px 8px;
-                font-size: 13px;
                 selection-background-color: #b8ff65;
                 selection-color: #09110c;
             }
@@ -421,7 +422,6 @@ class ModuloMainWindow(QMainWindow):
                 border: 2px solid #2bd66b;
                 selection-background-color: #b8ff65;
                 selection-color: #09110c;
-                font-size: 13px;
             }
             QComboBox::drop-down {
                 border: none;
