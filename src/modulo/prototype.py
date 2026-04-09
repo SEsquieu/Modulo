@@ -203,6 +203,7 @@ class LocalPrototypeHarness:
             activity_provider=self,
             hosting_model_changed_hook=self._on_hosting_model_changed,
         )
+        self._sync_initial_hosting_model()
 
     def _select_executor(self) -> WorkerExecutor:
         if self.executor is not None:
@@ -242,6 +243,16 @@ class LocalPrototypeHarness:
         if self._explicit_executor_override:
             return
         self.client.worker_bridge.executor = self._executor_for_model(model_id)
+
+    def _sync_initial_hosting_model(self) -> None:
+        status = self.client.get_status()
+        available_model_ids = status.hosting_setup.available_model_ids
+        if not available_model_ids:
+            return
+        current_model_id = status.hosting_setup.selected_model_id
+        if current_model_id in available_model_ids:
+            return
+        self.client.set_hosting_model(available_model_ids[0])
 
     def boot(self) -> ClientStatus:
         return self.client.start_hosting()

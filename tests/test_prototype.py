@@ -54,6 +54,16 @@ class InstalledQwenDiscovery:
         )
 
 
+class InstalledLlamaDiscovery:
+    def discover(self) -> OllamaDiscoveryStatus:
+        return OllamaDiscoveryStatus(
+            available=True,
+            installed_model_ids=("llama3.1:8b",),
+            summary="Ollama is available with 1 local llama model.",
+            details="installed llama discovery",
+        )
+
+
 class FakeLoadedModelsDiscovery:
     def discover(self) -> OllamaLoadedModelsStatus:
         return OllamaLoadedModelsStatus(
@@ -150,6 +160,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
     def test_selects_real_executor_when_runtime_probe_is_ready(self) -> None:
         harness = LocalPrototypeHarness(
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_discovery=InstalledLlamaDiscovery(),
             ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
             hosting_runtime_probe=ReadyRuntimeProbe(),
             ollama_http_client=FakeOllamaHTTPClient(),
@@ -162,6 +173,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
     def test_default_real_executor_uses_extended_timeout_budget(self) -> None:
         harness = LocalPrototypeHarness(
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_discovery=InstalledLlamaDiscovery(),
             ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
             hosting_runtime_probe=ReadyRuntimeProbe(),
         )
@@ -175,6 +187,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
     def test_falls_back_to_stub_executor_when_runtime_probe_is_blocked(self) -> None:
         harness = LocalPrototypeHarness(
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_discovery=InstalledLlamaDiscovery(),
             ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
             hosting_runtime_probe=BlockedRuntimeProbe(),
         )
@@ -188,6 +201,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         harness = LocalPrototypeHarness(
             executor=executor,
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_discovery=InstalledLlamaDiscovery(),
             ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
             hosting_runtime_probe=ReadyRuntimeProbe(),
         )
@@ -198,6 +212,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
     def test_boot_starts_hosting_and_registers_worker(self) -> None:
         harness = LocalPrototypeHarness(
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_discovery=InstalledLlamaDiscovery(),
             ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
         )
 
@@ -212,6 +227,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
     def test_round_trip_completes_job_and_returns_response(self) -> None:
         harness = LocalPrototypeHarness(
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_discovery=InstalledLlamaDiscovery(),
             ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
         )
 
@@ -231,6 +247,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
     def test_real_round_trip_completes_through_supervised_path(self) -> None:
         harness = LocalPrototypeHarness(
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_discovery=InstalledLlamaDiscovery(),
             ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
             hosting_runtime_probe=ReadyRuntimeProbe(),
             ollama_http_client=FakeOllamaHTTPClient(),
@@ -253,6 +270,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         loaded_discovery = MutableLoadedModelsDiscovery()
         harness = LocalPrototypeHarness(
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_discovery=InstalledLlamaDiscovery(),
             ollama_loaded_models_discovery=loaded_discovery,
             hosting_runtime_probe=ReadyRuntimeProbe(),
             hosting_prewarmer=SuccessfulPrewarmer(loaded_discovery),
@@ -268,6 +286,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         loaded_discovery = MutableLoadedModelsDiscovery()
         harness = LocalPrototypeHarness(
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_discovery=InstalledLlamaDiscovery(),
             ollama_loaded_models_discovery=loaded_discovery,
             hosting_runtime_probe=ReadyRuntimeProbe(),
             hosting_prewarmer=FailedPrewarmer(),
@@ -297,9 +316,25 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertIsNotNone(completed_job)
         self.assertEqual("qwen3.5:4b", completed_job.request.model_id)
 
+    def test_initial_host_model_syncs_to_first_available_local_model(self) -> None:
+        harness = LocalPrototypeHarness(
+            model_id="llama3.1:8b",
+            openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_discovery=InstalledQwenDiscovery(),
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
+            hosting_runtime_probe=BlockedRuntimeProbe(),
+        )
+
+        status = harness.client.get_status()
+
+        self.assertEqual("qwen3.5:4b", harness.model_id)
+        self.assertEqual(("qwen3.5:4b",), harness.client.worker_bridge.config.enabled_models)
+        self.assertEqual("qwen3.5:4b", status.hosting_setup.selected_model_id)
+
     def test_client_smoke_test_reports_success_through_client_surface(self) -> None:
         harness = LocalPrototypeHarness(
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_discovery=InstalledLlamaDiscovery(),
             ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
         )
 
@@ -315,6 +350,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
 
     def test_session_bridge_fetches_platform_state_without_hosting(self) -> None:
         harness = LocalPrototypeHarness(
+            ollama_discovery=InstalledLlamaDiscovery(),
             ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
         )
 
@@ -330,6 +366,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
 
     def test_session_bridge_reflects_network_models_after_hosting_registers(self) -> None:
         harness = LocalPrototypeHarness(
+            ollama_discovery=InstalledLlamaDiscovery(),
             ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
         )
 
@@ -345,6 +382,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         harness = LocalPrototypeHarness(
             executor=FailingExecutor(),
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_discovery=InstalledLlamaDiscovery(),
             ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
         )
 
@@ -361,6 +399,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
     def test_real_execution_failure_surfaces_through_smoke_test_and_onboarding(self) -> None:
         harness = LocalPrototypeHarness(
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_discovery=InstalledLlamaDiscovery(),
             ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
             hosting_runtime_probe=ReadyRuntimeProbe(),
             ollama_http_client=FailingOllamaHTTPClient(),
@@ -381,6 +420,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
     def test_real_execution_timeout_surfaces_as_clean_smoke_test_failure(self) -> None:
         harness = LocalPrototypeHarness(
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_discovery=InstalledLlamaDiscovery(),
             ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
             hosting_runtime_probe=ReadyRuntimeProbe(),
             ollama_http_client=TimeoutOllamaHTTPClient(),
@@ -400,6 +440,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
     def test_activity_visibility_tracks_recent_jobs_and_continuity(self) -> None:
         harness = LocalPrototypeHarness(
             openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_discovery=InstalledLlamaDiscovery(),
             ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
         )
 
