@@ -171,11 +171,8 @@ class ModuloMainWindow(QMainWindow):
         self.apply_openclaw_button = QPushButton("Apply staged plan")
         self.apply_openclaw_button.clicked.connect(self._apply_openclaw_plan)
 
-        self.start_button = QPushButton("Start Hosting")
-        self.start_button.clicked.connect(self._start_hosting_async)
-
-        self.stop_button = QPushButton("Stop Hosting")
-        self.stop_button.clicked.connect(self._stop_hosting_async)
+        self.host_toggle_button = QPushButton("Enable Hosting")
+        self.host_toggle_button.clicked.connect(self._toggle_hosting_async)
 
         self.restart_button = QPushButton("Restart Hosting")
         self.restart_button.clicked.connect(self._restart_hosting_async)
@@ -189,47 +186,42 @@ class ModuloMainWindow(QMainWindow):
         overview_layout.addWidget(self.subtitle_label)
         overview_box.setLayout(overview_layout)
 
-        host_setup_box = QGroupBox("Hosting Setup")
-        host_setup_layout = QVBoxLayout()
+        host_box = QGroupBox("Hosting")
+        host_layout = QVBoxLayout()
         hosting_setup_prompt_row = QHBoxLayout()
         hosting_setup_prompt_row.addWidget(QLabel("Hosting model"))
         hosting_setup_prompt_row.addWidget(self.hosting_model_combo)
-        host_setup_layout.addLayout(hosting_setup_prompt_row)
-        host_setup_layout.addWidget(self.hosting_mode_label)
-        host_setup_layout.addWidget(self.hosting_warm_state_label)
-        host_setup_layout.addWidget(self.hosting_warm_summary_label)
-        host_setup_layout.addWidget(self.hosting_warm_details_label)
-        host_setup_layout.addWidget(self.execution_mode_label)
-        host_setup_layout.addWidget(self.execution_summary_label)
-        host_setup_layout.addWidget(self.ollama_status_label)
-        host_setup_layout.addWidget(self.ollama_summary_label)
-        host_setup_layout.addWidget(self.ollama_inventory_summary_label)
-        host_setup_layout.addWidget(self.hosting_readiness_label)
-        host_setup_layout.addWidget(self.hosting_preflight_summary_label)
-        host_setup_layout.addWidget(self.hosting_preflight_reason_label)
-        host_setup_layout.addWidget(self.hosting_inventory_label)
-        host_setup_box.setLayout(host_setup_layout)
-
-        worker_box = QGroupBox("Hosting")
-        worker_layout = QVBoxLayout()
+        host_layout.addLayout(hosting_setup_prompt_row)
         hosting_controls_row = QHBoxLayout()
-        hosting_controls_row.addWidget(self.start_button)
-        hosting_controls_row.addWidget(self.stop_button)
+        hosting_controls_row.addWidget(self.host_toggle_button)
         hosting_controls_row.addWidget(self.restart_button)
-        worker_layout.addLayout(hosting_controls_row)
-        worker_layout.addWidget(self.host_activity_label)
-        worker_layout.addWidget(self.host_activity_bar)
-        worker_layout.addWidget(self.worker_registration_label)
-        worker_layout.addWidget(self.worker_health_summary_label)
-        worker_layout.addWidget(self.worker_activity_label)
-        worker_layout.addWidget(self.worker_id_label)
-        worker_layout.addWidget(self.worker_state_label)
-        worker_layout.addWidget(self.worker_models_label)
-        worker_layout.addWidget(self.worker_load_label)
-        worker_layout.addWidget(self.worker_jobs_label)
-        worker_layout.addWidget(self.worker_last_job_label)
-        worker_layout.addWidget(self.worker_error_label)
-        worker_box.setLayout(worker_layout)
+        host_layout.addLayout(hosting_controls_row)
+        host_layout.addWidget(self.host_activity_label)
+        host_layout.addWidget(self.host_activity_bar)
+        host_layout.addWidget(self.hosting_mode_label)
+        host_layout.addWidget(self.hosting_warm_state_label)
+        host_layout.addWidget(self.hosting_warm_summary_label)
+        host_layout.addWidget(self.hosting_warm_details_label)
+        host_layout.addWidget(self.execution_mode_label)
+        host_layout.addWidget(self.execution_summary_label)
+        host_layout.addWidget(self.ollama_status_label)
+        host_layout.addWidget(self.ollama_summary_label)
+        host_layout.addWidget(self.ollama_inventory_summary_label)
+        host_layout.addWidget(self.hosting_readiness_label)
+        host_layout.addWidget(self.hosting_preflight_summary_label)
+        host_layout.addWidget(self.hosting_preflight_reason_label)
+        host_layout.addWidget(self.hosting_inventory_label)
+        host_layout.addWidget(self.worker_registration_label)
+        host_layout.addWidget(self.worker_health_summary_label)
+        host_layout.addWidget(self.worker_activity_label)
+        host_layout.addWidget(self.worker_id_label)
+        host_layout.addWidget(self.worker_state_label)
+        host_layout.addWidget(self.worker_models_label)
+        host_layout.addWidget(self.worker_load_label)
+        host_layout.addWidget(self.worker_jobs_label)
+        host_layout.addWidget(self.worker_last_job_label)
+        host_layout.addWidget(self.worker_error_label)
+        host_box.setLayout(host_layout)
 
         buyer_box = QGroupBox("Buyer Routing")
         buyer_layout = QVBoxLayout()
@@ -270,8 +262,7 @@ class ModuloMainWindow(QMainWindow):
         host_tab_layout = QVBoxLayout()
         host_tab_layout.setContentsMargins(0, 0, 0, 0)
         host_tab_layout.setSpacing(12)
-        host_tab_layout.addWidget(host_setup_box)
-        host_tab_layout.addWidget(worker_box)
+        host_tab_layout.addWidget(host_box)
         host_tab.setLayout(host_tab_layout)
 
         buyer_tab = QWidget()
@@ -394,6 +385,13 @@ class ModuloMainWindow(QMainWindow):
             action=True,
         )
 
+    def _toggle_hosting_async(self) -> None:
+        latest = self._latest_state or self.controller.refresh()
+        if latest.hosting_enabled:
+            self._stop_hosting_async()
+            return
+        self._start_hosting_async()
+
     def _stop_hosting_async(self) -> None:
         self._run_async_state_action(
             self.controller.stop_hosting,
@@ -506,8 +504,12 @@ class ModuloMainWindow(QMainWindow):
         self.apply_openclaw_button.setText(state.openclaw_plan_apply_label)
         self.apply_openclaw_button.setEnabled(state.openclaw_plan_apply_enabled and controls_enabled)
         self.hosting_model_combo.setEnabled(state.hosting_setup_action_enabled and controls_enabled)
-        self.start_button.setEnabled(state.start_action_enabled and controls_enabled)
-        self.stop_button.setEnabled(state.stop_action_enabled and controls_enabled)
+        self.host_toggle_button.setText(
+            "Disable Hosting" if state.hosting_enabled else "Enable Hosting"
+        )
+        self.host_toggle_button.setEnabled(
+            (state.start_action_enabled or state.stop_action_enabled) and controls_enabled
+        )
         self.restart_button.setEnabled(state.restart_action_enabled and controls_enabled)
         self.smoke_button.setEnabled(state.smoke_action_enabled and controls_enabled)
         host_busy = self._action_in_flight and self._active_action_kind == "host_warm"
