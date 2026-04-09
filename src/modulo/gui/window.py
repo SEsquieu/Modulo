@@ -649,10 +649,6 @@ class ModuloMainWindow(QMainWindow):
             self.hosting_model_combo.setCurrentIndex(selected_index)
             self.hosting_model_combo.blockSignals(False)
 
-        self.host_card_model_value.setText(
-            self.hosting_model_combo.currentText() or state.hosting_selected_model_id or "No model selected"
-        )
-
         self.hosting_mode_label.setText(f"Hosting mode: {state.hosting_mode_badge}")
         self.hosting_warm_state_label.setText(f"Model state: {state.hosting_warm_state_badge}")
         self.hosting_warm_summary_label.setText(state.hosting_warm_summary)
