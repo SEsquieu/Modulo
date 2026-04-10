@@ -290,6 +290,7 @@ class LocalPrototypeHarness:
     _worker_loop_interval_seconds: float = field(init=False, default=0.02)
     platform_bind_port: int = field(init=False, default=0)
     lan_platform_url: str = field(init=False, default="")
+    active_platform_target_url: str = field(init=False, default="")
 
     def __post_init__(self) -> None:
         self.service = InMemoryModuloService(router=TrustRouter())
@@ -352,6 +353,7 @@ class LocalPrototypeHarness:
             activity_provider=self,
             hosting_model_changed_hook=self._on_hosting_model_changed,
         )
+        self.set_platform_target_url(self.lan_platform_url or self.modulo_url)
         self._sync_initial_hosting_model()
 
     def _select_executor(self) -> WorkerExecutor:
@@ -434,6 +436,7 @@ class LocalPrototypeHarness:
 
         effective_buyer_id = buyer_id or self.buyer_id
         current_model_id = self._current_model_id()
+        target_url = self._request_target_url()
         body = {
             "model": current_model_id,
             "buyer_id": effective_buyer_id,
@@ -447,7 +450,7 @@ class LocalPrototypeHarness:
         body["messages"].append({"role": "user", "content": user_message})
 
         req = request.Request(
-            f"{self.modulo_url.rstrip('/')}/api/chat",
+            f"{target_url.rstrip('/')}/api/chat",
             data=json.dumps(body).encode("utf-8"),
             headers={"Content-Type": "application/json"},
             method="POST",
@@ -485,6 +488,31 @@ class LocalPrototypeHarness:
             execution_summary=self.selected_executor_summary,
             client_status=status,
         )
+
+    def set_platform_target_url(self, url: str) -> None:
+        normalized_target = url.strip().rstrip("/")
+        if not normalized_target:
+            normalized_target = self.modulo_url.rstrip("/")
+        self.active_platform_target_url = normalized_target
+
+        session_bridge = self.client.session_bridge
+        if session_bridge is not None and hasattr(session_bridge, "set_target_url"):
+            session_bridge.set_target_url(normalized_target)
+
+        worker_target_url = self._worker_target_url_for(normalized_target)
+        current_config = self.client.worker_bridge.config
+        if current_config.modulo_url.rstrip("/") == worker_target_url:
+            return
+        next_config = WorkerBridgeConfig(
+            modulo_url=worker_target_url,
+            worker_id=current_config.worker_id,
+            enabled_models=current_config.enabled_models,
+            max_concurrency=current_config.max_concurrency,
+            kind=current_config.kind,
+            serving_scope=current_config.serving_scope,
+            private_network_id=current_config.private_network_id,
+        )
+        self.client.configure_worker(next_config)
 
     def run_smoke_test(
         self,
@@ -656,6 +684,17 @@ class LocalPrototypeHarness:
             execution_mode="network",
             execution_summary=f"Target: {target_url} | Private network: {network_id}",
         )
+
+    def _request_target_url(self) -> str:
+        return self.active_platform_target_url or self.modulo_url
+
+    def _worker_target_url_for(self, target_url: str) -> str:
+        local_targets = {self.modulo_url.rstrip("/")}
+        if self.lan_platform_url:
+            local_targets.add(self.lan_platform_url.rstrip("/"))
+        if target_url in local_targets:
+            return self.modulo_url.rstrip("/")
+        return target_url
 
     def _settle_worker_status_after_round_trip(self) -> ClientStatus:
         deadline = time.monotonic() + 1.0

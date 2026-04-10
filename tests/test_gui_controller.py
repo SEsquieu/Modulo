@@ -432,6 +432,36 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertEqual("https://modulo.grinningfrog.com", state.debug_target_url)
         self.assertIn("modulo.grinningfrog.com", state.debug_summary)
 
+    def test_start_hosting_registers_worker_to_applied_remote_platform_target(self) -> None:
+        remote_platform = LocalPrototypeHarness(
+            openclaw_discovery=FakeGuiOpenClawDiscovery(),
+            ollama_discovery=FakeGuiOllamaDiscovery(),
+            ollama_loaded_models_discovery=FakeGuiLoadedModelsDiscovery(),
+            hosting_runtime_probe=FakeGuiHostingRuntimeProbe(),
+        )
+        controller = GuiAppController(
+            harness=LocalPrototypeHarness(
+                model_id="qwen3.5:4b",
+                openclaw_discovery=FakeGuiOpenClawDiscovery(),
+                ollama_discovery=FakeGuiOllamaDiscovery(),
+                ollama_loaded_models_discovery=FakeGuiLoadedModelsDiscovery(),
+                hosting_runtime_probe=FakeGuiHostingRuntimeProbe(),
+            )
+        )
+
+        try:
+            controller.set_debug_target_url(remote_platform.modulo_url)
+            controller.start_hosting()
+
+            remote_status = remote_platform.client.get_status()
+
+            self.assertTrue(
+                any(model.model_id == "qwen3.5:4b" for model in remote_status.platform.network_models)
+            )
+        finally:
+            controller.harness.shutdown()
+            remote_platform.shutdown()
+
     def test_debug_target_updates_use_visibility_from_remote_platform(self) -> None:
         host_harness = LocalPrototypeHarness(
             model_id="gemma4:e2b",

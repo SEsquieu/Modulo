@@ -192,7 +192,7 @@ class GuiAppController:
 
     def set_debug_target_url(self, url: str) -> GuiShellState:
         self._debug_target_url = url.strip()
-        self._sync_debug_target_into_session_bridge()
+        self.harness.set_platform_target_url(self._debug_target_url or self.harness.modulo_url)
         return self.refresh()
 
     def set_debug_private_network_id(self, private_network_id: str) -> GuiShellState:
@@ -830,10 +830,7 @@ class GuiAppController:
         return "\n".join(lines)
 
     def _sync_debug_target_into_session_bridge(self) -> None:
-        session_bridge = self.harness.client.session_bridge
-        if session_bridge is None or not hasattr(session_bridge, "set_target_url"):
-            return
-        session_bridge.set_target_url(self._debug_target_url or self.harness.modulo_url)
+        self.harness.set_platform_target_url(self._debug_target_url or self.harness.modulo_url)
 
     @staticmethod
     def _hosting_preflight_checks(status: ClientStatus) -> tuple[str, ...]:
