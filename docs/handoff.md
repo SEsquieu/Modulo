@@ -47,7 +47,7 @@ This file is the quickest way to regain context when switching workstations.
 - the single-machine private proof now captures a truthful private-scope route trace through the same path used by smoke-test and diagnostics surfaces
 - the repo now includes explicit cross-machine entrypoints for a primary control-plane server and a remote worker bridge runner
 - a localhost test now proves the same control-plane server plus remote-worker shape that will be used for the real network validation
-- the GUI now includes a `Debug` tab that surfaces the current platform URL and ready-to-run private-network worker/request commands
+- the GUI now includes a `Debug` tab that surfaces the current platform URL, ready-to-run private-network worker/request commands, and an interactive network probe target
 - the GUI shell has been tightened into a consistent pattern:
   - top-level tabs: `Use / Host / Diagnostics / Debug`
   - compact header + primary action + summary card + nested detail tabs

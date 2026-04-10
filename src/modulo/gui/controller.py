@@ -107,12 +107,17 @@ class GuiShellState:
     debug_status_badge: str = "DEBUG"
     debug_summary: str = ""
     debug_platform_url: str = ""
+    debug_target_url: str = ""
+    debug_lan_platform_url: str = ""
     debug_private_network_id: str = ""
     debug_worker_id: str = ""
     debug_model_id: str = ""
     debug_topology_lines: tuple[str, ...] = ()
     debug_worker_command: str = ""
     debug_request_command: str = ""
+    debug_probe_result_label: str = "Not run yet"
+    debug_probe_summary: str = "No debug network probe has run yet."
+    debug_probe_details: str = ""
 
 
 @dataclass
@@ -121,11 +126,20 @@ class GuiAppController:
     _last_smoke_test_prompt: str = "Constrained GUI smoke probe"
     _selected_model_id: str = ""
     _selected_use_model_id: str = ""
+    _debug_target_url: str = ""
+    _debug_private_network_id: str = ""
+    _last_debug_probe: SmokeTestResult | None = None
 
     def __post_init__(self) -> None:
         if not self._selected_model_id:
             enabled_models = self.harness.client.worker_bridge.config.enabled_models
             self._selected_model_id = enabled_models[0] if enabled_models else ""
+        if not self._debug_target_url:
+            self._debug_target_url = self.harness.lan_platform_url or self.harness.modulo_url
+        if not self._debug_private_network_id:
+            self._debug_private_network_id = (
+                self.harness.client.worker_bridge.config.private_network_id or ""
+            )
 
     def refresh(self) -> GuiShellState:
         return self._build_state(
@@ -172,6 +186,22 @@ class GuiAppController:
         self.harness.client.run_smoke_test(
             GUI_SMOKE_TEST_USER_PROMPT,
             system_message=GUI_SMOKE_TEST_SYSTEM_PROMPT,
+        )
+        return self.refresh()
+
+    def set_debug_target_url(self, url: str) -> GuiShellState:
+        self._debug_target_url = url.strip()
+        return self.refresh()
+
+    def set_debug_private_network_id(self, private_network_id: str) -> GuiShellState:
+        self._debug_private_network_id = private_network_id.strip()
+        return self.refresh()
+
+    def run_debug_probe(self) -> GuiShellState:
+        self._last_debug_probe = self.harness.run_debug_platform_probe(
+            platform_url=self._debug_target_url or self.harness.modulo_url,
+            private_network_id=self._debug_private_network_id,
+            model_id=self._debug_model_id(self.harness.client.get_status()),
         )
         return self.refresh()
 
@@ -296,12 +326,17 @@ class GuiAppController:
             debug_status_badge=self._debug_status_badge(status),
             debug_summary=self._debug_summary(status),
             debug_platform_url=self.harness.modulo_url,
-            debug_private_network_id=self.harness.client.worker_bridge.config.private_network_id,
+            debug_target_url=self._debug_target_url or self.harness.modulo_url,
+            debug_lan_platform_url=self.harness.lan_platform_url,
+            debug_private_network_id=self._debug_private_network_id,
             debug_worker_id=self.harness.client.worker_bridge.config.worker_id,
             debug_model_id=self._debug_model_id(status),
             debug_topology_lines=self._debug_topology_lines(status),
             debug_worker_command=self._debug_worker_command(status),
             debug_request_command=self._debug_request_command(status),
+            debug_probe_result_label=self._debug_probe_result_label(),
+            debug_probe_summary=self._debug_probe_summary(),
+            debug_probe_details=self._debug_probe_details(),
         )
 
     @staticmethod
@@ -682,7 +717,7 @@ class GuiAppController:
 
     def _debug_summary(self, status: ClientStatus) -> str:
         model_id = self._debug_model_id(status)
-        network_id = self.harness.client.worker_bridge.config.private_network_id or "unset"
+        network_id = self._debug_private_network_id or "unset"
         if status.worker and status.worker.registered_with_cloud:
             return (
                 f"Current prototype control plane is reachable at {self.harness.modulo_url} "
@@ -707,21 +742,28 @@ class GuiAppController:
 
     def _debug_topology_lines(self, status: ClientStatus) -> tuple[str, ...]:
         worker = status.worker
-        return (
-            f"Platform URL: {self.harness.modulo_url}",
+        lines = [
+            f"Local control plane: {self.harness.modulo_url}",
+        ]
+        if self.harness.lan_platform_url:
+            lines.append(f"LAN control plane: {self.harness.lan_platform_url}")
+        lines.extend(
+            (
             f"Worker ID: {self.harness.client.worker_bridge.config.worker_id}",
-            f"Private network: {self.harness.client.worker_bridge.config.private_network_id or 'unset'}",
+            f"Private network: {self._debug_private_network_id or 'unset'}",
             f"Advertised model: {self._debug_model_id(status) or 'unset'}",
             f"Worker registered: {'yes' if worker and worker.registered_with_cloud else 'no'}",
             f"Worker state: {worker.runtime_state.value if worker else 'stopped'}",
+            )
         )
+        return tuple(lines)
 
     def _debug_worker_command(self, status: ClientStatus) -> str:
         model_id = self._debug_model_id(status) or "MODEL_ID"
-        network_id = self.harness.client.worker_bridge.config.private_network_id or "PRIVATE_NETWORK_ID"
+        network_id = self._debug_private_network_id or "PRIVATE_NETWORK_ID"
         return (
             "python -m modulo.worker.bridge_runner "
-            f"--modulo-url {self.harness.modulo_url} "
+            f"--modulo-url {self._debug_target_url or self.harness.modulo_url} "
             "--worker-id worker-laptop "
             f"--model {model_id} "
             "--scope private "
@@ -730,7 +772,8 @@ class GuiAppController:
 
     def _debug_request_command(self, status: ClientStatus) -> str:
         model_id = self._debug_model_id(status) or "MODEL_ID"
-        network_id = self.harness.client.worker_bridge.config.private_network_id or "PRIVATE_NETWORK_ID"
+        network_id = self._debug_private_network_id or "PRIVATE_NETWORK_ID"
+        target_url = self._debug_target_url or self.harness.modulo_url
         return (
             "$body = @{\n"
             f"  model = \"{model_id}\"\n"
@@ -742,9 +785,41 @@ class GuiAppController:
             "  )\n"
             "  stream = $false\n"
             "} | ConvertTo-Json -Depth 5\n\n"
-            f"Invoke-RestMethod -Method Post -Uri \"{self.harness.modulo_url}/api/chat\" "
+            f"Invoke-RestMethod -Method Post -Uri \"{target_url}/api/chat\" "
             "-ContentType \"application/json\" -Body $body"
         )
+
+    def _debug_probe_result_label(self) -> str:
+        if self._last_debug_probe is None:
+            return "Not run yet"
+        return "Pass" if self._last_debug_probe.ok else "Fail"
+
+    def _debug_probe_summary(self) -> str:
+        if self._last_debug_probe is None:
+            return "No debug network probe has run yet."
+        if self._last_debug_probe.ok:
+            return (
+                f"Debug probe reached {self._debug_target_url or self.harness.modulo_url} "
+                f"and returned {self._last_debug_probe.model_id} successfully."
+            )
+        return (
+            f"Debug probe failed against {self._debug_target_url or self.harness.modulo_url}: "
+            f"{self._last_debug_probe.error or 'unknown error'}"
+        )
+
+    def _debug_probe_details(self) -> str:
+        if self._last_debug_probe is None:
+            return ""
+        lines = []
+        if self._last_debug_probe.execution_mode:
+            lines.append(f"Execution mode: {self._last_debug_probe.execution_mode.upper()}")
+        if self._last_debug_probe.execution_summary:
+            lines.append(f"Execution summary: {self._last_debug_probe.execution_summary}")
+        if self._last_debug_probe.ok:
+            lines.append(f"Response: {self._last_debug_probe.response_text}")
+        else:
+            lines.append(f"Error: {self._last_debug_probe.error}")
+        return "\n".join(lines)
 
     @staticmethod
     def _hosting_preflight_checks(status: ClientStatus) -> tuple[str, ...]:

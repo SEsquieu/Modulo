@@ -104,6 +104,7 @@ The GUI currently includes:
 
 - a `Use / Host / Diagnostics` shell with consistent nested-tab navigation
 - a `Debug` tab with current platform URL plus ready-to-run worker and request commands for private-network validation
+- an interactive `Debug` probe surface that can target another workstation's platform URL and run a real `/api/chat` network test
 - a `Use` tab with active route summary, OpenClaw route truth, and local/network/cloud source visibility
 - a `Host` tab with local-only model selection, warm-state card, host toggle, and worker/runtime detail tabs
 - a `Diagnostics` tab with smoke-test summary, activity, and error views

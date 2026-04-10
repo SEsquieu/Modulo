@@ -14,6 +14,7 @@ try:
         QGroupBox,
         QHBoxLayout,
         QLabel,
+        QLineEdit,
         QMainWindow,
         QProgressBar,
         QPushButton,
@@ -145,6 +146,10 @@ class ModuloMainWindow(QMainWindow):
         self.debug_summary_label.setWordWrap(True)
         self.debug_platform_value = QLabel()
         self.debug_platform_value.setWordWrap(True)
+        self.debug_target_url_input = QLineEdit()
+        self.debug_private_network_input = QLineEdit()
+        self.debug_probe_button = QPushButton("Run Debug Probe")
+        self.debug_probe_button.clicked.connect(self._run_debug_probe)
         self.debug_topology_box = QPlainTextEdit()
         self.debug_topology_box.setReadOnly(True)
         self.debug_topology_box.setMinimumHeight(110)
@@ -155,6 +160,12 @@ class ModuloMainWindow(QMainWindow):
         self.debug_request_command_box = QPlainTextEdit()
         self.debug_request_command_box.setReadOnly(True)
         self.debug_request_command_box.setMinimumHeight(170)
+        self.debug_probe_summary_label = QLabel()
+        self.debug_probe_summary_label.setWordWrap(True)
+        self.debug_probe_result_label = QLabel()
+        self.debug_probe_details_box = QPlainTextEdit()
+        self.debug_probe_details_box.setReadOnly(True)
+        self.debug_probe_details_box.setMinimumHeight(100)
         self.diagnostics_state_badge_label = QLabel()
         self.diagnostics_state_badge_label.setStyleSheet("font-size: 18px; font-weight: 700;")
         self.diagnostics_card_value = QLabel()
@@ -713,12 +724,25 @@ class ModuloMainWindow(QMainWindow):
     def _build_debug_page(self) -> QWidget:
         page = QWidget()
         layout = QVBoxLayout()
+        target_row = QHBoxLayout()
+        target_row.addWidget(self._build_section_label("Target URL"))
+        target_row.addWidget(self.debug_target_url_input, 1)
+        layout.addLayout(target_row)
+        network_row = QHBoxLayout()
+        network_row.addWidget(self._build_section_label("Private Network"))
+        network_row.addWidget(self.debug_private_network_input, 1)
+        network_row.addWidget(self.debug_probe_button, 0)
+        layout.addLayout(network_row)
         layout.addWidget(self._build_section_label("Current Topology"))
         layout.addWidget(self.debug_topology_box)
         layout.addWidget(self._build_section_label("Remote Worker Command"))
         layout.addWidget(self.debug_worker_command_box)
         layout.addWidget(self._build_section_label("Request Command"))
         layout.addWidget(self.debug_request_command_box)
+        layout.addWidget(self._build_section_label("Probe Result"))
+        layout.addWidget(self.debug_probe_result_label)
+        layout.addWidget(self.debug_probe_summary_label)
+        layout.addWidget(self.debug_probe_details_box)
         layout.addStretch(1)
         page.setLayout(layout)
         return page
@@ -768,6 +792,18 @@ class ModuloMainWindow(QMainWindow):
             self.controller.run_smoke_test,
             busy_message="Running constrained smoke probe...",
             action_kind="smoke_test",
+            action=True,
+        )
+
+    def _run_debug_probe(self) -> None:
+        target_url = self.debug_target_url_input.text().strip()
+        private_network_id = self.debug_private_network_input.text().strip()
+        self.controller.set_debug_target_url(target_url)
+        self.controller.set_debug_private_network_id(private_network_id)
+        self._run_async_state_action(
+            self.controller.run_debug_probe,
+            busy_message="Running debug network probe...",
+            action_kind="debug_probe",
             action=True,
         )
 
@@ -1029,6 +1065,7 @@ class ModuloMainWindow(QMainWindow):
         )
         self.restart_button.setEnabled(state.restart_action_enabled and controls_enabled)
         self.smoke_button.setEnabled(state.smoke_action_enabled and controls_enabled)
+        self.debug_probe_button.setEnabled(controls_enabled)
         host_busy = self._action_in_flight and self._active_action_kind == "host_warm"
         smoke_busy = self._action_in_flight and self._active_action_kind == "smoke_test"
         self.host_activity_label.setText(
@@ -1236,9 +1273,16 @@ class ModuloMainWindow(QMainWindow):
                 )
             )
         )
+        if not self.debug_target_url_input.hasFocus():
+            self.debug_target_url_input.setText(state.debug_target_url)
+        if not self.debug_private_network_input.hasFocus():
+            self.debug_private_network_input.setText(state.debug_private_network_id)
         self.debug_topology_box.setPlainText("\n".join(state.debug_topology_lines))
         self.debug_worker_command_box.setPlainText(state.debug_worker_command)
         self.debug_request_command_box.setPlainText(state.debug_request_command)
+        self.debug_probe_result_label.setText(f"Result: {state.debug_probe_result_label}")
+        self.debug_probe_summary_label.setText(state.debug_probe_summary)
+        self.debug_probe_details_box.setPlainText(state.debug_probe_details)
 
     @staticmethod
     def _footer_status_html(value: str, *, ok: bool) -> str:

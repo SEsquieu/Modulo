@@ -398,6 +398,7 @@ class GuiAppControllerTests(unittest.TestCase):
         state = self.controller.refresh()
 
         self.assertIn("http://127.0.0.1:", state.debug_platform_url)
+        self.assertTrue(state.debug_target_url)
         self.assertEqual("prototype-private", state.debug_private_network_id)
         self.assertTrue(state.debug_worker_id)
         self.assertTrue(state.debug_model_id)
@@ -406,6 +407,14 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertIn("--scope private", state.debug_worker_command)
         self.assertIn("Invoke-RestMethod", state.debug_request_command)
         self.assertIn("/api/chat", state.debug_request_command)
+
+    def test_debug_probe_can_hit_current_platform_target(self) -> None:
+        state = self.controller.run_debug_probe()
+
+        self.assertEqual("Pass", state.debug_probe_result_label)
+        self.assertIn("returned", state.debug_probe_summary)
+        self.assertIn("Execution mode: NETWORK", state.debug_probe_details)
+        self.assertIn("Response:", state.debug_probe_details)
 
 
 if __name__ == "__main__":

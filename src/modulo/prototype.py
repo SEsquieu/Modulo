@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import socket
 import threading
 import time
 from dataclasses import dataclass, field
@@ -182,6 +183,8 @@ class LocalPrototypeHarness:
     worker_loop_thread: threading.Thread | None = field(init=False, default=None)
     _worker_loop_stop: threading.Event = field(init=False, default_factory=threading.Event)
     _worker_loop_interval_seconds: float = field(init=False, default=0.02)
+    platform_bind_port: int = field(init=False, default=0)
+    lan_platform_url: str = field(init=False, default="")
 
     def __post_init__(self) -> None:
         self.service = InMemoryModuloService(router=TrustRouter())
@@ -199,15 +202,19 @@ class LocalPrototypeHarness:
             executor.register_worker(self.worker_id, self.stub_response_text)
 
         server = build_http_server(
-            "127.0.0.1",
+            "0.0.0.0",
             0,
             service=self.service,
             runtime=self.cloud_runtime,
             app=self.app,
         )
         self.server = server
-        host, port = server.server_address
-        self.modulo_url = f"http://{host}:{port}"
+        _, port = server.server_address
+        self.platform_bind_port = port
+        self.modulo_url = f"http://127.0.0.1:{port}"
+        lan_ip = self._discover_lan_ip()
+        if lan_ip:
+            self.lan_platform_url = f"http://{lan_ip}:{port}"
         self.server_thread = threading.Thread(target=server.serve_forever, daemon=True)
         self.server_thread.start()
 
@@ -472,6 +479,88 @@ class LocalPrototypeHarness:
             ):
                 self.client.run_hosting_cycle()
             time.sleep(self._worker_loop_interval_seconds)
+
+    def run_debug_platform_probe(
+        self,
+        *,
+        platform_url: str,
+        private_network_id: str,
+        model_id: str,
+        user_message: str = "Say hello from the Modulo debug tab.",
+        buyer_id: str = "buyer-debug",
+    ) -> SmokeTestResult:
+        target_url = platform_url.strip() or self.modulo_url
+        network_id = private_network_id.strip() or PROTOTYPE_PRIVATE_NETWORK_ID
+        normalized_target = target_url.rstrip("/")
+        local_targets = {self.modulo_url.rstrip("/")}
+        if self.lan_platform_url:
+            local_targets.add(self.lan_platform_url.rstrip("/"))
+        if normalized_target in local_targets:
+            if not self.client.get_status().hosting_enabled:
+                self.boot()
+            else:
+                self._ensure_worker_loop_running()
+        body = {
+            "model": model_id,
+            "buyer_id": buyer_id,
+            "scope": "private",
+            "private_network_id": network_id,
+            "messages": [{"role": "user", "content": user_message}],
+            "stream": False,
+        }
+        req = request.Request(
+            f"{target_url.rstrip('/')}/api/chat",
+            data=json.dumps(body).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with request.urlopen(req, timeout=10.0) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except urllib_error.HTTPError as exc:
+            error_payload = json.loads(exc.read().decode("utf-8")) if exc.fp is not None else {}
+            message = error_payload.get("error", str(exc)) if isinstance(error_payload, dict) else str(exc)
+            return SmokeTestResult(
+                ok=False,
+                model_id=model_id,
+                user_message=user_message,
+                error=message,
+                execution_mode="network",
+                execution_summary=f"Target: {target_url} | Private network: {network_id}",
+            )
+        except Exception as exc:
+            return SmokeTestResult(
+                ok=False,
+                model_id=model_id,
+                user_message=user_message,
+                error=str(exc),
+                execution_mode="network",
+                execution_summary=f"Target: {target_url} | Private network: {network_id}",
+            )
+
+        return SmokeTestResult(
+            ok=True,
+            model_id=payload.get("model", model_id),
+            user_message=user_message,
+            response_text=payload.get("message", {}).get("content", ""),
+            execution_mode="network",
+            execution_summary=f"Target: {target_url} | Private network: {network_id}",
+        )
+
+    @staticmethod
+    def _discover_lan_ip() -> str:
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                sock.connect(("8.8.8.8", 80))
+                ip = sock.getsockname()[0]
+            finally:
+                sock.close()
+        except OSError:
+            return ""
+        if ip.startswith("127."):
+            return ""
+        return ip
 
 
 def main() -> None:
