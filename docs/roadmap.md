@@ -180,7 +180,7 @@ The next committed implementation path is:
 
 Current active slice:
 
-- `Slice 3: Network-addressable worker configuration`
+- `Slice 4: Single-machine routed private proof`
 
 Why it is next:
 

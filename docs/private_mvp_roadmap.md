@@ -102,7 +102,20 @@ Notes:
 - this slice should avoid adding packaging or installer work
 - the point is transport truth, not desktop polish
 
-Status: not started
+Status: completed
+
+Summary:
+
+- added a real URL-backed worker HTTP transport so the bridge can target `modulo_url` over the actual control-plane API
+- preserved private-scope identity and route-trace threading across the worker claim path instead of only in in-process transport
+- proved a valid single-machine localhost configuration against the real HTTP server without turning this slice into the full routed-ingress proof
+
+Proof added to repo:
+
+- `UrllibWorkerHTTPTransport` in `src/modulo/worker/transport.py`
+- worker claim payload now includes `trace_id` in `src/modulo/cloud/http.py`
+- localhost endpoint integration coverage in `tests/test_worker_transport.py`
+- HTTP contract coverage updated in `tests/test_http_app.py`
 
 ### Slice 4: Single-machine routed private proof
 

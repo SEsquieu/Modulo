@@ -11,6 +11,7 @@ This file is the quickest way to regain context when switching workstations.
 - the active next implementation roadmap is [private_mvp_roadmap.md](./private_mvp_roadmap.md)
 - `Slice 1: Private-scope routing contracts` is completed
 - `Slice 2: Structured route-trace spine` is completed
+- `Slice 3: Network-addressable worker configuration` is completed
 - the current architecture discussion is [private_scope_mvp_design.md](./private_scope_mvp_design.md), which narrows the next remote-execution proof around `Local / Private / Public / Cloud`
 
 ## What exists today
@@ -37,6 +38,8 @@ This file is the quickest way to regain context when switching workstations.
 - host-side warm maintenance that refreshes the selected model when hosting stays enabled and local warmth drops away
 - GUI host actions and smoke tests now run asynchronously so long local Ollama calls do not freeze the client shell
 - the cloud path now records structured route traces for each routing attempt, including retry attempts and filtered-worker reasons
+- the worker bridge can now target a real `modulo_url` over HTTP instead of only an in-process app seam
+- localhost integration coverage now proves worker register, heartbeat, claim, and report flows against the real HTTP server contract
 - the GUI shell has been tightened into a consistent pattern:
   - top-level tabs: `Use / Host / Diagnostics`
   - compact header + primary action + summary card + nested detail tabs
@@ -79,13 +82,13 @@ The host selector only shows local installable models, and the startup path now 
 
 ## Next recommended starting point
 
-Start with `Slice 3: Network-addressable worker configuration` in [private_mvp_roadmap.md](./private_mvp_roadmap.md).
+Start with `Slice 4: Single-machine routed private proof` in [private_mvp_roadmap.md](./private_mvp_roadmap.md).
 
 The most likely first useful slice is:
 
-- make the worker bridge and cloud/API target a real reachable endpoint instead of relying only on in-process assumptions
-- preserve the new private-scope and route-trace contracts while externalizing the transport seam
-- keep the slice focused on configuration and connectivity truth, not packaging or GUI polish
+- send one request through the actual HTTP ingress instead of directly entering the service layer
+- keep the route trace and worker-bridge HTTP path observable in the same single-machine proof
+- stop just short of the second-machine proof so debugging remains easy before remote testing
 
 If resuming in architecture mode instead of productization mode, the current non-implementation discussion is:
 
@@ -151,6 +154,7 @@ Current architecture discussion:
 
 Recent meaningful commits:
 
+- `4a31eaa` `Complete route trace spine slice`
 - `edd70a8` `Complete private scope routing contracts slice`
 - `ddd3cec` `Clarify private scope roadmap terminology`
 - `71cb7fc` `Refresh docs and workstation handoff context`

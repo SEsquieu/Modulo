@@ -108,6 +108,8 @@ The current scaffold includes these worker-facing HTTP routes:
 
 They currently use simple JSON payloads and map directly onto the in-memory control plane.
 
+The worker bridge now has both an in-process HTTP-shaped transport for local harness work and a real URL-backed transport for localhost or private-environment control-plane testing against `modulo_url`.
+
 The current HTTP ingress also exposes:
 
 - `GET /api/tags`

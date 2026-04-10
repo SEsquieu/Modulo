@@ -176,6 +176,7 @@ class ModuloHTTPAppTests(unittest.TestCase):
         )
         self.assertEqual(200, claim_status)
         self.assertEqual(job.job_id, claim_payload["job"]["job_id"])
+        self.assertEqual(job.trace_id, claim_payload["job"]["trace_id"])
 
         result_status, result_payload = self.app.handle(
             "POST",

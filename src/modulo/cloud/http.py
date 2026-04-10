@@ -267,6 +267,7 @@ class ModuloHTTPApp:
         return HTTPStatus.OK, {
             "job": {
                 "job_id": claim.job_id,
+                "trace_id": claim.trace_id,
                 "model": claim.request.model_id,
                 "messages": [
                     {"role": message.role, "content": message.content}
