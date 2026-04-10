@@ -15,6 +15,7 @@ This file is the quickest way to regain context when switching workstations.
 - `Slice 4: Single-machine routed private proof` is completed
 - `Slice 5: Cross-machine private execution proof` is completed in repo shape and ready for live network validation
 - the current architecture discussion is [private_scope_mvp_design.md](./private_scope_mvp_design.md), which narrows the next remote-execution proof around `Local / Private / Public / Cloud`
+- a future routing note is captured in [future_host_capacity_intelligence.md](./future_host_capacity_intelligence.md) for host capability profiling, warm/cold inventory truth, and dynamic idle swapping
 
 ## What exists today
 

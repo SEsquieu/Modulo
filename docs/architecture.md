@@ -68,3 +68,7 @@ Near-term sequence:
 5. keep future private-network work architecture-led instead of bolted onto the public path later
 
 As routing evolves, prefer continuity-preserving behavior such as short-lived request leases on healthy workers when that reduces cold-start thrash without hiding failures.
+
+Future routing note:
+
+- [future_host_capacity_intelligence.md](./future_host_capacity_intelligence.md) captures a later design for client-built host capability profiles, warm/cold inventory truth, and dynamic idle swapping between installed models.
