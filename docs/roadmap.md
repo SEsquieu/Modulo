@@ -180,7 +180,7 @@ The next committed implementation path is:
 
 Current active slice:
 
-- `Slice 2: Structured route-trace spine`
+- `Slice 3: Network-addressable worker configuration`
 
 Why it is next:
 

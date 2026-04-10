@@ -22,7 +22,7 @@ class InMemoryJobQueue:
     _jobs: dict[str, JobRecord] = field(default_factory=dict)
     _next_job_number: int = 1
 
-    def create_job(self, request: ChatRequest, route: RouteDecision) -> JobRecord:
+    def create_job(self, request: ChatRequest, route: RouteDecision, *, trace_id: str = "") -> JobRecord:
         job_id = f"job-{self._next_job_number:05d}"
         self._next_job_number += 1
         record = JobRecord(
@@ -32,6 +32,7 @@ class InMemoryJobQueue:
             route=route,
             assigned_worker_id=route.worker_id,
             assigned_worker_kind=route.worker_kind,
+            trace_id=trace_id,
         )
         self._jobs[job_id] = record
         return record
@@ -48,6 +49,7 @@ class InMemoryJobQueue:
                 route=job.route,
                 assigned_worker_id=job.assigned_worker_id,
                 assigned_worker_kind=job.assigned_worker_kind,
+                trace_id=job.trace_id,
                 attempts=job.attempts,
             )
             self._jobs[job.job_id] = claimed
@@ -56,6 +58,7 @@ class InMemoryJobQueue:
                 worker_id=worker_id,
                 request=job.request,
                 route=job.route,
+                trace_id=job.trace_id,
             )
         return None
 
@@ -68,6 +71,7 @@ class InMemoryJobQueue:
             route=job.route,
             assigned_worker_id=job.assigned_worker_id,
             assigned_worker_kind=job.assigned_worker_kind,
+            trace_id=job.trace_id,
             attempts=job.attempts,
             response_text=result.response_text,
         )
@@ -83,13 +87,14 @@ class InMemoryJobQueue:
             route=job.route,
             assigned_worker_id=job.assigned_worker_id,
             assigned_worker_kind=job.assigned_worker_kind,
+            trace_id=job.trace_id,
             attempts=job.attempts,
             failure_reason=f"{failure.error_code}: {failure.message}",
         )
         self._jobs[job.job_id] = failed
         return failed
 
-    def retry(self, job_id: str, route: RouteDecision, failure_reason: str) -> JobRecord:
+    def retry(self, job_id: str, route: RouteDecision, failure_reason: str, *, trace_id: str = "") -> JobRecord:
         job = self._jobs.get(job_id)
         if job is None:
             raise JobQueueError(f"Unknown job id: {job_id}")
@@ -103,6 +108,7 @@ class InMemoryJobQueue:
             route=route,
             assigned_worker_id=route.worker_id,
             assigned_worker_kind=route.worker_kind,
+            trace_id=trace_id,
             attempts=job.attempts + 1,
             failure_reason=failure_reason,
         )

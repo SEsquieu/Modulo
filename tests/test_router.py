@@ -191,6 +191,76 @@ class TrustRouterTests(unittest.TestCase):
 
         self.assertEqual("private-1", decision.worker_id)
 
+    def test_route_trace_records_scope_selection_and_filtered_workers(self) -> None:
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="private-1",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                        confidence=0.80,
+                    ),
+                ),
+                serving_scope=RouteScope.PRIVATE,
+                private_network_id="org-a",
+            )
+        )
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="public-1",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                        confidence=0.99,
+                    ),
+                ),
+                serving_scope=RouteScope.PUBLIC,
+            )
+        )
+
+        job = self.service.submit_chat(
+            ChatRequest(
+                model_id="llama3.1:8b",
+                execution_mode=ExecutionMode.NETWORK,
+                requested_scope=RouteScope.PRIVATE,
+                private_network_id="org-a",
+            )
+        )
+        self.service.claim_job("private-1")
+        self.service.complete_job(
+            JobResult(
+                job_id=job.job_id,
+                worker_id="private-1",
+                response_text="private response",
+            )
+        )
+
+        traces = self.service.list_traces()
+        self.assertEqual(1, len(traces))
+        trace = traces[0]
+        self.assertEqual(RouteScope.PRIVATE, trace.resolved_scope)
+        self.assertEqual("org-a", trace.private_network_id)
+        self.assertEqual(job.job_id, trace.job_id)
+        self.assertEqual(("private-1",), trace.eligible_worker_ids)
+        self.assertEqual("private-1", trace.selected_worker_id)
+        self.assertEqual("selected_requested_mode", trace.route_reason_code)
+        self.assertEqual("completed", trace.final_status)
+        self.assertTrue(
+            any(
+                item.worker_id == "public-1"
+                and item.reason_code in {"scope_mismatch", "private_network_mismatch"}
+                for item in trace.filtered_worker_reasons
+            )
+        )
+
     def test_routes_exact_match_worker_for_uncurated_advertised_model(self) -> None:
         self.service.register_worker(
             WorkerSnapshot(
@@ -358,6 +428,73 @@ class TrustRouterTests(unittest.TestCase):
         unhealthy_worker = self.service.registry.get("network-1")
         self.assertIsNotNone(unhealthy_worker)
         self.assertFalse(unhealthy_worker.healthy)
+
+    def test_route_trace_records_retry_as_separate_attempt(self) -> None:
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="network-1",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                        confidence=0.95,
+                    ),
+                ),
+            )
+        )
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="network-2",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                        confidence=0.90,
+                    ),
+                ),
+            )
+        )
+
+        job = self.service.submit_chat(
+            ChatRequest(model_id="llama3.1:8b", execution_mode=ExecutionMode.NETWORK)
+        )
+        self.service.claim_job("network-1")
+
+        retried = self.service.fail_job(
+            JobFailure(
+                job_id=job.job_id,
+                worker_id="network-1",
+                error_code="EXEC_TIMEOUT",
+                message="Execution timed out",
+            )
+        )
+        self.service.claim_job("network-2")
+        self.service.complete_job(
+            JobResult(
+                job_id=job.job_id,
+                worker_id="network-2",
+                response_text="retried response",
+            )
+        )
+
+        traces = sorted(self.service.list_traces(), key=lambda item: item.attempt_number)
+        self.assertEqual(2, len(traces))
+        first_trace, second_trace = traces
+        self.assertEqual(1, first_trace.attempt_number)
+        self.assertEqual("network-1", first_trace.selected_worker_id)
+        self.assertEqual("retried", first_trace.final_status)
+        self.assertIn("EXEC_TIMEOUT", first_trace.final_error)
+        self.assertEqual(2, second_trace.attempt_number)
+        self.assertEqual(1, second_trace.retry_count)
+        self.assertEqual(retried.trace_id, second_trace.trace_id)
+        self.assertEqual("network-2", second_trace.selected_worker_id)
+        self.assertEqual("completed", second_trace.final_status)
 
     def test_timeout_marks_worker_unhealthy_and_fails_cleanly_when_no_retry_target(self) -> None:
         self.service.register_worker(

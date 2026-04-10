@@ -69,7 +69,21 @@ Notes:
 - this is the foundation for future private-network ops visibility
 - machine-readable fields matter more than polished UI in this slice
 
-Status: not started
+Status: completed
+
+Summary:
+
+- added a structured in-memory route-trace record for each routing attempt in the cloud control path
+- kept retries as separate trace attempts so route history stays useful for future health and ops aggregation
+- preserved machine-readable worker filter reasons, selected worker facts, scope resolution, and terminal outcomes without adding any dashboard surface yet
+
+Proof added to repo:
+
+- `RouteTraceRecord` and `FilteredWorkerReason` in `src/modulo/common/contracts.py`
+- route-trace draft generation in `src/modulo/cloud/router.py`
+- trace lifecycle storage and attempt updates in `src/modulo/cloud/runtime.py`
+- job trace-id threading in `src/modulo/cloud/jobs.py`
+- router tests covering successful trace capture and retry-attempt trace history
 
 ### Slice 3: Network-addressable worker configuration
 

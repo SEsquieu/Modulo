@@ -136,6 +136,40 @@ class RouteDecision:
 
 
 @dataclass(frozen=True)
+class FilteredWorkerReason:
+    worker_id: str
+    reason_code: str
+    detail: str = ""
+
+
+@dataclass(frozen=True)
+class RouteTraceRecord:
+    trace_id: str
+    model_id: str
+    buyer_id: str
+    selected_source: str
+    resolved_scope: RouteScope
+    private_network_id: str = ""
+    requested_execution_mode: ExecutionMode = ExecutionMode.NETWORK
+    job_id: str = ""
+    attempt_number: int = 1
+    retry_count: int = 0
+    eligible_worker_ids: tuple[str, ...] = field(default_factory=tuple)
+    filtered_worker_reasons: tuple[FilteredWorkerReason, ...] = field(default_factory=tuple)
+    selected_worker_id: str = ""
+    selected_worker_kind: WorkerKind | None = None
+    route_reason: str = ""
+    route_reason_code: str = ""
+    continuity_used: bool = False
+    warm_path_used: bool = False
+    current_status: str = "selected"
+    final_status: str = ""
+    final_error: str = ""
+    created_at_tick: int = 0
+    updated_at_tick: int = 0
+
+
+@dataclass(frozen=True)
 class JobRecord:
     job_id: str
     request: ChatRequest
@@ -143,6 +177,7 @@ class JobRecord:
     route: RouteDecision
     assigned_worker_id: str
     assigned_worker_kind: WorkerKind
+    trace_id: str = ""
     attempts: int = 1
     failure_reason: str = ""
     response_text: str = ""
@@ -154,6 +189,7 @@ class JobClaim:
     worker_id: str
     request: ChatRequest
     route: RouteDecision
+    trace_id: str = ""
 
 
 @dataclass(frozen=True)
