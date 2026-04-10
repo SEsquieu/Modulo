@@ -9,6 +9,7 @@ This file is the quickest way to regain context when switching workstations.
 - Phase 2 integration work is completed through `Step 5: Real local execution`
 - the host-side warm-state roadmap is completed
 - the active next implementation roadmap is [private_mvp_roadmap.md](./private_mvp_roadmap.md)
+- `Slice 1: Private-scope routing contracts` is completed
 - the current architecture discussion is [private_scope_mvp_design.md](./private_scope_mvp_design.md), which narrows the next remote-execution proof around `Local / Private / Public / Cloud`
 
 ## What exists today
@@ -76,13 +77,13 @@ The host selector only shows local installable models, and the startup path now 
 
 ## Next recommended starting point
 
-Start with `Slice 1: Private-scope routing contracts` in [private_mvp_roadmap.md](./private_mvp_roadmap.md).
+Start with `Slice 2: Structured route-trace spine` in [private_mvp_roadmap.md](./private_mvp_roadmap.md).
 
 The most likely first useful slice is:
 
-- introduce the minimum request and worker scope contracts needed for `private` remote execution
-- keep the old singular `network` assumption from hardening any further
-- make route traces structured enough that future private-network ops visibility will not require a large retrofit
+- capture structured route data in the cloud path for each routed request
+- preserve scope resolution, worker eligibility, and selection reasons in machine-readable form
+- keep the trace foundation narrow so future private-network ops visibility has truthful backend data to build on
 
 If resuming in architecture mode instead of productization mode, the current non-implementation discussion is:
 
@@ -148,6 +149,7 @@ Current architecture discussion:
 
 Recent meaningful commits:
 
+- `ddd3cec` `Clarify private scope roadmap terminology`
 - `71cb7fc` `Refresh docs and workstation handoff context`
 - `da37572` `Refine private networks source and scope model`
 - `755d0ca` `Add private networks architecture note`

@@ -12,6 +12,7 @@ from modulo.common.contracts import (
     JobClaim,
     JobFailure,
     JobResult,
+    RouteScope,
     WorkerBridgeConfig,
     WorkerHeartbeat,
 )
@@ -39,6 +40,12 @@ class InProcessWorkerHTTPTransport:
                 {
                     "worker_id": self.config.worker_id,
                     "kind": self.config.kind.value,
+                    "serving_scope": (
+                        self.config.serving_scope.value
+                        if self.config.serving_scope is not None
+                        else None
+                    ),
+                    "private_network_id": self.config.private_network_id,
                     "max_concurrency": self.config.max_concurrency,
                     "models": list(self.config.enabled_models),
                 }
@@ -75,10 +82,16 @@ class InProcessWorkerHTTPTransport:
         model_id = job_payload.get("model")
         raw_messages = job_payload.get("messages", [])
         stream = bool(job_payload.get("stream", False))
+        scope_name = job_payload.get("scope")
+        private_network_id = job_payload.get("private_network_id", "")
         if not isinstance(model_id, str):
             raise WorkerTransportError("Claim response missing job model")
         if not isinstance(raw_messages, list):
             raise WorkerTransportError("Claim response missing job messages")
+        if scope_name is not None and not isinstance(scope_name, str):
+            raise WorkerTransportError("Claim response contains invalid scope")
+        if not isinstance(private_network_id, str):
+            raise WorkerTransportError("Claim response contains invalid private network id")
 
         messages: list[ChatMessage] = []
         for item in raw_messages:
@@ -90,6 +103,13 @@ class InProcessWorkerHTTPTransport:
                 raise WorkerTransportError("Claim response contains invalid job messages")
             messages.append(ChatMessage(role=role, content=content))
 
+        requested_scope = None
+        if isinstance(scope_name, str):
+            try:
+                requested_scope = RouteScope(scope_name)
+            except ValueError as exc:
+                raise WorkerTransportError("Claim response contains unsupported scope") from exc
+
         return JobClaim(
             job_id=job_payload["job_id"],
             worker_id=worker_id,
@@ -98,6 +118,8 @@ class InProcessWorkerHTTPTransport:
                 execution_mode=ExecutionMode.NETWORK,
                 messages=tuple(messages),
                 stream=stream,
+                requested_scope=requested_scope,
+                private_network_id=private_network_id,
             ),
             route=self._route_from_payload(job_payload.get("route", {}), model_id),
         )

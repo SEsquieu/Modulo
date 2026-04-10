@@ -13,6 +13,7 @@ from modulo.common.contracts import (
     ExecutionMode,
     JobFailure,
     JobResult,
+    RouteScope,
     WorkerHeartbeat,
     WorkerKind,
     WorkerModelState,
@@ -109,13 +110,26 @@ class ModuloHTTPApp:
     def _handle_chat(self, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
         model_id = payload.get("model")
         buyer_id = payload.get("buyer_id", "")
+        scope_name = payload.get("scope")
+        private_network_id = payload.get("private_network_id", "")
         raw_messages = payload.get("messages", [])
         if not isinstance(model_id, str) or not model_id:
             return HTTPStatus.BAD_REQUEST, {"error": "Missing required field: model"}
         if not isinstance(buyer_id, str):
             return HTTPStatus.BAD_REQUEST, {"error": "Invalid field: buyer_id"}
+        if scope_name is not None and not isinstance(scope_name, str):
+            return HTTPStatus.BAD_REQUEST, {"error": "Invalid field: scope"}
+        if not isinstance(private_network_id, str):
+            return HTTPStatus.BAD_REQUEST, {"error": "Invalid field: private_network_id"}
         if not isinstance(raw_messages, list):
             return HTTPStatus.BAD_REQUEST, {"error": "Invalid field: messages"}
+
+        requested_scope = None
+        if isinstance(scope_name, str):
+            try:
+                requested_scope = RouteScope(scope_name)
+            except ValueError:
+                return HTTPStatus.BAD_REQUEST, {"error": f"Unsupported scope: {scope_name}"}
 
         messages: list[ChatMessage] = []
         for item in raw_messages:
@@ -134,6 +148,8 @@ class ModuloHTTPApp:
             messages=tuple(messages),
             stream=bool(payload.get("stream", False)),
             requires_tools=bool(payload.get("tools")),
+            requested_scope=requested_scope,
+            private_network_id=private_network_id,
         )
 
         try:
@@ -167,6 +183,8 @@ class ModuloHTTPApp:
     def _handle_worker_register(self, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
         worker_id = payload.get("worker_id")
         kind_name = payload.get("kind", "network")
+        scope_name = payload.get("serving_scope")
+        private_network_id = payload.get("private_network_id", "")
         max_concurrency = payload.get("max_concurrency", 1)
         model_ids = payload.get("models", [])
 
@@ -174,6 +192,10 @@ class ModuloHTTPApp:
             return HTTPStatus.BAD_REQUEST, {"error": "Missing required field: worker_id"}
         if not isinstance(kind_name, str):
             return HTTPStatus.BAD_REQUEST, {"error": "Invalid field: kind"}
+        if scope_name is not None and not isinstance(scope_name, str):
+            return HTTPStatus.BAD_REQUEST, {"error": "Invalid field: serving_scope"}
+        if not isinstance(private_network_id, str):
+            return HTTPStatus.BAD_REQUEST, {"error": "Invalid field: private_network_id"}
         if not isinstance(max_concurrency, int) or max_concurrency < 1:
             return HTTPStatus.BAD_REQUEST, {"error": "Invalid field: max_concurrency"}
         if not isinstance(model_ids, list) or not all(isinstance(model_id, str) for model_id in model_ids):
@@ -183,6 +205,10 @@ class ModuloHTTPApp:
             kind = WorkerKind(kind_name)
         except ValueError:
             return HTTPStatus.BAD_REQUEST, {"error": f"Unsupported worker kind: {kind_name}"}
+        try:
+            serving_scope = RouteScope(scope_name) if scope_name is not None else None
+        except ValueError:
+            return HTTPStatus.BAD_REQUEST, {"error": f"Unsupported worker scope: {scope_name}"}
 
         worker = WorkerSnapshot(
             worker_id=worker_id,
@@ -193,12 +219,16 @@ class ModuloHTTPApp:
                 WorkerModelState(model_id=model_id, runtime_identity=model_id)
                 for model_id in model_ids
             ),
+            serving_scope=serving_scope,
+            private_network_id=private_network_id,
         )
         self.service.register_worker(worker)
         return HTTPStatus.OK, {
             "worker_id": worker.worker_id,
             "status": "registered",
             "models": [state.model_id for state in worker.advertised_models],
+            "serving_scope": worker.resolved_scope().value,
+            "private_network_id": worker.private_network_id,
         }
 
     def _handle_worker_heartbeat(self, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
@@ -243,6 +273,8 @@ class ModuloHTTPApp:
                     for message in claim.request.messages
                 ],
                 "stream": claim.request.stream,
+                "scope": claim.request.resolved_scope().value,
+                "private_network_id": claim.request.private_network_id,
                 "route": {
                     "worker_id": claim.route.worker_id,
                     "worker_kind": claim.route.worker_kind.value,

@@ -37,6 +37,14 @@ Notes:
 - this slice should stay narrow and contract-led
 - old `network` vocabulary may still exist in some surfaces, but new routing assumptions should stop depending on a singular network pool
 
+Status: completed
+
+Summary:
+
+- added explicit request-side scope and private-network identity to shared routing contracts without forcing a large naming refactor
+- added worker-side serving scope and private-network identity to worker registration and bridge configuration
+- made router eligibility filter by scope and private-network identity before trust scoring
+
 ### Slice 2: Structured route-trace spine
 
 Goal:
@@ -134,3 +142,10 @@ Add a short summary here when the roadmap is complete:
 
 - summary:
 - proof added to repo:
+
+## Slice 1 proof
+
+- shared `RouteScope` contract plus request-side and worker-side private-network identity in `src/modulo/common/contracts.py`
+- scope-aware router eligibility in `src/modulo/cloud/router.py`
+- scope-preserving worker registration and claim transport in `src/modulo/cloud/http.py` and `src/modulo/worker/transport.py`
+- router and HTTP tests covering private-scope filtering and private-network identity matching

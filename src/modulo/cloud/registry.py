@@ -40,6 +40,8 @@ class InMemoryWorkerRegistry:
             healthy=heartbeat.healthy,
             max_concurrency=worker.max_concurrency,
             advertised_models=advertised_models,
+            serving_scope=worker.serving_scope,
+            private_network_id=worker.private_network_id,
             trust_notes=worker.trust_notes,
         )
         self._workers[worker.worker_id] = updated
@@ -60,6 +62,8 @@ class InMemoryWorkerRegistry:
             healthy=False,
             max_concurrency=worker.max_concurrency,
             advertised_models=worker.advertised_models,
+            serving_scope=worker.serving_scope,
+            private_network_id=worker.private_network_id,
             trust_notes=trust_notes,
         )
         self._workers[worker.worker_id] = updated

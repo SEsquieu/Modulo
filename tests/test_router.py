@@ -10,6 +10,7 @@ from modulo.common.contracts import (
     JobFailure,
     JobResult,
     JobStatus,
+    RouteScope,
     RoutingPolicy,
     WorkerKind,
     WorkerModelState,
@@ -96,6 +97,99 @@ class TrustRouterTests(unittest.TestCase):
             self.service.route_chat(
                 ChatRequest(model_id="qwen2.5-coder:7b", execution_mode=ExecutionMode.NETWORK)
             )
+
+    def test_private_scope_routes_only_matching_private_network(self) -> None:
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="private-a",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                        confidence=0.80,
+                    ),
+                ),
+                serving_scope=RouteScope.PRIVATE,
+                private_network_id="org-a",
+            )
+        )
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="private-b",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                        confidence=0.99,
+                    ),
+                ),
+                serving_scope=RouteScope.PRIVATE,
+                private_network_id="org-b",
+            )
+        )
+
+        decision = self.service.route_chat(
+            ChatRequest(
+                model_id="llama3.1:8b",
+                execution_mode=ExecutionMode.NETWORK,
+                requested_scope=RouteScope.PRIVATE,
+                private_network_id="org-a",
+            )
+        )
+
+        self.assertEqual("private-a", decision.worker_id)
+
+    def test_private_scope_rejects_public_scope_worker_even_with_higher_score(self) -> None:
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="private-1",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                        confidence=0.80,
+                    ),
+                ),
+                serving_scope=RouteScope.PRIVATE,
+                private_network_id="org-a",
+            )
+        )
+        self.service.register_worker(
+            WorkerSnapshot(
+                worker_id="public-1",
+                kind=WorkerKind.NETWORK,
+                healthy=True,
+                max_concurrency=1,
+                advertised_models=(
+                    WorkerModelState(
+                        model_id="llama3.1:8b",
+                        runtime_identity="llama3.1:8b",
+                        confidence=0.99,
+                    ),
+                ),
+                serving_scope=RouteScope.PUBLIC,
+            )
+        )
+
+        decision = self.service.route_chat(
+            ChatRequest(
+                model_id="llama3.1:8b",
+                execution_mode=ExecutionMode.NETWORK,
+                requested_scope=RouteScope.PRIVATE,
+                private_network_id="org-a",
+            )
+        )
+
+        self.assertEqual("private-1", decision.worker_id)
 
     def test_routes_exact_match_worker_for_uncurated_advertised_model(self) -> None:
         self.service.register_worker(

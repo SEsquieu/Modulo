@@ -10,6 +10,13 @@ class ExecutionMode(str, Enum):
     CLOUD = "cloud"
 
 
+class RouteScope(str, Enum):
+    LOCAL = "local"
+    PRIVATE = "private"
+    PUBLIC = "public"
+    CLOUD = "cloud"
+
+
 class RoutingPolicy(str, Enum):
     STRICT = "strict"
     BALANCED = "balanced"
@@ -70,6 +77,8 @@ class WorkerSnapshot:
     healthy: bool
     max_concurrency: int
     advertised_models: tuple[WorkerModelState, ...]
+    serving_scope: RouteScope | None = None
+    private_network_id: str = ""
     trust_notes: tuple[str, ...] = field(default_factory=tuple)
 
     def supports_model(self, model_id: str) -> WorkerModelState | None:
@@ -77,6 +86,15 @@ class WorkerSnapshot:
             if state.model_id == model_id:
                 return state
         return None
+
+    def resolved_scope(self) -> RouteScope:
+        if self.serving_scope is not None:
+            return self.serving_scope
+        return {
+            WorkerKind.LOCAL: RouteScope.LOCAL,
+            WorkerKind.NETWORK: RouteScope.PRIVATE,
+            WorkerKind.CLOUD: RouteScope.CLOUD,
+        }[self.kind]
 
 
 @dataclass(frozen=True)
@@ -94,6 +112,17 @@ class ChatRequest:
     routing_policy: RoutingPolicy = RoutingPolicy.STRICT
     stream: bool = False
     requires_tools: bool = False
+    requested_scope: RouteScope | None = None
+    private_network_id: str = ""
+
+    def resolved_scope(self) -> RouteScope:
+        if self.requested_scope is not None:
+            return self.requested_scope
+        return {
+            ExecutionMode.LOCAL: RouteScope.LOCAL,
+            ExecutionMode.NETWORK: RouteScope.PRIVATE,
+            ExecutionMode.CLOUD: RouteScope.CLOUD,
+        }[self.execution_mode]
 
 
 @dataclass(frozen=True)
@@ -156,6 +185,8 @@ class WorkerBridgeConfig:
     enabled_models: tuple[str, ...]
     max_concurrency: int = 1
     kind: WorkerKind = WorkerKind.NETWORK
+    serving_scope: RouteScope | None = None
+    private_network_id: str = ""
 
 
 @dataclass(frozen=True)

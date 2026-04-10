@@ -279,6 +279,8 @@ class ModuloClientSupervisor:
             enabled_models=(model_id,),
             max_concurrency=config.max_concurrency,
             kind=config.kind,
+            serving_scope=config.serving_scope,
+            private_network_id=config.private_network_id,
         )
         status = self.configure_worker(next_config)
         if self.hosting_model_changed_hook is not None:

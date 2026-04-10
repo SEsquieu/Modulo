@@ -9,6 +9,7 @@ from modulo.common.contracts import (
     JobFailure,
     JobRecord,
     JobResult,
+    RouteScope,
     RouteDecision,
     WorkerHeartbeat,
     WorkerSnapshot,
@@ -189,6 +190,16 @@ class InMemoryModuloService:
             ExecutionMode.CLOUD: "cloud",
         }[lease.execution_mode]
         if worker.kind.value != expected_kind:
+            self.leases.break_for_buyer_model(request.buyer_id, request.model_id)
+            return None
+        if worker.resolved_scope() is not request.resolved_scope():
+            self.leases.break_for_buyer_model(request.buyer_id, request.model_id)
+            return None
+        if (
+            request.resolved_scope() is RouteScope.PRIVATE
+            and request.private_network_id
+            and worker.private_network_id != request.private_network_id
+        ):
             self.leases.break_for_buyer_model(request.buyer_id, request.model_id)
             return None
         model_state = worker.supports_model(request.model_id)

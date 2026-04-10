@@ -6,6 +6,7 @@ from modulo.common.catalog import get_model
 from modulo.common.contracts import (
     ChatRequest,
     ExecutionMode,
+    RouteScope,
     RouteDecision,
     WorkerKind,
     WorkerSnapshot,
@@ -43,9 +44,10 @@ class TrustRouter:
             raise RoutingError("Tool calling is intentionally disabled in v1.")
 
         mode_candidates = self._filter_for_mode(
-            request.execution_mode,
-            request.model_id,
-            workers,
+            request=request,
+            mode=request.execution_mode,
+            model_id=request.model_id,
+            workers=workers,
             exclude_worker_ids=exclude_worker_ids,
         )
         if mode_candidates:
@@ -63,9 +65,10 @@ class TrustRouter:
             and self.policy.allow_trusted_cloud_fallback_for_exact_match
         ):
             fallback_candidates = self._filter_for_mode(
-                ExecutionMode.CLOUD,
-                request.model_id,
-                workers,
+                request=request,
+                mode=ExecutionMode.CLOUD,
+                model_id=request.model_id,
+                workers=workers,
                 exclude_worker_ids=exclude_worker_ids,
             )
             if fallback_candidates:
@@ -83,10 +86,11 @@ class TrustRouter:
 
     def _filter_for_mode(
         self,
+        *,
+        request: ChatRequest,
         mode: ExecutionMode,
         model_id: str,
         workers: list[WorkerSnapshot],
-        *,
         exclude_worker_ids: set[str] | None = None,
     ) -> list[WorkerSnapshot]:
         eligible_kind = {
@@ -94,12 +98,19 @@ class TrustRouter:
             ExecutionMode.NETWORK: WorkerKind.NETWORK,
             ExecutionMode.CLOUD: WorkerKind.CLOUD,
         }[mode]
+        request_scope = self._resolve_request_scope(mode, request)
 
         eligible_workers: list[tuple[float, WorkerSnapshot]] = []
         for worker in workers:
             if exclude_worker_ids and worker.worker_id in exclude_worker_ids:
                 continue
             if worker.kind is not eligible_kind or not worker.healthy:
+                continue
+            if not self._worker_matches_scope(
+                request_scope=request_scope,
+                request_private_network_id=request.private_network_id,
+                worker=worker,
+            ):
                 continue
 
             model_state = worker.supports_model(model_id)
@@ -129,3 +140,29 @@ class TrustRouter:
             + (1.0 - model_state.timeout_rate) * 0.10
             + headroom * 0.05
         )
+
+    @staticmethod
+    def _resolve_request_scope(mode: ExecutionMode, request: ChatRequest) -> RouteScope:
+        if request.requested_scope is not None:
+            return request.requested_scope
+        return {
+            ExecutionMode.LOCAL: RouteScope.LOCAL,
+            ExecutionMode.NETWORK: RouteScope.PRIVATE,
+            ExecutionMode.CLOUD: RouteScope.CLOUD,
+        }[mode]
+
+    @staticmethod
+    def _worker_matches_scope(
+        *,
+        request_scope: RouteScope,
+        request_private_network_id: str,
+        worker: WorkerSnapshot,
+    ) -> bool:
+        worker_scope = worker.resolved_scope()
+        if worker_scope is not request_scope:
+            return False
+        if request_scope is not RouteScope.PRIVATE:
+            return True
+        if request_private_network_id and worker.private_network_id != request_private_network_id:
+            return False
+        return True

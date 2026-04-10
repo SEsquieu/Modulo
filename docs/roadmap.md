@@ -180,7 +180,7 @@ The next committed implementation path is:
 
 Current active slice:
 
-- `Slice 1: Private-scope routing contracts`
+- `Slice 2: Structured route-trace spine`
 
 Why it is next:
 

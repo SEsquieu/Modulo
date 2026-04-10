@@ -5,7 +5,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from modulo.common.contracts import ChatRequest, JobStatus, WorkerKind, WorkerModelState, WorkerSnapshot, ExecutionMode
+from modulo.common.contracts import ChatRequest, ExecutionMode, JobStatus, RouteScope, WorkerKind, WorkerModelState, WorkerSnapshot
 from modulo.cloud.http import ModuloHTTPApp
 from modulo.cloud.router import TrustRouter
 from modulo.cloud.runtime import InMemoryModuloService
@@ -108,6 +108,7 @@ class ModuloHTTPAppTests(unittest.TestCase):
                 {
                     "worker_id": "cloud-1",
                     "kind": "cloud",
+                    "serving_scope": "cloud",
                     "max_concurrency": 2,
                     "models": ["llama3.1:8b"],
                 }
@@ -115,7 +116,34 @@ class ModuloHTTPAppTests(unittest.TestCase):
         )
         self.assertEqual(200, status)
         self.assertEqual("registered", payload["status"])
-        self.assertIsNotNone(self.service.registry.get("cloud-1"))
+        worker = self.service.registry.get("cloud-1")
+        self.assertIsNotNone(worker)
+        self.assertEqual("cloud", payload["serving_scope"])
+        self.assertEqual(RouteScope.CLOUD, worker.resolved_scope())
+
+    def test_worker_register_endpoint_carries_private_scope_identity(self) -> None:
+        status, payload = self.app.handle(
+            "POST",
+            "/worker/register",
+            json.dumps(
+                {
+                    "worker_id": "private-1",
+                    "kind": "network",
+                    "serving_scope": "private",
+                    "private_network_id": "org-a",
+                    "max_concurrency": 1,
+                    "models": ["llama3.1:8b"],
+                }
+            ).encode("utf-8"),
+        )
+
+        self.assertEqual(200, status)
+        self.assertEqual("private", payload["serving_scope"])
+        self.assertEqual("org-a", payload["private_network_id"])
+        worker = self.service.registry.get("private-1")
+        self.assertIsNotNone(worker)
+        self.assertEqual(RouteScope.PRIVATE, worker.resolved_scope())
+        self.assertEqual("org-a", worker.private_network_id)
 
     def test_worker_heartbeat_updates_health_and_load(self) -> None:
         status, payload = self.app.handle(
