@@ -67,6 +67,12 @@ Near-term sequence:
 4. package the current PySide shell cleanly on Windows only after the private remote-execution proof is real
 5. keep future private-network work architecture-led instead of bolted onto the public path later
 
+Scope guardrail:
+
+- future `Public` support should be policy-gated, not self-declared by hosts
+- private-network or org policy must be able to clamp a host's effective scope back down to `Private`
+- the router should operate on effective scope after policy enforcement, not raw host intent
+
 As routing evolves, prefer continuity-preserving behavior such as short-lived request leases on healthy workers when that reduces cold-start thrash without hiding failures.
 
 Future routing note:

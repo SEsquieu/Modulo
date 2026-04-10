@@ -36,6 +36,61 @@ For the next implementation proof:
 - older `network` language may still appear in implementation seams, but new routing assumptions should not depend on one singular network pool
 - a local-network environment is only one early way to validate `Private`, not the definition of it
 
+## Scope governance principle
+
+Support for a scope and permission to use that scope are not the same thing.
+
+Modulo should treat scope as policy-clamped, not self-declared.
+
+That means:
+
+- the platform may support `Public`
+- a private organization or bounded private network may still forbid `Public`
+- a host may request to advertise into `Public`
+- the actual routable result should still be limited to what policy allows
+
+In other words, routing should use an `effective scope`, not just an advertised scope.
+
+## Effective scope model
+
+The long-term shape should leave room for four related truths:
+
+- `requested_scope`
+- `advertised_scope`
+- `max_allowed_scope`
+- `effective_scope`
+
+For the MVP, not all four need to be fully implemented as named fields yet, but the architecture should preserve room for them.
+
+The intended behavior is:
+
+1. the client or host requests a scope
+2. platform and private-boundary policy decide the maximum allowed scope
+3. the worker registration is clamped to that maximum
+4. the router only ever sees the effective result
+
+This keeps the router simple while still making scope trustworthy.
+
+## Policy layers
+
+The clean release model should assume scope may be constrained by multiple layers:
+
+- platform policy
+- private-network or org policy
+- host policy
+- user or client preference
+
+The effective scope should be the intersection of those layers, not the union.
+
+Example:
+
+- the broader Modulo platform supports `Public`
+- a private team network disables `Public`
+- a developer workstation tries to host publicly
+- the effective result is still `Private`
+
+This is how a bounded team environment can stay private even when the product later supports global scope elsewhere.
+
 ## MVP scope stance
 
 The next proof should behave as if the platform already understands:
@@ -117,6 +172,8 @@ Later it may include:
 - `public`
 - additional private pool identity
 
+Worker scope should remain subject to policy clamp before it becomes active routing truth.
+
 ### Visibility rule
 
 A request should only see workers whose scope is compatible with the selected source.
@@ -126,6 +183,8 @@ For now:
 - `private` requests may use `private` workers
 - `local` requests should not silently route to non-local workers
 - `cloud` should stay explicit and future-facing
+
+Later, `public` requests may use `public` workers, but only when that worker's effective scope is actually public.
 
 ## Minimal private identity model
 
@@ -154,6 +213,15 @@ For the near-term MVP that means the host path should be able to say:
 - host into a private network
 
 Even if the UI keeps this lightweight at first, the underlying contract should not infer it silently.
+
+On release, hosts should also default to the safest non-global scope.
+
+That means:
+
+- new hosts should default to `Private`, not `Public`
+- `Public` should require explicit opt-in
+- a private-network policy should be able to forbid `Public` entirely
+- invalid scope escalation should be rejected or clamped during registration, not only filtered later during routing
 
 ## Route trace requirement
 

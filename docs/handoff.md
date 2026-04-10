@@ -17,6 +17,7 @@ This file is the quickest way to regain context when switching workstations.
 - `Slice 6: Lightweight shared-platform advertising visibility` is completed
 - the current architecture discussion is [private_scope_mvp_design.md](./private_scope_mvp_design.md), which narrows the next remote-execution proof around `Local / Private / Public / Cloud`
 - a future routing note is captured in [future_host_capacity_intelligence.md](./future_host_capacity_intelligence.md) for host capability profiling, warm/cold inventory truth, and dynamic idle swapping
+- the private-scope design doc now explicitly captures scope governance so future `Public` support stays policy-gated and clampable back to `Private`
 
 ## What exists today
 
@@ -105,6 +106,12 @@ The most likely first useful slice is:
 If resuming in architecture mode instead of productization mode, the current non-implementation discussion is:
 
 - [private_scope_mvp_design.md](./private_scope_mvp_design.md)
+
+The latest architecture note in that doc is:
+
+- keep `Public` support separate from permission to use `Public`
+- treat worker scope as policy-clamped into an effective scope before routing
+- allow private-network policy to forbid `Public` even if the broader platform supports it
 
 ## Run commands
 
