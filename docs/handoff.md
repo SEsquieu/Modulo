@@ -8,8 +8,8 @@ This file is the quickest way to regain context when switching workstations.
 - GUI phase-0 roadmap is completed
 - Phase 2 integration work is completed through `Step 5: Real local execution`
 - the host-side warm-state roadmap is completed
-- the active next step is [productization_checklist.md](./productization_checklist.md)
-- the current architecture discussion is [private_networks_design.md](./private_networks_design.md), which now narrows the product-facing source model to `Local / Private / Public / Cloud`
+- the active next implementation roadmap is [lan_private_mvp_roadmap.md](./lan_private_mvp_roadmap.md)
+- the current architecture discussion is [private_scope_mvp_design.md](./private_scope_mvp_design.md), which narrows the next remote-execution proof around `Local / Private / Public / Cloud`
 
 ## What exists today
 
@@ -44,8 +44,8 @@ This file is the quickest way to regain context when switching workstations.
 
 - use-side model selection and routing setup
 - actual OpenClaw config mutation and rollback flow
-- packaging, installer, and first-run polish
 - broader trust-and-recovery polish beyond the main surfaced errors
+- Windows packaging, installer, and first-run polish
 
 ## Latest OpenClaw truth
 
@@ -76,17 +76,17 @@ The host selector only shows local installable models, and the startup path now 
 
 ## Next recommended starting point
 
-Start with `Checkpoint 1: Windows packaging path` in [productization_checklist.md](./productization_checklist.md).
+Start with `Slice 1: Private-scope routing contracts` in [lan_private_mvp_roadmap.md](./lan_private_mvp_roadmap.md).
 
 The most likely first useful slice is:
 
-- prove the PySide client launches cleanly from a packaged Windows build
-- capture packaging commands and any startup/resource caveats in the repo
-- keep productization grounded in the now-stabilized Use, Host, and Diagnostics shell
+- introduce the minimum request and worker scope contracts needed for `private` remote execution
+- keep the old singular `network` assumption from hardening any further
+- make route traces structured enough that future private-network ops visibility will not require a large retrofit
 
 If resuming in architecture mode instead of productization mode, the current non-implementation discussion is:
 
-- [private_networks_design.md](./private_networks_design.md)
+- [private_scope_mvp_design.md](./private_scope_mvp_design.md)
 
 ## Run commands
 
@@ -128,11 +128,11 @@ Primary sequencing doc:
 
 Active implementation doc:
 
-- [productization_checklist.md](./productization_checklist.md)
+- [lan_private_mvp_roadmap.md](./lan_private_mvp_roadmap.md)
 
 Current architecture discussion:
 
-- [private_networks_design.md](./private_networks_design.md)
+- [private_scope_mvp_design.md](./private_scope_mvp_design.md)
 
 ## Working preferences
 
@@ -148,6 +148,7 @@ Current architecture discussion:
 
 Recent meaningful commits:
 
+- `71cb7fc` `Refresh docs and workstation handoff context`
 - `da37572` `Refine private networks source and scope model`
 - `755d0ca` `Add private networks architecture note`
 - `a8efbf2` `Stabilize overview copy and split footer status`
@@ -160,5 +161,5 @@ Recent meaningful commits:
 If resuming cold, start by reading:
 
 1. [handoff.md](./handoff.md)
-2. [productization_checklist.md](./productization_checklist.md)
-3. [private_networks_design.md](./private_networks_design.md)
+2. [private_scope_mvp_design.md](./private_scope_mvp_design.md)
+3. [lan_private_mvp_roadmap.md](./lan_private_mvp_roadmap.md)

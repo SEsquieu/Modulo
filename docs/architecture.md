@@ -51,9 +51,9 @@ These rules should guide implementation order:
 - avoid widening the surface area unless the new behavior clearly supports the roadmap
 - treat request continuity and warm-path UX as router concerns inside `cloud`, not `client` shortcuts
 
-The current slice order and completion summaries live in [roadmap.md](/Users/16096/Desktop/Projects/Modulo/docs/roadmap.md).
-The GUI-specific build path lives in [gui_roadmap.md](/Users/16096/Desktop/Projects/Modulo/docs/gui_roadmap.md).
-The first GUI screen/state inventory lives in [gui_state_map.md](/Users/16096/Desktop/Projects/Modulo/docs/gui_state_map.md).
+The current slice order and completion summaries live in [roadmap.md](./roadmap.md).
+The GUI-specific build path lives in [gui_roadmap.md](./gui_roadmap.md).
+The first GUI screen/state inventory lives in [gui_state_map.md](./gui_state_map.md).
 
 ## Development sequencing
 
@@ -62,8 +62,9 @@ The repo is intentionally backend-first, but the PySide client shell is now far 
 Near-term sequence:
 
 1. keep the `cloud` and `worker` seams truthful and scope-ready
-2. package the current PySide shell cleanly on Windows
-3. preserve the `Use / Host / Diagnostics` client shape while adding product polish
-4. keep future private-network work architecture-led instead of bolted onto the public path later
+2. prove LAN-hosted remote execution through the real router and worker chain
+3. preserve enough structured route-trace data for future private-network ops visibility
+4. package the current PySide shell cleanly on Windows only after the LAN proof is real
+5. keep future private-network work architecture-led instead of bolted onto the public path later
 
 As routing evolves, prefer continuity-preserving behavior such as short-lived request leases on healthy workers when that reduces cold-start thrash without hiding failures.

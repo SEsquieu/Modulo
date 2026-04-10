@@ -44,6 +44,8 @@ Roadmap reference:
 - [docs/phase_2_plan.md](./docs/phase_2_plan.md)
 - [docs/session_bridge_roadmap.md](./docs/session_bridge_roadmap.md)
 - [docs/host_warm_state_roadmap.md](./docs/host_warm_state_roadmap.md)
+- [docs/private_scope_mvp_design.md](./docs/private_scope_mvp_design.md)
+- [docs/lan_private_mvp_roadmap.md](./docs/lan_private_mvp_roadmap.md)
 
 ## Running the demo server
 
@@ -89,9 +91,10 @@ The GUI currently includes:
 - async host actions and smoke tests so long Ollama calls do not freeze the UI
 - a split footer with left-side shell status and right-side transient notices
 
-Planned next host refinement:
+Current next functional proof:
 
-- [docs/host_warm_state_roadmap.md](./docs/host_warm_state_roadmap.md) to make model warm-state and local resource usage visible before packaging work
+- [docs/private_scope_mvp_design.md](./docs/private_scope_mvp_design.md) narrows the source/scope model so the next remote-execution work does not harden a singular `network` pool
+- [docs/lan_private_mvp_roadmap.md](./docs/lan_private_mvp_roadmap.md) defines the LAN-hosted private-scope MVP proof before packaging work resumes
 
 ## Current platform surface
 

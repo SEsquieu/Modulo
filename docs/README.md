@@ -18,6 +18,8 @@ Current source of truth:
 - [host_warm_state_roadmap.md](./host_warm_state_roadmap.md): mini roadmap for host-side warm-state visibility and prewarm lifecycle
 - [productization_checklist.md](./productization_checklist.md): compact gated checklist for packaging and trust polish
 - [private_networks_design.md](./private_networks_design.md): architectural note for access-controlled private Modulo networks inside an org boundary
+- [private_scope_mvp_design.md](./private_scope_mvp_design.md): implementation-narrowing doc for treating the first LAN remote-execution proof as `Private` scope
+- [lan_private_mvp_roadmap.md](./lan_private_mvp_roadmap.md): mini roadmap for the first LAN-hosted private-scope remote execution proof
 
 Recommended next docs to add:
 

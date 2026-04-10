@@ -174,7 +174,19 @@ Proof added to repo:
 
 ## Upcoming slices
 
-No additional slices are committed yet. New work should be added here only when it clearly strengthens the roadmap-critical demo path and preserves the current boundaries.
+The next committed implementation path is:
+
+- [lan_private_mvp_roadmap.md](./lan_private_mvp_roadmap.md)
+
+Current active slice:
+
+- `Slice 1: Private-scope routing contracts`
+
+Why it is next:
+
+- the true MVP proof is routed execution to a non-local worker over LAN
+- the router should become scope-aware before the old singular `network` assumption hardens further
+- structured route traces should begin with the next remote-execution slices so future private-network ops visibility does not require a large retrofit
 
 ## Roadmap guardrails
 
