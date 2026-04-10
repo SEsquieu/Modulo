@@ -139,6 +139,22 @@ class ModuloMainWindow(QMainWindow):
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Fixed,
         )
+        self.debug_state_badge_label = QLabel()
+        self.debug_state_badge_label.setStyleSheet("font-size: 18px; font-weight: 700;")
+        self.debug_summary_label = QLabel()
+        self.debug_summary_label.setWordWrap(True)
+        self.debug_platform_value = QLabel()
+        self.debug_platform_value.setWordWrap(True)
+        self.debug_topology_box = QPlainTextEdit()
+        self.debug_topology_box.setReadOnly(True)
+        self.debug_topology_box.setMinimumHeight(110)
+        self.debug_topology_box.setMaximumHeight(110)
+        self.debug_worker_command_box = QPlainTextEdit()
+        self.debug_worker_command_box.setReadOnly(True)
+        self.debug_worker_command_box.setMinimumHeight(120)
+        self.debug_request_command_box = QPlainTextEdit()
+        self.debug_request_command_box.setReadOnly(True)
+        self.debug_request_command_box.setMinimumHeight(170)
         self.diagnostics_state_badge_label = QLabel()
         self.diagnostics_state_badge_label.setStyleSheet("font-size: 18px; font-weight: 700;")
         self.diagnostics_card_value = QLabel()
@@ -353,10 +369,19 @@ class ModuloMainWindow(QMainWindow):
         diagnostics_tab_layout.addStretch(1)
         diagnostics_tab.setLayout(diagnostics_tab_layout)
 
+        debug_tab = QWidget()
+        debug_tab_layout = QVBoxLayout()
+        debug_tab_layout.setContentsMargins(0, 0, 0, 0)
+        debug_tab_layout.setSpacing(12)
+        debug_tab_layout.addWidget(self._build_debug_box())
+        debug_tab_layout.addStretch(1)
+        debug_tab.setLayout(debug_tab_layout)
+
         self.tab_widget = QTabWidget()
         self.tab_widget.addTab(use_tab, "Use")
         self.tab_widget.addTab(host_tab, "Host")
         self.tab_widget.addTab(diagnostics_tab, "Diagnostics")
+        self.tab_widget.addTab(debug_tab, "Debug")
         self.tab_widget.currentChanged.connect(self._refresh_active_tab_layout)
 
         root = QWidget()
@@ -670,6 +695,39 @@ class ModuloMainWindow(QMainWindow):
         layout.addStretch(1)
         page.setLayout(layout)
         return page
+
+    def _build_debug_box(self) -> QGroupBox:
+        debug_box = QGroupBox("Debug")
+        debug_box.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Maximum,
+        )
+        layout = QVBoxLayout()
+        layout.addWidget(self.debug_state_badge_label)
+        layout.addWidget(self.debug_summary_label)
+        layout.addWidget(self._build_host_card("Platform", self.debug_platform_value))
+        layout.addWidget(self._build_debug_page())
+        debug_box.setLayout(layout)
+        return debug_box
+
+    def _build_debug_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout()
+        layout.addWidget(self._build_section_label("Current Topology"))
+        layout.addWidget(self.debug_topology_box)
+        layout.addWidget(self._build_section_label("Remote Worker Command"))
+        layout.addWidget(self.debug_worker_command_box)
+        layout.addWidget(self._build_section_label("Request Command"))
+        layout.addWidget(self.debug_request_command_box)
+        layout.addStretch(1)
+        page.setLayout(layout)
+        return page
+
+    @staticmethod
+    def _build_section_label(text: str) -> QLabel:
+        label = QLabel(text)
+        label.setStyleSheet("font-size: 10px; color: #5fd98f; letter-spacing: 1px;")
+        return label
 
     def _apply_window_sizing(self) -> None:
         screen = self.screen() or QApplication.primaryScreen()
@@ -1166,6 +1224,21 @@ class ModuloMainWindow(QMainWindow):
         self.diagnostics_details_box.setPlainText(state.diagnostics_details)
         self.continuity_summary_label.setText(state.continuity_summary)
         self.activity_box.setPlainText("\n".join(state.activity_lines))
+        self.debug_state_badge_label.setText(state.debug_status_badge)
+        self.debug_summary_label.setText(state.debug_summary)
+        self.debug_platform_value.setText(
+            "\n".join(
+                (
+                    f"Platform URL: {state.debug_platform_url or 'Unavailable'}",
+                    f"Private network: {state.debug_private_network_id or 'unset'}",
+                    f"Worker ID: {state.debug_worker_id or 'unset'}",
+                    f"Model: {state.debug_model_id or 'unset'}",
+                )
+            )
+        )
+        self.debug_topology_box.setPlainText("\n".join(state.debug_topology_lines))
+        self.debug_worker_command_box.setPlainText(state.debug_worker_command)
+        self.debug_request_command_box.setPlainText(state.debug_request_command)
 
     @staticmethod
     def _footer_status_html(value: str, *, ok: bool) -> str:

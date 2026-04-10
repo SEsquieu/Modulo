@@ -104,6 +104,15 @@ class GuiShellState:
     diagnostics_details: str = ""
     continuity_summary: str = ""
     activity_lines: tuple[str, ...] = ()
+    debug_status_badge: str = "DEBUG"
+    debug_summary: str = ""
+    debug_platform_url: str = ""
+    debug_private_network_id: str = ""
+    debug_worker_id: str = ""
+    debug_model_id: str = ""
+    debug_topology_lines: tuple[str, ...] = ()
+    debug_worker_command: str = ""
+    debug_request_command: str = ""
 
 
 @dataclass
@@ -284,6 +293,15 @@ class GuiAppController:
             diagnostics_details=self._diagnostics_details(onboarding, smoke_test),
             continuity_summary=status.activity.continuity_summary,
             activity_lines=self._activity_lines(status),
+            debug_status_badge=self._debug_status_badge(status),
+            debug_summary=self._debug_summary(status),
+            debug_platform_url=self.harness.modulo_url,
+            debug_private_network_id=self.harness.client.worker_bridge.config.private_network_id,
+            debug_worker_id=self.harness.client.worker_bridge.config.worker_id,
+            debug_model_id=self._debug_model_id(status),
+            debug_topology_lines=self._debug_topology_lines(status),
+            debug_worker_command=self._debug_worker_command(status),
+            debug_request_command=self._debug_request_command(status),
         )
 
     @staticmethod
@@ -654,6 +672,78 @@ class GuiAppController:
             f"{supported_count} supported model(s) installed, "
             f"{missing_count} supported model(s) missing, "
             f"{unsupported_count} installed model(s) outside the curated catalog."
+        )
+
+    @staticmethod
+    def _debug_status_badge(status: ClientStatus) -> str:
+        if status.worker and status.worker.registered_with_cloud:
+            return "DEBUG: LIVE"
+        return "DEBUG: READY"
+
+    def _debug_summary(self, status: ClientStatus) -> str:
+        model_id = self._debug_model_id(status)
+        network_id = self.harness.client.worker_bridge.config.private_network_id or "unset"
+        if status.worker and status.worker.registered_with_cloud:
+            return (
+                f"Current prototype control plane is reachable at {self.harness.modulo_url} "
+                f"with worker {self.harness.client.worker_bridge.config.worker_id} registered for "
+                f"{model_id} on private network {network_id}."
+            )
+        return (
+            f"Use this tab to point another worker at {self.harness.modulo_url} and send a "
+            f"private request for {model_id} under private network {network_id}."
+        )
+
+    def _debug_model_id(self, status: ClientStatus) -> str:
+        selected_use_model = self._selected_use_model_id
+        if selected_use_model.startswith(("local:", "network:", "cloud:")):
+            return selected_use_model.split(":", 1)[1]
+        if status.hosting_setup.selected_model_id:
+            return status.hosting_setup.selected_model_id
+        enabled_models = self.harness.client.worker_bridge.config.enabled_models
+        if enabled_models:
+            return enabled_models[0]
+        return ""
+
+    def _debug_topology_lines(self, status: ClientStatus) -> tuple[str, ...]:
+        worker = status.worker
+        return (
+            f"Platform URL: {self.harness.modulo_url}",
+            f"Worker ID: {self.harness.client.worker_bridge.config.worker_id}",
+            f"Private network: {self.harness.client.worker_bridge.config.private_network_id or 'unset'}",
+            f"Advertised model: {self._debug_model_id(status) or 'unset'}",
+            f"Worker registered: {'yes' if worker and worker.registered_with_cloud else 'no'}",
+            f"Worker state: {worker.runtime_state.value if worker else 'stopped'}",
+        )
+
+    def _debug_worker_command(self, status: ClientStatus) -> str:
+        model_id = self._debug_model_id(status) or "MODEL_ID"
+        network_id = self.harness.client.worker_bridge.config.private_network_id or "PRIVATE_NETWORK_ID"
+        return (
+            "python -m modulo.worker.bridge_runner "
+            f"--modulo-url {self.harness.modulo_url} "
+            "--worker-id worker-laptop "
+            f"--model {model_id} "
+            "--scope private "
+            f"--private-network-id {network_id}"
+        )
+
+    def _debug_request_command(self, status: ClientStatus) -> str:
+        model_id = self._debug_model_id(status) or "MODEL_ID"
+        network_id = self.harness.client.worker_bridge.config.private_network_id or "PRIVATE_NETWORK_ID"
+        return (
+            "$body = @{\n"
+            f"  model = \"{model_id}\"\n"
+            "  buyer_id = \"buyer-a\"\n"
+            "  scope = \"private\"\n"
+            f"  private_network_id = \"{network_id}\"\n"
+            "  messages = @(\n"
+            "    @{ role = \"user\"; content = \"Say hello from the Modulo debug tab.\" }\n"
+            "  )\n"
+            "  stream = $false\n"
+            "} | ConvertTo-Json -Depth 5\n\n"
+            f"Invoke-RestMethod -Method Post -Uri \"{self.harness.modulo_url}/api/chat\" "
+            "-ContentType \"application/json\" -Body $body"
         )
 
     @staticmethod

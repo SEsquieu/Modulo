@@ -394,6 +394,19 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertEqual("WARM_FAILED", started.hosting_warm_state_badge)
         self.assertIn("prewarm failed", started.hosting_warm_summary.lower())
 
+    def test_debug_state_surfaces_cross_network_commands(self) -> None:
+        state = self.controller.refresh()
+
+        self.assertIn("http://127.0.0.1:", state.debug_platform_url)
+        self.assertEqual("prototype-private", state.debug_private_network_id)
+        self.assertTrue(state.debug_worker_id)
+        self.assertTrue(state.debug_model_id)
+        self.assertTrue(state.debug_topology_lines)
+        self.assertIn("modulo.worker.bridge_runner", state.debug_worker_command)
+        self.assertIn("--scope private", state.debug_worker_command)
+        self.assertIn("Invoke-RestMethod", state.debug_request_command)
+        self.assertIn("/api/chat", state.debug_request_command)
+
 
 if __name__ == "__main__":
     unittest.main()
