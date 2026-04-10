@@ -71,6 +71,7 @@ python -m modulo.prototype
 This boots the in-process cloud control plane, starts a supervised worker through the client-facing path, and runs one buyer round trip through the local prototype harness.
 
 The local prototype now also supports a client-facing smoke-test path through the same harness and worker/runtime seams.
+It now routes the buyer request through the real local `/api/chat` HTTP ingress while the hosted worker bridge claims and completes the job over the worker HTTP contract.
 
 ## Running the GUI shell
 

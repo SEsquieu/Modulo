@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -12,6 +13,7 @@ from modulo.common.contracts import (
     ChatRequest,
     ExecutionMode,
     JobFailure,
+    JobStatus,
     JobResult,
     RouteScope,
     WorkerHeartbeat,
@@ -30,6 +32,9 @@ from modulo.worker.runtime import InMemoryWorkerRuntime
 class ModuloHTTPApp:
     service: InMemoryModuloService
     runtime: InMemoryWorkerRuntime
+    inline_chat_execution: bool = True
+    chat_wait_timeout_seconds: float = 10.0
+    chat_wait_poll_seconds: float = 0.05
 
     def handle(self, method: str, path: str, body: bytes | None = None) -> tuple[int, dict[str, Any]]:
         if method == "GET" and path == "/api/tags":
@@ -154,18 +159,21 @@ class ModuloHTTPApp:
 
         try:
             job = self.service.submit_chat(request)
-            claim = self.service.claim_job(job.assigned_worker_id)
-            if claim is None:
-                raise JobQueueError(f"No claimable job for {job.assigned_worker_id}")
+            if self.inline_chat_execution:
+                claim = self.service.claim_job(job.assigned_worker_id)
+                if claim is None:
+                    raise JobQueueError(f"No claimable job for {job.assigned_worker_id}")
 
-            response_text = self.runtime.execute(claim.worker_id, claim.request)
-            completed = self.service.complete_job(
-                JobResult(
-                    job_id=claim.job_id,
-                    worker_id=claim.worker_id,
-                    response_text=response_text,
+                response_text = self.runtime.execute(claim.worker_id, claim.request)
+                completed = self.service.complete_job(
+                    JobResult(
+                        job_id=claim.job_id,
+                        worker_id=claim.worker_id,
+                        response_text=response_text,
+                    )
                 )
-            )
+            else:
+                completed = self._wait_for_job(job.job_id)
         except (RoutingError, WorkerExecutionError, JobQueueError) as exc:
             return HTTPStatus.BAD_GATEWAY, {"error": str(exc)}
         except json.JSONDecodeError:
@@ -179,6 +187,19 @@ class ModuloHTTPApp:
             },
             "done": True,
         }
+
+    def _wait_for_job(self, job_id: str):
+        deadline = time.monotonic() + self.chat_wait_timeout_seconds
+        while time.monotonic() < deadline:
+            job = self.service.get_job(job_id)
+            if job is None:
+                raise JobQueueError(f"Unknown job id: {job_id}")
+            if job.status is JobStatus.COMPLETED:
+                return job
+            if job.status is JobStatus.FAILED:
+                raise JobQueueError(job.failure_reason or f"Job {job_id} failed")
+            time.sleep(self.chat_wait_poll_seconds)
+        raise JobQueueError(f"Timed out waiting for job {job_id} to complete")
 
     def _handle_worker_register(self, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
         worker_id = payload.get("worker_id")
@@ -374,7 +395,8 @@ def build_http_server(
     *,
     service: InMemoryModuloService,
     runtime: InMemoryWorkerRuntime,
+    app: ModuloHTTPApp | None = None,
 ) -> ThreadingHTTPServer:
     handler_class = type("ModuloRequestHandler", (_ModuloRequestHandler,), {})
-    handler_class.app = ModuloHTTPApp(service=service, runtime=runtime)
+    handler_class.app = app or ModuloHTTPApp(service=service, runtime=runtime)
     return ThreadingHTTPServer((host, port), handler_class)

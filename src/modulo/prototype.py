@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import json
+import threading
+import time
 from dataclasses import dataclass, field
+from http.server import ThreadingHTTPServer
 from urllib import request
+from urllib import error as urllib_error
 
 from modulo.client.app import (
     ActivityEntry,
@@ -19,15 +23,15 @@ from modulo.client.openclaw_discovery import OpenClawDiscovery
 from modulo.client.ollama_discovery import OllamaDiscovery
 from modulo.client.ollama_loaded_models import OllamaLoadedModelsDiscovery
 from modulo.client.hosting_readiness import HostingRuntimeProbeStatus, OllamaHostingRuntimeProbe
-from modulo.cloud.http import ModuloHTTPApp
+from modulo.cloud.http import ModuloHTTPApp, build_http_server
 from modulo.cloud.router import TrustRouter
 from modulo.cloud.runtime import InMemoryModuloService
 from modulo.common.catalog import SUPPORTED_MODELS
-from modulo.common.contracts import ChatMessage, ChatRequest, ExecutionMode, JobStatus, WorkerBridgeConfig
+from modulo.common.contracts import JobStatus, RouteScope, WorkerBridgeConfig, WorkerRuntimeState
 from modulo.worker.executors import OllamaExecutor, OllamaHTTPClient, StubExecutor, UrllibOllamaHTTPClient
 from modulo.worker.errors import WorkerExecutionError
 from modulo.worker.runtime import InMemoryWorkerRuntime, WorkerBridgeRuntime, WorkerExecutor
-from modulo.worker.transport import InProcessWorkerHTTPTransport
+from modulo.worker.transport import UrllibWorkerHTTPTransport
 
 GUI_SMOKE_TEST_USER_PROMPT = "Return the Modulo smoke test acknowledgment."
 GUI_SMOKE_TEST_SYSTEM_PROMPT = (
@@ -35,11 +39,13 @@ GUI_SMOKE_TEST_SYSTEM_PROMPT = (
     "Do not ask follow-up questions. "
     "Reply with exactly: MODULO_SMOKE_TEST_OK"
 )
+PROTOTYPE_PRIVATE_NETWORK_ID = "prototype-private"
 
 
 @dataclass(frozen=True)
 class PrototypeRoundTripResult:
     job_id: str
+    trace_id: str
     model_id: str
     buyer_id: str
     assigned_worker_id: str
@@ -171,24 +177,50 @@ class LocalPrototypeHarness:
     cloud_runtime: InMemoryWorkerRuntime = field(init=False)
     app: ModuloHTTPApp = field(init=False)
     client: ModuloClientSupervisor = field(init=False)
+    server: ThreadingHTTPServer | None = field(init=False, default=None)
+    server_thread: threading.Thread | None = field(init=False, default=None)
+    worker_loop_thread: threading.Thread | None = field(init=False, default=None)
+    _worker_loop_stop: threading.Event = field(init=False, default_factory=threading.Event)
+    _worker_loop_interval_seconds: float = field(init=False, default=0.02)
 
     def __post_init__(self) -> None:
         self.service = InMemoryModuloService(router=TrustRouter())
         self.cloud_runtime = InMemoryWorkerRuntime()
-        self.app = ModuloHTTPApp(service=self.service, runtime=self.cloud_runtime)
+        self.app = ModuloHTTPApp(
+            service=self.service,
+            runtime=self.cloud_runtime,
+            inline_chat_execution=False,
+            chat_wait_timeout_seconds=5.0,
+            chat_wait_poll_seconds=0.02,
+        )
 
         executor = self._select_executor()
         if hasattr(executor, "register_worker"):
             executor.register_worker(self.worker_id, self.stub_response_text)
 
+        server = build_http_server(
+            "127.0.0.1",
+            0,
+            service=self.service,
+            runtime=self.cloud_runtime,
+            app=self.app,
+        )
+        self.server = server
+        host, port = server.server_address
+        self.modulo_url = f"http://{host}:{port}"
+        self.server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+        self.server_thread.start()
+
         config = WorkerBridgeConfig(
             modulo_url=self.modulo_url,
             worker_id=self.worker_id,
             enabled_models=(self.model_id,),
+            serving_scope=RouteScope.PRIVATE,
+            private_network_id=PROTOTYPE_PRIVATE_NETWORK_ID,
         )
         bridge = WorkerBridgeRuntime(
             config=config,
-            transport=InProcessWorkerHTTPTransport(app=self.app, config=config),
+            transport=UrllibWorkerHTTPTransport(config=config),
             executor=executor,
         )
         self.client = ModuloClientSupervisor(
@@ -255,10 +287,21 @@ class LocalPrototypeHarness:
         self.client.set_hosting_model(available_model_ids[0])
 
     def boot(self) -> ClientStatus:
-        return self.client.start_hosting()
+        status = self.client.start_hosting()
+        self._ensure_worker_loop_running()
+        return status
 
     def shutdown(self) -> ClientStatus:
-        return self.client.stop_hosting()
+        self._stop_worker_loop()
+        status = self.client.stop_hosting()
+        if self.server is not None:
+            self.server.shutdown()
+            self.server.server_close()
+            self.server = None
+        if self.server_thread is not None:
+            self.server_thread.join(timeout=2.0)
+            self.server_thread = None
+        return status
 
     def run_round_trip(
         self,
@@ -269,41 +312,58 @@ class LocalPrototypeHarness:
     ) -> PrototypeRoundTripResult:
         if not self.client.get_status().hosting_enabled:
             self.boot()
+        else:
+            self._ensure_worker_loop_running()
 
         effective_buyer_id = buyer_id or self.buyer_id
         current_model_id = self._current_model_id()
-        messages = []
+        body = {
+            "model": current_model_id,
+            "buyer_id": effective_buyer_id,
+            "scope": "private",
+            "private_network_id": PROTOTYPE_PRIVATE_NETWORK_ID,
+            "messages": [],
+            "stream": False,
+        }
         if system_message:
-            messages.append(ChatMessage(role="system", content=system_message))
-        messages.append(ChatMessage(role="user", content=user_message))
-        job = self.service.submit_chat(
-            ChatRequest(
-                model_id=current_model_id,
-                execution_mode=ExecutionMode.NETWORK,
-                buyer_id=effective_buyer_id,
-                messages=tuple(messages),
-            )
+            body["messages"].append({"role": "system", "content": system_message})
+        body["messages"].append({"role": "user", "content": user_message})
+
+        req = request.Request(
+            f"{self.modulo_url.rstrip('/')}/api/chat",
+            data=json.dumps(body).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
         )
-        status = self.client.run_hosting_cycle()
-        completed_job = self.service.get_job(job.job_id)
-        if completed_job is None or not completed_job.response_text:
-            worker_error = ""
-            if status.worker is not None and status.worker.last_error:
-                worker_error = status.worker.last_error
-            elif completed_job is not None and completed_job.failure_reason:
-                worker_error = completed_job.failure_reason
-            detail = f": {worker_error}" if worker_error else ""
+        try:
+            with request.urlopen(req, timeout=10.0) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except urllib_error.HTTPError as exc:
+            error_payload = json.loads(exc.read().decode("utf-8")) if exc.fp is not None else {}
+            message = error_payload.get("error", str(exc)) if isinstance(error_payload, dict) else str(exc)
             raise RuntimeError(
-                f"Prototype job {job.job_id} did not complete successfully{detail}"
-            )
+                f"Prototype HTTP round trip did not complete successfully: {message}"
+            ) from exc
+        except Exception as exc:
+            raise RuntimeError(f"Prototype ingress request failed: {exc}") from exc
+
+        status = self.client.get_status()
+        completed_job = self.service.jobs.list_jobs()[-1] if self.service.jobs.list_jobs() else None
+        if completed_job is None or not completed_job.response_text:
+            worker_error = status.worker.last_error if status.worker is not None else ""
+            detail = f": {worker_error}" if worker_error else ""
+            raise RuntimeError(f"Prototype HTTP round trip did not complete successfully{detail}")
+        traces = self.service.list_traces()
+        trace_id = traces[-1].trace_id if traces else ""
 
         return PrototypeRoundTripResult(
             job_id=completed_job.job_id,
+            trace_id=trace_id,
             model_id=completed_job.request.model_id,
             buyer_id=effective_buyer_id,
             assigned_worker_id=completed_job.assigned_worker_id,
             user_message=user_message,
-            response_text=completed_job.response_text,
+            response_text=payload.get("message", {}).get("content", completed_job.response_text),
             execution_mode=self.selected_executor_mode,
             execution_summary=self.selected_executor_summary,
             client_status=status,
@@ -390,6 +450,28 @@ class LocalPrototypeHarness:
         if job.attempts > 1:
             return "Retried onto a different worker"
         return "Fresh routing decision"
+
+    def _ensure_worker_loop_running(self) -> None:
+        if self.worker_loop_thread is not None and self.worker_loop_thread.is_alive():
+            return
+        self._worker_loop_stop.clear()
+        self.worker_loop_thread = threading.Thread(target=self._worker_loop, daemon=True)
+        self.worker_loop_thread.start()
+
+    def _stop_worker_loop(self) -> None:
+        self._worker_loop_stop.set()
+        if self.worker_loop_thread is not None:
+            self.worker_loop_thread.join(timeout=2.0)
+            self.worker_loop_thread = None
+
+    def _worker_loop(self) -> None:
+        while not self._worker_loop_stop.is_set():
+            status = self.client.get_status()
+            if status.hosting_enabled and (
+                status.worker is None or status.worker.runtime_state is not WorkerRuntimeState.ERROR
+            ):
+                self.client.run_hosting_cycle()
+            time.sleep(self._worker_loop_interval_seconds)
 
 
 def main() -> None:

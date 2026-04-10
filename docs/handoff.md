@@ -12,6 +12,7 @@ This file is the quickest way to regain context when switching workstations.
 - `Slice 1: Private-scope routing contracts` is completed
 - `Slice 2: Structured route-trace spine` is completed
 - `Slice 3: Network-addressable worker configuration` is completed
+- `Slice 4: Single-machine routed private proof` is completed
 - the current architecture discussion is [private_scope_mvp_design.md](./private_scope_mvp_design.md), which narrows the next remote-execution proof around `Local / Private / Public / Cloud`
 
 ## What exists today
@@ -40,6 +41,8 @@ This file is the quickest way to regain context when switching workstations.
 - the cloud path now records structured route traces for each routing attempt, including retry attempts and filtered-worker reasons
 - the worker bridge can now target a real `modulo_url` over HTTP instead of only an in-process app seam
 - localhost integration coverage now proves worker register, heartbeat, claim, and report flows against the real HTTP server contract
+- the local prototype harness now sends requests through the real `/api/chat` ingress while the hosted worker bridge claims and executes over the worker HTTP contract
+- the single-machine private proof now captures a truthful private-scope route trace through the same path used by smoke-test and diagnostics surfaces
 - the GUI shell has been tightened into a consistent pattern:
   - top-level tabs: `Use / Host / Diagnostics`
   - compact header + primary action + summary card + nested detail tabs
@@ -82,13 +85,13 @@ The host selector only shows local installable models, and the startup path now 
 
 ## Next recommended starting point
 
-Start with `Slice 4: Single-machine routed private proof` in [private_mvp_roadmap.md](./private_mvp_roadmap.md).
+Start with `Slice 5: Cross-machine private execution proof` in [private_mvp_roadmap.md](./private_mvp_roadmap.md).
 
 The most likely first useful slice is:
 
-- send one request through the actual HTTP ingress instead of directly entering the service layer
-- keep the route trace and worker-bridge HTTP path observable in the same single-machine proof
-- stop just short of the second-machine proof so debugging remains easy before remote testing
+- point a second machine's worker bridge at the primary machine's cloud/API endpoint
+- keep the private-network identity and route-trace fields identical to the single-machine proof so cross-machine comparison stays easy
+- focus on one clean remote execution proof before any packaging or installer work resumes
 
 If resuming in architecture mode instead of productization mode, the current non-implementation discussion is:
 
@@ -154,6 +157,7 @@ Current architecture discussion:
 
 Recent meaningful commits:
 
+- `3e64fa1` `Complete network addressable worker slice`
 - `4a31eaa` `Complete route trace spine slice`
 - `edd70a8` `Complete private scope routing contracts slice`
 - `ddd3cec` `Clarify private scope roadmap terminology`

@@ -5,7 +5,7 @@ import socket
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from modulo.common.contracts import JobStatus, WorkerRuntimeState
+from modulo.common.contracts import JobStatus, RouteScope, WorkerRuntimeState
 from modulo.client.hosting_readiness import HostingRuntimeProbeStatus
 from modulo.client.app import HostingPrewarmResult
 from modulo.client.ollama_loaded_models import LoadedOllamaModel, OllamaLoadedModelsStatus
@@ -265,6 +265,24 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertIsNotNone(completed_job)
         self.assertEqual(JobStatus.COMPLETED, completed_job.status)
         self.assertEqual("real prototype hello", completed_job.request.messages[0].content)
+
+    def test_single_machine_http_ingress_records_private_route_trace(self) -> None:
+        harness = LocalPrototypeHarness(
+            openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_discovery=InstalledLlamaDiscovery(),
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
+        )
+
+        result = harness.run_round_trip("trace proof")
+
+        self.assertTrue(result.trace_id)
+        trace = harness.service.get_trace(result.trace_id)
+        self.assertIsNotNone(trace)
+        self.assertEqual(RouteScope.PRIVATE, trace.resolved_scope)
+        self.assertEqual("prototype-private", trace.private_network_id)
+        self.assertEqual(result.job_id, trace.job_id)
+        self.assertEqual("completed", trace.final_status)
+        self.assertEqual(harness.worker_id, trace.selected_worker_id)
 
     def test_boot_prewarms_real_model_when_prewarm_succeeds(self) -> None:
         loaded_discovery = MutableLoadedModelsDiscovery()

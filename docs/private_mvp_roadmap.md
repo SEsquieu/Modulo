@@ -135,7 +135,19 @@ Notes:
 - this is a staging slice, not the final proof
 - it is acceptable if the worker and cloud share a machine, as long as the routing chain remains truthful
 
-Status: not started
+Status: completed
+
+Summary:
+
+- moved the local prototype harness onto the real HTTP ingress so requests now enter through `/api/chat` instead of directly calling the service layer
+- ran the hosted worker through the real worker-bridge HTTP path in queued mode, with the router producing a private-scope route trace and the worker completing the job asynchronously
+- kept the smoke-test and diagnostics-facing client surfaces intact while making the single-machine proof much closer to the eventual cross-machine path
+
+Proof added to repo:
+
+- queued chat wait mode in `src/modulo/cloud/http.py`
+- real single-machine routed ingress harness in `src/modulo/prototype.py`
+- prototype tests covering routed round-trip, failure surfacing, and private route-trace capture in `tests/test_prototype.py`
 
 ### Slice 5: Cross-machine private execution proof
 

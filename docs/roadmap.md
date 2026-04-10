@@ -180,7 +180,7 @@ The next committed implementation path is:
 
 Current active slice:
 
-- `Slice 4: Single-machine routed private proof`
+- `Slice 5: Cross-machine private execution proof`
 
 Why it is next:
 
