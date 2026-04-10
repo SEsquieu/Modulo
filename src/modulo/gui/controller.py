@@ -208,8 +208,11 @@ class GuiAppController:
         return self.refresh()
 
     @staticmethod
-    def build_default() -> "GuiAppController":
-        return GuiAppController(harness=LocalPrototypeHarness())
+    def build_default(*, platform_target_url: str = "") -> "GuiAppController":
+        return GuiAppController(
+            harness=LocalPrototypeHarness(),
+            _debug_target_url=platform_target_url.strip(),
+        )
 
     def _build_state(self, *, status: ClientStatus, onboarding: OnboardingStatus) -> GuiShellState:
         worker = status.worker

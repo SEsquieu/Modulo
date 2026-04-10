@@ -1295,6 +1295,11 @@ class ModuloMainWindow(QMainWindow):
                 )
             )
         )
+        if (
+            not self.debug_target_url_input.hasFocus()
+            and not self.debug_target_url_input.text().strip()
+        ):
+            self.debug_target_url_input.setText(state.debug_target_url)
         if not self.debug_private_network_input.hasFocus():
             self.debug_private_network_input.setText(state.debug_private_network_id)
         self.debug_topology_box.setPlainText("\n".join(state.debug_topology_lines))

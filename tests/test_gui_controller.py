@@ -416,6 +416,22 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertIn("Execution mode: NETWORK", state.debug_probe_details)
         self.assertIn("Response:", state.debug_probe_details)
 
+    def test_controller_can_seed_external_platform_target(self) -> None:
+        controller = GuiAppController(
+            harness=LocalPrototypeHarness(
+                openclaw_discovery=FakeGuiOpenClawDiscovery(),
+                ollama_discovery=FakeGuiOllamaDiscovery(),
+                ollama_loaded_models_discovery=FakeGuiLoadedModelsDiscovery(),
+                hosting_runtime_probe=FakeGuiHostingRuntimeProbe(),
+            ),
+            _debug_target_url="https://modulo.grinningfrog.com",
+        )
+
+        state = controller.refresh()
+
+        self.assertEqual("https://modulo.grinningfrog.com", state.debug_target_url)
+        self.assertIn("modulo.grinningfrog.com", state.debug_summary)
+
     def test_debug_target_updates_use_visibility_from_remote_platform(self) -> None:
         host_harness = LocalPrototypeHarness(
             model_id="gemma4:e2b",

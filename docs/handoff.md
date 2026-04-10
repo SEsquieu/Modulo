@@ -133,6 +133,12 @@ Launch GUI:
 python -m modulo.gui_app
 ```
 
+Launch GUI with a shared hosted backend target preloaded:
+
+```powershell
+python -m modulo.gui_app --platform-url https://modulo.grinningfrog.com
+```
+
 Run local prototype harness:
 
 ```powershell

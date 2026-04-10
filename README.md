@@ -98,6 +98,14 @@ python -m pip install -e .[gui]
 python -m modulo.gui_app
 ```
 
+To launch the GUI already pointed at a shared hosted backend target:
+
+```powershell
+python -m modulo.gui_app --platform-url https://modulo.grinningfrog.com
+```
+
+You can also set `MODULO_PLATFORM_URL=https://modulo.grinningfrog.com` before launch if you want that target preloaded by default.
+
 This launches the barebones PySide6 desktop shell against the current live client/prototype state.
 
 The GUI currently includes:
