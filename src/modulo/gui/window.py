@@ -147,7 +147,11 @@ class ModuloMainWindow(QMainWindow):
         self.debug_platform_value = QLabel()
         self.debug_platform_value.setWordWrap(True)
         self.debug_target_url_input = QLineEdit()
+        self.debug_target_url_input.setPlaceholderText("http://REMOTE_HOST:PORT")
         self.debug_private_network_input = QLineEdit()
+        self.debug_private_network_input.setPlaceholderText("private-network-id")
+        self.debug_apply_target_button = QPushButton("Apply Target")
+        self.debug_apply_target_button.clicked.connect(self._apply_debug_target)
         self.debug_probe_button = QPushButton("Run Debug Probe")
         self.debug_probe_button.clicked.connect(self._run_debug_probe)
         self.debug_topology_box = QPlainTextEdit()
@@ -727,6 +731,7 @@ class ModuloMainWindow(QMainWindow):
         target_row = QHBoxLayout()
         target_row.addWidget(self._build_section_label("Target URL"))
         target_row.addWidget(self.debug_target_url_input, 1)
+        target_row.addWidget(self.debug_apply_target_button, 0)
         layout.addLayout(target_row)
         network_row = QHBoxLayout()
         network_row.addWidget(self._build_section_label("Private Network"))
@@ -795,11 +800,26 @@ class ModuloMainWindow(QMainWindow):
             action=True,
         )
 
-    def _run_debug_probe(self) -> None:
+    def _persist_debug_target_url(self) -> None:
         target_url = self.debug_target_url_input.text().strip()
+        if self._latest_state is not None and target_url == self._latest_state.debug_target_url:
+            return
+        self._apply_state(self.controller.set_debug_target_url(target_url))
+
+    def _persist_debug_private_network_id(self) -> None:
         private_network_id = self.debug_private_network_input.text().strip()
-        self.controller.set_debug_target_url(target_url)
-        self.controller.set_debug_private_network_id(private_network_id)
+        if (
+            self._latest_state is not None
+            and private_network_id == self._latest_state.debug_private_network_id
+        ):
+            return
+        self._apply_state(self.controller.set_debug_private_network_id(private_network_id))
+
+    def _apply_debug_target(self) -> None:
+        self._persist_debug_target_url()
+        self._persist_debug_private_network_id()
+
+    def _run_debug_probe(self) -> None:
         self._run_async_state_action(
             self.controller.run_debug_probe,
             busy_message="Running debug network probe...",
@@ -1065,6 +1085,7 @@ class ModuloMainWindow(QMainWindow):
         )
         self.restart_button.setEnabled(state.restart_action_enabled and controls_enabled)
         self.smoke_button.setEnabled(state.smoke_action_enabled and controls_enabled)
+        self.debug_apply_target_button.setEnabled(controls_enabled)
         self.debug_probe_button.setEnabled(controls_enabled)
         host_busy = self._action_in_flight and self._active_action_kind == "host_warm"
         smoke_busy = self._action_in_flight and self._active_action_kind == "smoke_test"
@@ -1266,15 +1287,14 @@ class ModuloMainWindow(QMainWindow):
         self.debug_platform_value.setText(
             "\n".join(
                 (
-                    f"Platform URL: {state.debug_platform_url or 'Unavailable'}",
+                    f"Local platform URL: {state.debug_platform_url or 'Unavailable'}",
+                    f"Active target URL: {state.debug_target_url or state.debug_platform_url or 'Unavailable'}",
                     f"Private network: {state.debug_private_network_id or 'unset'}",
                     f"Worker ID: {state.debug_worker_id or 'unset'}",
                     f"Model: {state.debug_model_id or 'unset'}",
                 )
             )
         )
-        if not self.debug_target_url_input.hasFocus():
-            self.debug_target_url_input.setText(state.debug_target_url)
         if not self.debug_private_network_input.hasFocus():
             self.debug_private_network_input.setText(state.debug_private_network_id)
         self.debug_topology_box.setPlainText("\n".join(state.debug_topology_lines))

@@ -464,7 +464,7 @@ class LocalPrototypeHarness:
         except Exception as exc:
             raise RuntimeError(f"Prototype ingress request failed: {exc}") from exc
 
-        status = self.client.get_status()
+        status = self._settle_worker_status_after_round_trip()
         completed_job = self.service.jobs.list_jobs()[-1] if self.service.jobs.list_jobs() else None
         if completed_job is None or not completed_job.response_text:
             worker_error = status.worker.last_error if status.worker is not None else ""
@@ -656,6 +656,23 @@ class LocalPrototypeHarness:
             execution_mode="network",
             execution_summary=f"Target: {target_url} | Private network: {network_id}",
         )
+
+    def _settle_worker_status_after_round_trip(self) -> ClientStatus:
+        deadline = time.monotonic() + 1.0
+        last_status = self.client.get_status()
+        while time.monotonic() < deadline:
+            worker = last_status.worker
+            if worker is None:
+                return last_status
+            if (
+                worker.current_load == 0
+                and worker.last_job_status in {JobStatus.COMPLETED, JobStatus.FAILED}
+            ):
+                return last_status
+            self.client.run_hosting_cycle()
+            time.sleep(self._worker_loop_interval_seconds)
+            last_status = self.client.get_status()
+        return last_status
 
     @staticmethod
     def _discover_lan_ip() -> str:
