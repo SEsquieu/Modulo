@@ -45,6 +45,13 @@ Summary:
 - added worker-side serving scope and private-network identity to worker registration and bridge configuration
 - made router eligibility filter by scope and private-network identity before trust scoring
 
+Proof added to repo:
+
+- shared `RouteScope` contract plus request-side and worker-side private-network identity in `src/modulo/common/contracts.py`
+- scope-aware router eligibility in `src/modulo/cloud/router.py`
+- scope-preserving worker registration and claim transport in `src/modulo/cloud/http.py` and `src/modulo/worker/transport.py`
+- router and HTTP tests covering private-scope filtering and private-network identity matching
+
 ### Slice 2: Structured route-trace spine
 
 Goal:
@@ -62,6 +69,8 @@ Notes:
 - this is the foundation for future private-network ops visibility
 - machine-readable fields matter more than polished UI in this slice
 
+Status: not started
+
 ### Slice 3: Network-addressable worker configuration
 
 Goal:
@@ -78,6 +87,8 @@ Notes:
 
 - this slice should avoid adding packaging or installer work
 - the point is transport truth, not desktop polish
+
+Status: not started
 
 ### Slice 4: Single-machine routed private proof
 
@@ -97,6 +108,8 @@ Notes:
 - this is a staging slice, not the final proof
 - it is acceptable if the worker and cloud share a machine, as long as the routing chain remains truthful
 
+Status: not started
+
 ### Slice 5: Cross-machine private execution proof
 
 Goal:
@@ -114,6 +127,8 @@ Notes:
 
 - this slice is the true private remote-execution MVP proof
 - after this succeeds, packaging can resume with much more confidence
+
+Status: not started
 
 ## Route-trace requirement
 
@@ -142,10 +157,3 @@ Add a short summary here when the roadmap is complete:
 
 - summary:
 - proof added to repo:
-
-## Slice 1 proof
-
-- shared `RouteScope` contract plus request-side and worker-side private-network identity in `src/modulo/common/contracts.py`
-- scope-aware router eligibility in `src/modulo/cloud/router.py`
-- scope-preserving worker registration and claim transport in `src/modulo/cloud/http.py` and `src/modulo/worker/transport.py`
-- router and HTTP tests covering private-scope filtering and private-network identity matching
