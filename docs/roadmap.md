@@ -180,7 +180,7 @@ The next committed implementation path is:
 
 Current active slice:
 
-- `Slice 5: Cross-machine private execution proof`
+- `Private MVP roadmap complete`
 
 Why it is next:
 

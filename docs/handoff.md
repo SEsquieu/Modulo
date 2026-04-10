@@ -13,6 +13,7 @@ This file is the quickest way to regain context when switching workstations.
 - `Slice 2: Structured route-trace spine` is completed
 - `Slice 3: Network-addressable worker configuration` is completed
 - `Slice 4: Single-machine routed private proof` is completed
+- `Slice 5: Cross-machine private execution proof` is completed in repo shape and ready for live network validation
 - the current architecture discussion is [private_scope_mvp_design.md](./private_scope_mvp_design.md), which narrows the next remote-execution proof around `Local / Private / Public / Cloud`
 
 ## What exists today
@@ -43,6 +44,8 @@ This file is the quickest way to regain context when switching workstations.
 - localhost integration coverage now proves worker register, heartbeat, claim, and report flows against the real HTTP server contract
 - the local prototype harness now sends requests through the real `/api/chat` ingress while the hosted worker bridge claims and executes over the worker HTTP contract
 - the single-machine private proof now captures a truthful private-scope route trace through the same path used by smoke-test and diagnostics surfaces
+- the repo now includes explicit cross-machine entrypoints for a primary control-plane server and a remote worker bridge runner
+- a localhost test now proves the same control-plane server plus remote-worker shape that will be used for the real network validation
 - the GUI shell has been tightened into a consistent pattern:
   - top-level tabs: `Use / Host / Diagnostics`
   - compact header + primary action + summary card + nested detail tabs
@@ -85,13 +88,13 @@ The host selector only shows local installable models, and the startup path now 
 
 ## Next recommended starting point
 
-Start with `Slice 5: Cross-machine private execution proof` in [private_mvp_roadmap.md](./private_mvp_roadmap.md).
+Start with the live network validation run using the commands in [README.md](../README.md) and the completed [private_mvp_roadmap.md](./private_mvp_roadmap.md).
 
 The most likely first useful slice is:
 
-- point a second machine's worker bridge at the primary machine's cloud/API endpoint
-- keep the private-network identity and route-trace fields identical to the single-machine proof so cross-machine comparison stays easy
-- focus on one clean remote execution proof before any packaging or installer work resumes
+- run the primary control-plane server on one machine and the worker bridge on a second machine
+- confirm one real request completes against the remote worker under a shared private-network identity
+- capture the route trace and then decide whether packaging or trace-visibility work should come next
 
 If resuming in architecture mode instead of productization mode, the current non-implementation discussion is:
 
@@ -129,6 +132,18 @@ Run HTTP demo server:
 python -m modulo.cloud.demo_server
 ```
 
+Run private-network control plane:
+
+```powershell
+python -m modulo.cloud.server --host 0.0.0.0 --port 8000
+```
+
+Run remote worker bridge:
+
+```powershell
+python -m modulo.worker.bridge_runner --modulo-url http://PRIMARY_MACHINE_IP:8000 --worker-id worker-laptop --model gemma4:e2b --scope private --private-network-id office-private
+```
+
 ## Current roadmap pointer
 
 Primary sequencing doc:
@@ -157,6 +172,7 @@ Current architecture discussion:
 
 Recent meaningful commits:
 
+- `6cc4633` `Complete single machine routed proof slice`
 - `3e64fa1` `Complete network addressable worker slice`
 - `4a31eaa` `Complete route trace spine slice`
 - `edd70a8` `Complete private scope routing contracts slice`

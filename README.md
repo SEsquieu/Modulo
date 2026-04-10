@@ -73,6 +73,24 @@ This boots the in-process cloud control plane, starts a supervised worker throug
 The local prototype now also supports a client-facing smoke-test path through the same harness and worker/runtime seams.
 It now routes the buyer request through the real local `/api/chat` HTTP ingress while the hosted worker bridge claims and completes the job over the worker HTTP contract.
 
+## Running the private-network proof
+
+Primary machine:
+
+```powershell
+python -m pip install -e .
+python -m modulo.cloud.server --host 0.0.0.0 --port 8000
+```
+
+Worker machine:
+
+```powershell
+python -m pip install -e .
+python -m modulo.worker.bridge_runner --modulo-url http://PRIMARY_MACHINE_IP:8000 --worker-id worker-laptop --model gemma4:e2b --scope private --private-network-id office-private
+```
+
+You can also use `--stub-response "hello from remote worker"` on the worker runner if you want to validate transport and routing before relying on a real local Ollama runtime on the second machine.
+
 ## Running the GUI shell
 
 ```powershell

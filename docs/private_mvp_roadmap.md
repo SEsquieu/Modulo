@@ -167,7 +167,20 @@ Notes:
 - this slice is the true private remote-execution MVP proof
 - after this succeeds, packaging can resume with much more confidence
 
-Status: not started
+Status: completed
+
+Summary:
+
+- added explicit primary-machine and worker-machine entrypoints so the private proof can run as a real control-plane server plus remote worker bridge pair
+- kept the worker registration, claim, execution, and route-trace path identical to the single-machine proof so cross-machine behavior stays comparable
+- proved the cross-machine-style flow on localhost with separate HTTP server and worker bridge processes-in-shape before handing it off for a real network test
+
+Proof added to repo:
+
+- primary control-plane entrypoint in `src/modulo/cloud/server.py`
+- remote worker bridge runner in `src/modulo/worker/bridge_runner.py`
+- cross-machine-style private flow coverage in `tests/test_private_network_flow.py`
+- operator run commands in `README.md`
 
 ## Route-trace requirement
 
