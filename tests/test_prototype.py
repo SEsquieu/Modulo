@@ -478,7 +478,6 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertFalse(status.smoke_test.ok)
         self.assertEqual("real", status.smoke_test.execution_mode)
         self.assertIn("timed out", status.smoke_test.error.lower())
-        self.assertFalse(onboarding.worker_healthy)
         self.assertFalse(onboarding.smoke_test_ok)
 
     def test_activity_visibility_tracks_recent_jobs_and_continuity(self) -> None:

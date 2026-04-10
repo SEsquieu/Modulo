@@ -18,7 +18,7 @@ from modulo.common.contracts import (
     WorkerRuntimeState,
 )
 from modulo.worker.runtime import InMemoryWorkerRuntime, WorkerBridgeRuntime
-from modulo.worker.transport import UrllibWorkerHTTPTransport
+from modulo.worker.transport import UrllibWorkerHTTPTransport, WorkerTransportError
 
 
 class UrllibWorkerHTTPTransportTests(unittest.TestCase):
@@ -141,6 +141,28 @@ class UrllibWorkerHTTPTransportTests(unittest.TestCase):
         self.assertEqual(WorkerRuntimeState.ERROR, status.runtime_state)
         self.assertFalse(status.registered_with_cloud)
         self.assertIn("Failed to register worker", status.last_error)
+
+    def test_register_worker_surfaces_http_status_and_raw_error_body(self) -> None:
+        transport = UrllibWorkerHTTPTransport(
+            config=WorkerBridgeConfig(
+                modulo_url=self.base_url,
+                worker_id="worker-http",
+                enabled_models=("llama3.1:8b",),
+            ),
+            timeout_seconds=2.0,
+        )
+
+        def fake_post(path: str, payload: dict, *, action: str):
+            del path, payload, action
+            return 403, {"error": "<html><body>forbidden by edge</body></html>"}
+
+        object.__setattr__(transport, "_post", fake_post)
+
+        with self.assertRaises(WorkerTransportError) as raised:
+            transport.register_worker()
+
+        self.assertIn("HTTP 403", str(raised.exception))
+        self.assertIn("forbidden by edge", str(raised.exception))
 
 
 if __name__ == "__main__":

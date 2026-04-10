@@ -47,13 +47,19 @@ def _decode_json_bytes_safe(body: bytes) -> dict:
     try:
         return _decode_json_bytes(body)
     except WorkerTransportError:
-        return {"error": "unknown error"}
+        text = body.decode("utf-8", errors="replace").strip()
+        if text:
+            condensed = " ".join(text.split())
+            return {"error": condensed[:240]}
+        return {"error": "empty error response"}
 
 
 def _require_ok(status: int, payload: dict, action: str) -> None:
     if status != HTTPStatus.OK:
         error_message = payload.get("error", "unknown error")
-        raise WorkerTransportError(f"Failed to {action}: {error_message}")
+        raise WorkerTransportError(
+            f"Failed to {action}: HTTP {status} - {error_message}"
+        )
 
 
 def _route_from_payload(payload: dict, model_id: str):
