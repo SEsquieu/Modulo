@@ -416,6 +416,37 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertIn("Execution mode: NETWORK", state.debug_probe_details)
         self.assertIn("Response:", state.debug_probe_details)
 
+    def test_debug_target_updates_use_visibility_from_remote_platform(self) -> None:
+        host_harness = LocalPrototypeHarness(
+            model_id="gemma4:e2b",
+            openclaw_discovery=InstalledGuiOpenClawDiscovery(),
+            ollama_discovery=FakeGuiOllamaDiscovery(),
+            ollama_loaded_models_discovery=FakeGuiLoadedModelsDiscovery(),
+            hosting_runtime_probe=FakeGuiHostingRuntimeProbe(),
+        )
+        buyer_controller = GuiAppController(
+            harness=LocalPrototypeHarness(
+                openclaw_discovery=InstalledGuiOpenClawDiscovery(),
+                ollama_discovery=FakeGuiOllamaDiscovery(),
+                ollama_loaded_models_discovery=FakeGuiLoadedModelsDiscovery(),
+                hosting_runtime_probe=FakeGuiHostingRuntimeProbe(),
+            )
+        )
+
+        try:
+            host_harness.client.set_hosting_model("gemma4:e2b")
+            host_harness.boot()
+
+            state = buyer_controller.set_debug_target_url(host_harness.modulo_url)
+
+            self.assertIn("currently advertised", state.buyer_platform_summary)
+            self.assertTrue(any("gemma4:e2b" in line for line in state.buyer_network_models))
+            self.assertIn("network:gemma4:e2b", state.use_available_model_ids)
+            self.assertIn(host_harness.modulo_url, state.debug_summary)
+        finally:
+            buyer_controller.harness.shutdown()
+            host_harness.shutdown()
+
 
 if __name__ == "__main__":
     unittest.main()

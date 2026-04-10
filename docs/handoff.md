@@ -14,6 +14,7 @@ This file is the quickest way to regain context when switching workstations.
 - `Slice 3: Network-addressable worker configuration` is completed
 - `Slice 4: Single-machine routed private proof` is completed
 - `Slice 5: Cross-machine private execution proof` is completed in repo shape and ready for live network validation
+- `Slice 6: Lightweight shared-platform advertising visibility` is completed
 - the current architecture discussion is [private_scope_mvp_design.md](./private_scope_mvp_design.md), which narrows the next remote-execution proof around `Local / Private / Public / Cloud`
 - a future routing note is captured in [future_host_capacity_intelligence.md](./future_host_capacity_intelligence.md) for host capability profiling, warm/cold inventory truth, and dynamic idle swapping
 
@@ -48,6 +49,9 @@ This file is the quickest way to regain context when switching workstations.
 - the repo now includes explicit cross-machine entrypoints for a primary control-plane server and a remote worker bridge runner
 - a localhost test now proves the same control-plane server plus remote-worker shape that will be used for the real network validation
 - the GUI now includes a `Debug` tab that surfaces the current platform URL, ready-to-run private-network worker/request commands, and an interactive network probe target
+- the control plane now exposes lightweight shared-platform advertising visibility through `GET /api/platform/status`
+- the prototype session bridge can now read another machine's advertised model list instead of only local in-memory state
+- the GUI `Use` tab can now reflect a remote host's advertised network models when the Debug target URL points at that host
 - the GUI shell has been tightened into a consistent pattern:
   - top-level tabs: `Use / Host / Diagnostics / Debug`
   - compact header + primary action + summary card + nested detail tabs
@@ -94,9 +98,9 @@ Start with the live network validation run using the commands in [README.md](../
 
 The most likely first useful slice is:
 
-- run the primary control-plane server on one machine and the worker bridge on a second machine
-- confirm one real request completes against the remote worker under a shared private-network identity
-- capture the route trace and then decide whether packaging or trace-visibility work should come next
+- keep using the GUI Debug target as the lightweight shared-platform selector while validating multiple workstation paths
+- decide whether the next slice should be richer shared discovery in `Use`, or operator-facing route-trace visibility on the host side
+- only return to packaging once the shared-network behavior feels truthful enough to lock in
 
 If resuming in architecture mode instead of productization mode, the current non-implementation discussion is:
 
@@ -175,6 +179,10 @@ Current architecture discussion:
 Recent meaningful commits:
 
 - `6cc4633` `Complete single machine routed proof slice`
+- `42cb6b7` `Complete cross machine private proof slice`
+- `9210991` `Capture future host capacity routing note`
+- `9d56be0` `Add debug tab for network validation`
+- `c395b1d` `Add interactive debug network probe`
 - `3e64fa1` `Complete network addressable worker slice`
 - `4a31eaa` `Complete route trace spine slice`
 - `edd70a8` `Complete private scope routing contracts slice`

@@ -182,6 +182,39 @@ Proof added to repo:
 - cross-machine-style private flow coverage in `tests/test_private_network_flow.py`
 - operator run commands in `README.md`
 
+### Slice 6: Lightweight shared-platform advertising visibility
+
+Goal:
+
+- let a buyer-side GUI point at a shared control plane and see the currently advertised network models without building full discovery or trust UX yet
+
+Exit criteria:
+
+- the control plane exposes a lightweight platform-visibility read endpoint
+- the client session bridge can read that endpoint from another machine
+- the GUI `Use` tab updates its network-model visibility from the selected debug target
+- tests prove one harness can see another harness's advertised model list
+
+Notes:
+
+- keep this narrow and visibility-only
+- do not turn this slice into full network discovery, trust ranking, or route-health UX
+
+Status: completed
+
+Summary:
+
+- added a lightweight shared-platform status endpoint so buyers can read advertised network models and buyer-routing context from the active control plane
+- taught the prototype session bridge to treat the Debug target URL as a real platform visibility target instead of only a probe destination
+- wired the GUI so the `Use` tab now reflects the selected Debug target's advertised network models, which closes the exact cross-machine selection gap discovered during live testing
+
+Proof added to repo:
+
+- `GET /api/platform/status` in `src/modulo/cloud/http.py`
+- remote-aware prototype session bridge in `src/modulo/prototype.py`
+- Debug-target-driven visibility sync in `src/modulo/gui/controller.py`
+- HTTP, prototype, and GUI coverage for remote advertising visibility in `tests/test_http_app.py`, `tests/test_prototype.py`, and `tests/test_gui_controller.py`
+
 ## Route-trace requirement
 
 Every slice in this roadmap should preserve the future ability to expose route traces in operator surfaces.
@@ -208,4 +241,6 @@ This does not require a dashboard yet, but it must leave enough truthful data fo
 Add a short summary here when the roadmap is complete:
 
 - summary:
+  - Modulo now proves a bounded private-scope execution path across machines and has a light buyer-side visibility surface for advertised network models through the GUI Debug target.
 - proof added to repo:
+  - shared control-plane and worker entrypoints, route traces, cross-machine worker transport, and lightweight shared-platform advertising visibility

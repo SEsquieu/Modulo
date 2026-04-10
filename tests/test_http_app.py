@@ -61,6 +61,17 @@ class ModuloHTTPAppTests(unittest.TestCase):
         advertised_ids = {model["name"] for model in payload["models"]}
         self.assertIn("qwen3.5:4b", advertised_ids)
 
+    def test_get_platform_status_returns_advertised_network_models(self) -> None:
+        status, payload = self.app.handle("GET", "/api/platform/status")
+
+        self.assertEqual(200, status)
+        self.assertTrue(payload["connected"])
+        self.assertIn("shared control plane", payload["summary"])
+        self.assertIn("currently advertised", payload["buyer_routing_summary"])
+        self.assertTrue(payload["network_models"])
+        self.assertEqual("llama3.1:8b", payload["network_models"][0]["model_id"])
+        self.assertEqual("network", payload["network_models"][0]["source"])
+
     def test_post_chat_returns_ollama_shaped_response(self) -> None:
         status, payload = self.app.handle(
             "POST",

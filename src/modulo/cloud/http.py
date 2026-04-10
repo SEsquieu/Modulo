@@ -40,6 +40,9 @@ class ModuloHTTPApp:
         if method == "GET" and path == "/api/tags":
             return HTTPStatus.OK, self._handle_tags()
 
+        if method == "GET" and path == "/api/platform/status":
+            return HTTPStatus.OK, self._handle_platform_status()
+
         if method == "POST" and path == "/api/chat":
             try:
                 payload = json.loads((body or b"{}").decode("utf-8"))
@@ -110,6 +113,62 @@ class ModuloHTTPApp:
                 )
         return {
             "models": list(models_by_id.values())
+        }
+
+    def _handle_platform_status(self) -> dict[str, Any]:
+        workers = self.service.registry.list_workers()
+        healthy_network_workers = [
+            worker for worker in workers if worker.healthy and worker.kind.value == "network"
+        ]
+
+        network_models: dict[str, dict[str, Any]] = {}
+        for worker in healthy_network_workers:
+            for advertised_model in worker.advertised_models:
+                canonical = SUPPORTED_MODELS.get(advertised_model.model_id)
+                display_name = (
+                    canonical.display_name if canonical is not None else advertised_model.model_id
+                )
+                network_models.setdefault(
+                    advertised_model.model_id,
+                    {
+                        "model_id": advertised_model.model_id,
+                        "display_name": display_name,
+                        "source": "network",
+                        "summary": f"Advertised by healthy network worker {worker.worker_id}.",
+                    },
+                )
+
+        cloud_models = [
+            {
+                "model_id": model.model_id,
+                "display_name": model.display_name,
+                "source": "cloud",
+                "summary": "Prototype-safe placeholder trusted cloud catalog.",
+            }
+            for model in SUPPORTED_MODELS.values()
+        ]
+        network_summary = (
+            f"{len(network_models)} network model(s) are currently advertised by healthy workers."
+            if network_models
+            else "No network models are currently advertised on this platform target."
+        )
+        health = self.service.health_summary()
+        details = (
+            f"Healthy workers: {health['healthy_workers']} / {health['total_workers']}. "
+            "Cloud catalog is still a prototype-safe placeholder."
+        )
+        return {
+            "connected": True,
+            "summary": "Platform session bridge is connected to the shared control plane.",
+            "details": details,
+            "account_summary": "Prototype account context is local-only and not authenticated yet.",
+            "network_models": list(network_models.values()),
+            "cloud_models": cloud_models,
+            "credits_summary": "Prototype credits are not implemented yet.",
+            "buyer_routing_summary": network_summary,
+            "buyer_config_summary": (
+                "Buyer routing defaults to platform-managed selection in the current prototype."
+            ),
         }
 
     def _handle_chat(self, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:

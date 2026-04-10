@@ -140,6 +140,7 @@ class GuiAppController:
             self._debug_private_network_id = (
                 self.harness.client.worker_bridge.config.private_network_id or ""
             )
+        self._sync_debug_target_into_session_bridge()
 
     def refresh(self) -> GuiShellState:
         return self._build_state(
@@ -191,6 +192,7 @@ class GuiAppController:
 
     def set_debug_target_url(self, url: str) -> GuiShellState:
         self._debug_target_url = url.strip()
+        self._sync_debug_target_into_session_bridge()
         return self.refresh()
 
     def set_debug_private_network_id(self, private_network_id: str) -> GuiShellState:
@@ -718,15 +720,17 @@ class GuiAppController:
     def _debug_summary(self, status: ClientStatus) -> str:
         model_id = self._debug_model_id(status)
         network_id = self._debug_private_network_id or "unset"
+        visibility_target = self._debug_target_url or self.harness.modulo_url
         if status.worker and status.worker.registered_with_cloud:
             return (
                 f"Current prototype control plane is reachable at {self.harness.modulo_url} "
                 f"with worker {self.harness.client.worker_bridge.config.worker_id} registered for "
-                f"{model_id} on private network {network_id}."
+                f"{model_id} on private network {network_id}. Visibility target: {visibility_target}."
             )
         return (
             f"Use this tab to point another worker at {self.harness.modulo_url} and send a "
-            f"private request for {model_id} under private network {network_id}."
+            f"private request for {model_id} under private network {network_id}. "
+            f"Buyer-side visibility follows {visibility_target}."
         )
 
     def _debug_model_id(self, status: ClientStatus) -> str:
@@ -744,6 +748,7 @@ class GuiAppController:
         worker = status.worker
         lines = [
             f"Local control plane: {self.harness.modulo_url}",
+            f"Visibility target: {self._debug_target_url or self.harness.modulo_url}",
         ]
         if self.harness.lan_platform_url:
             lines.append(f"LAN control plane: {self.harness.lan_platform_url}")
@@ -820,6 +825,12 @@ class GuiAppController:
         else:
             lines.append(f"Error: {self._last_debug_probe.error}")
         return "\n".join(lines)
+
+    def _sync_debug_target_into_session_bridge(self) -> None:
+        session_bridge = self.harness.client.session_bridge
+        if session_bridge is None or not hasattr(session_bridge, "set_target_url"):
+            return
+        session_bridge.set_target_url(self._debug_target_url or self.harness.modulo_url)
 
     @staticmethod
     def _hosting_preflight_checks(status: ClientStatus) -> tuple[str, ...]:

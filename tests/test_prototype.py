@@ -396,6 +396,32 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertEqual("network", status.platform.network_models[0].source)
         self.assertIn("currently advertised", status.platform.buyer_routing_summary)
 
+    def test_session_bridge_can_read_remote_platform_visibility(self) -> None:
+        host_harness = LocalPrototypeHarness(
+            model_id="qwen3.5:4b",
+            ollama_discovery=InstalledQwenDiscovery(),
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
+        )
+        buyer_harness = LocalPrototypeHarness(
+            ollama_discovery=InstalledLlamaDiscovery(),
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
+        )
+
+        try:
+            host_harness.boot()
+            buyer_harness.client.session_bridge.set_target_url(host_harness.modulo_url)
+
+            status = buyer_harness.client.get_status()
+
+            self.assertTrue(status.platform.connected)
+            self.assertIn("shared control plane", status.platform.summary)
+            self.assertEqual(1, len(status.platform.network_models))
+            self.assertEqual("qwen3.5:4b", status.platform.network_models[0].model_id)
+            self.assertIn("currently advertised", status.platform.buyer_routing_summary)
+        finally:
+            buyer_harness.shutdown()
+            host_harness.shutdown()
+
     def test_client_smoke_test_reports_failure_when_executor_fails(self) -> None:
         harness = LocalPrototypeHarness(
             executor=FailingExecutor(),

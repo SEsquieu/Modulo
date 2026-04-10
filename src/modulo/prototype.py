@@ -60,8 +60,18 @@ class PrototypeRoundTripResult:
 @dataclass(frozen=True)
 class LocalPrototypeSessionBridge(ClientSessionBridge):
     service: InMemoryModuloService
+    modulo_url: str = ""
+    lan_platform_url: str = ""
+    target_url: str = ""
+
+    def set_target_url(self, url: str) -> None:
+        object.__setattr__(self, "target_url", url.strip())
 
     def fetch_platform_status(self) -> PlatformSessionStatus:
+        remote_target = self._remote_target_url()
+        if remote_target:
+            return self._fetch_remote_platform_status(remote_target)
+
         workers = self.service.registry.list_workers()
         healthy_network_workers = [
             worker for worker in workers if worker.healthy and worker.kind.value == "network"
@@ -119,6 +129,101 @@ class LocalPrototypeSessionBridge(ClientSessionBridge):
                 "Buyer routing defaults to platform-managed selection in the local prototype."
             ),
         )
+
+    def _remote_target_url(self) -> str:
+        normalized_target = self.target_url.rstrip("/")
+        if not normalized_target:
+            return ""
+        local_targets = {self.modulo_url.rstrip("/")}
+        if self.lan_platform_url:
+            local_targets.add(self.lan_platform_url.rstrip("/"))
+        if normalized_target in local_targets:
+            return ""
+        return normalized_target
+
+    def _fetch_remote_platform_status(self, target_url: str) -> PlatformSessionStatus:
+        req = request.Request(f"{target_url}/api/platform/status", method="GET")
+        try:
+            with request.urlopen(req, timeout=5.0) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except urllib_error.HTTPError as exc:
+            message = str(exc)
+            if exc.fp is not None:
+                try:
+                    error_payload = json.loads(exc.read().decode("utf-8"))
+                except json.JSONDecodeError:
+                    error_payload = {}
+                if isinstance(error_payload, dict) and error_payload.get("error"):
+                    message = str(error_payload["error"])
+            return PlatformSessionStatus(
+                connected=False,
+                summary="Platform session bridge could not read the remote control plane.",
+                details=f"Target {target_url} returned an HTTP error: {message}",
+                account_summary="Remote platform status is unavailable.",
+                credits_summary="Unavailable",
+                buyer_routing_summary="Network model visibility is unavailable for the selected target.",
+                buyer_config_summary="Remote buyer routing state could not be fetched.",
+            )
+        except Exception as exc:
+            return PlatformSessionStatus(
+                connected=False,
+                summary="Platform session bridge could not reach the remote control plane.",
+                details=f"Target {target_url} could not be queried: {exc}",
+                account_summary="Remote platform status is unavailable.",
+                credits_summary="Unavailable",
+                buyer_routing_summary="Network model visibility is unavailable for the selected target.",
+                buyer_config_summary="Remote buyer routing state could not be fetched.",
+            )
+
+        return PlatformSessionStatus(
+            connected=bool(payload.get("connected", True)),
+            summary=str(payload.get("summary", "Platform session bridge is connected to the shared control plane.")),
+            details=str(payload.get("details", "")),
+            account_summary=str(payload.get("account_summary", "Remote platform account context is unavailable.")),
+            network_models=self._platform_models_from_payload(payload.get("network_models"), source="network"),
+            cloud_models=self._platform_models_from_payload(payload.get("cloud_models"), source="cloud"),
+            credits_summary=str(payload.get("credits_summary", "Unavailable")),
+            buyer_routing_summary=str(
+                payload.get(
+                    "buyer_routing_summary",
+                    "Network model visibility was fetched from the shared control plane.",
+                )
+            ),
+            buyer_config_summary=str(
+                payload.get(
+                    "buyer_config_summary",
+                    "Buyer routing defaults to platform-managed selection in the current prototype.",
+                )
+            ),
+        )
+
+    @staticmethod
+    def _platform_models_from_payload(
+        raw_models: object,
+        *,
+        source: str,
+    ) -> tuple[PlatformModelListing, ...]:
+        if not isinstance(raw_models, list):
+            return ()
+        listings: list[PlatformModelListing] = []
+        for raw_model in raw_models:
+            if not isinstance(raw_model, dict):
+                continue
+            model_id = raw_model.get("model_id")
+            display_name = raw_model.get("display_name")
+            if not isinstance(model_id, str) or not model_id:
+                continue
+            if not isinstance(display_name, str) or not display_name:
+                display_name = model_id
+            listings.append(
+                PlatformModelListing(
+                    model_id=model_id,
+                    display_name=display_name,
+                    source=str(raw_model.get("source", source)),
+                    summary=str(raw_model.get("summary", "")),
+                )
+            )
+        return tuple(listings)
 
 
 @dataclass(frozen=True)
@@ -232,7 +337,12 @@ class LocalPrototypeHarness:
         )
         self.client = ModuloClientSupervisor(
             worker_bridge=bridge,
-            session_bridge=LocalPrototypeSessionBridge(service=self.service),
+            session_bridge=LocalPrototypeSessionBridge(
+                service=self.service,
+                modulo_url=self.modulo_url,
+                lan_platform_url=self.lan_platform_url,
+                target_url=self.lan_platform_url or self.modulo_url,
+            ),
             openclaw_discovery=self.openclaw_discovery or OpenClawDiscovery(modulo_url=self.modulo_url),
             ollama_discovery=self.ollama_discovery or OllamaDiscovery(),
             ollama_loaded_models_discovery=self.ollama_loaded_models_discovery or OllamaLoadedModelsDiscovery(),
