@@ -62,9 +62,9 @@ The repo is intentionally backend-first, but the PySide client shell is now far 
 Near-term sequence:
 
 1. keep the `cloud` and `worker` seams truthful and scope-ready
-2. prove LAN-hosted remote execution through the real router and worker chain
+2. prove private-scope remote execution through the real router and worker chain
 3. preserve enough structured route-trace data for future private-network ops visibility
-4. package the current PySide shell cleanly on Windows only after the LAN proof is real
+4. package the current PySide shell cleanly on Windows only after the private remote-execution proof is real
 5. keep future private-network work architecture-led instead of bolted onto the public path later
 
 As routing evolves, prefer continuity-preserving behavior such as short-lived request leases on healthy workers when that reduces cold-start thrash without hiding failures.

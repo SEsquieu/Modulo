@@ -8,7 +8,7 @@ It uses checklist format instead of a full mini roadmap because these steps are 
 
 - do not start this checklist until the Phase 2 integration roadmaps are completed
 - do not start this checklist until the host warm-state roadmap is completed
-- do not start this checklist until the LAN private MVP roadmap is completed or intentionally deferred
+- do not start this checklist until the private MVP roadmap is completed or intentionally deferred
 - complete each checkpoint in order
 - add a short note under each checkpoint when it is done
 

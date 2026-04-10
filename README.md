@@ -45,7 +45,7 @@ Roadmap reference:
 - [docs/session_bridge_roadmap.md](./docs/session_bridge_roadmap.md)
 - [docs/host_warm_state_roadmap.md](./docs/host_warm_state_roadmap.md)
 - [docs/private_scope_mvp_design.md](./docs/private_scope_mvp_design.md)
-- [docs/lan_private_mvp_roadmap.md](./docs/lan_private_mvp_roadmap.md)
+- [docs/private_mvp_roadmap.md](./docs/private_mvp_roadmap.md)
 
 ## Running the demo server
 
@@ -94,7 +94,7 @@ The GUI currently includes:
 Current next functional proof:
 
 - [docs/private_scope_mvp_design.md](./docs/private_scope_mvp_design.md) narrows the source/scope model so the next remote-execution work does not harden a singular `network` pool
-- [docs/lan_private_mvp_roadmap.md](./docs/lan_private_mvp_roadmap.md) defines the LAN-hosted private-scope MVP proof before packaging work resumes
+- [docs/private_mvp_roadmap.md](./docs/private_mvp_roadmap.md) defines the first bounded private-scope remote-execution MVP proof before packaging work resumes
 
 ## Current platform surface
 

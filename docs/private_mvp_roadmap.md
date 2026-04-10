@@ -1,20 +1,20 @@
-# LAN Private MVP Roadmap
+# Private MVP Roadmap
 
 This mini roadmap covers the next functional proof after the current local execution and host warm-state work.
 
-It exists to prove that Modulo can route a real request to a model hosted through the worker bridge on another machine over the local network, while staying compatible with the future `Local / Private / Public / Cloud` source model.
+It exists to prove that Modulo can route a real request to a model hosted through the worker bridge on another machine inside a bounded private scope, while staying compatible with the future `Local / Private / Public / Cloud` source model.
 
 ## Goal
 
 - prove one real non-local execution path through the router
-- treat LAN-hosted remote execution as the first `Private`-style execution proof
+- treat bounded private remote execution as the first `Private`-style execution proof
 - keep the existing `client -> cloud -> worker -> Ollama` responsibilities intact
 - capture structured route-trace data that can later power private-network ops visibility
 
 ## Why this matters
 
 - this is the real MVP proof more than packaging is
-- remote execution over LAN exercises the same router and worker seams that later internet or private-network execution will use
+- remote execution inside a private bounded scope exercises the same router and worker seams that later enterprise or broader private-network execution will use
 - if scope is not narrowed now, the old singular `network` assumption will get more expensive to undo later
 - route-trace observability needs to start with the router path, not as a retrofit after private networks exist
 
@@ -58,11 +58,11 @@ Notes:
 
 Goal:
 
-- make the worker bridge and cloud/API configuration cleanly usable across a LAN instead of only in-process assumptions
+- make the worker bridge and cloud/API configuration cleanly usable across a real private environment instead of only in-process assumptions
 
 Exit criteria:
 
-- cloud URL and worker configuration can target a real LAN-visible API endpoint
+- cloud URL and worker configuration can target a real reachable API endpoint
 - the worker bridge can register, heartbeat, claim, and report over that address cleanly
 - one machine can still run a valid single-box proof by hitting the same HTTP/control path
 
@@ -89,11 +89,11 @@ Notes:
 - this is a staging slice, not the final proof
 - it is acceptable if the worker and cloud share a machine, as long as the routing chain remains truthful
 
-### Slice 5: Cross-machine LAN execution proof
+### Slice 5: Cross-machine private execution proof
 
 Goal:
 
-- prove the same routed execution path with the worker on a second LAN machine
+- prove the same routed execution path with the worker on a second machine inside the same private scope
 
 Exit criteria:
 
@@ -104,7 +104,7 @@ Exit criteria:
 
 Notes:
 
-- this slice is the true LAN MVP proof
+- this slice is the true private remote-execution MVP proof
 - after this succeeds, packaging can resume with much more confidence
 
 ## Route-trace requirement

@@ -176,7 +176,7 @@ Proof added to repo:
 
 The next committed implementation path is:
 
-- [lan_private_mvp_roadmap.md](./lan_private_mvp_roadmap.md)
+- [private_mvp_roadmap.md](./private_mvp_roadmap.md)
 
 Current active slice:
 
@@ -184,7 +184,7 @@ Current active slice:
 
 Why it is next:
 
-- the true MVP proof is routed execution to a non-local worker over LAN
+- the true MVP proof is routed execution to a non-local worker inside a bounded private scope
 - the router should become scope-aware before the old singular `network` assumption hardens further
 - structured route traces should begin with the next remote-execution slices so future private-network ops visibility does not require a large retrofit
 

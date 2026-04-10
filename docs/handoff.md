@@ -8,7 +8,7 @@ This file is the quickest way to regain context when switching workstations.
 - GUI phase-0 roadmap is completed
 - Phase 2 integration work is completed through `Step 5: Real local execution`
 - the host-side warm-state roadmap is completed
-- the active next implementation roadmap is [lan_private_mvp_roadmap.md](./lan_private_mvp_roadmap.md)
+- the active next implementation roadmap is [private_mvp_roadmap.md](./private_mvp_roadmap.md)
 - the current architecture discussion is [private_scope_mvp_design.md](./private_scope_mvp_design.md), which narrows the next remote-execution proof around `Local / Private / Public / Cloud`
 
 ## What exists today
@@ -76,7 +76,7 @@ The host selector only shows local installable models, and the startup path now 
 
 ## Next recommended starting point
 
-Start with `Slice 1: Private-scope routing contracts` in [lan_private_mvp_roadmap.md](./lan_private_mvp_roadmap.md).
+Start with `Slice 1: Private-scope routing contracts` in [private_mvp_roadmap.md](./private_mvp_roadmap.md).
 
 The most likely first useful slice is:
 
@@ -128,7 +128,7 @@ Primary sequencing doc:
 
 Active implementation doc:
 
-- [lan_private_mvp_roadmap.md](./lan_private_mvp_roadmap.md)
+- [private_mvp_roadmap.md](./private_mvp_roadmap.md)
 
 Current architecture discussion:
 
@@ -162,4 +162,4 @@ If resuming cold, start by reading:
 
 1. [handoff.md](./handoff.md)
 2. [private_scope_mvp_design.md](./private_scope_mvp_design.md)
-3. [lan_private_mvp_roadmap.md](./lan_private_mvp_roadmap.md)
+3. [private_mvp_roadmap.md](./private_mvp_roadmap.md)
