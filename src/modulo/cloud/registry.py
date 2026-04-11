@@ -18,6 +18,9 @@ class InMemoryWorkerRegistry:
     def list_workers(self) -> list[WorkerSnapshot]:
         return list(self._workers.values())
 
+    def unregister(self, worker_id: str) -> WorkerSnapshot | None:
+        return self._workers.pop(worker_id, None)
+
     def heartbeat(self, heartbeat: WorkerHeartbeat) -> WorkerSnapshot | None:
         worker = self._workers.get(heartbeat.worker_id)
         if worker is None:

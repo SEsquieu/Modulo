@@ -62,6 +62,12 @@ class ModuloHTTPApp:
                 return payload
             return self._handle_worker_heartbeat(payload)
 
+        if method == "POST" and path == "/worker/unregister":
+            payload = self._decode_json(body)
+            if isinstance(payload, tuple):
+                return payload
+            return self._handle_worker_unregister(payload)
+
         if method == "POST" and path == "/worker/jobs/claim":
             payload = self._decode_json(body)
             if isinstance(payload, tuple):
@@ -333,6 +339,20 @@ class ModuloHTTPApp:
             "worker_id": worker.worker_id,
             "healthy": worker.healthy,
             "current_load": current_load,
+        }
+
+    def _handle_worker_unregister(self, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+        worker_id = payload.get("worker_id")
+        if not isinstance(worker_id, str) or not worker_id:
+            return HTTPStatus.BAD_REQUEST, {"error": "Missing required field: worker_id"}
+
+        worker = self.service.unregister_worker(worker_id)
+        if worker is None:
+            return HTTPStatus.NOT_FOUND, {"error": f"Unknown worker: {worker_id}"}
+
+        return HTTPStatus.OK, {
+            "worker_id": worker_id,
+            "status": "unregistered",
         }
 
     def _handle_worker_claim(self, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:

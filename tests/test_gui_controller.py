@@ -462,6 +462,36 @@ class GuiAppControllerTests(unittest.TestCase):
             controller.harness.shutdown()
             remote_platform.shutdown()
 
+    def test_stop_hosting_removes_model_from_remote_platform_visibility(self) -> None:
+        remote_platform = LocalPrototypeHarness(
+            openclaw_discovery=FakeGuiOpenClawDiscovery(),
+            ollama_discovery=FakeGuiOllamaDiscovery(),
+            ollama_loaded_models_discovery=FakeGuiLoadedModelsDiscovery(),
+            hosting_runtime_probe=FakeGuiHostingRuntimeProbe(),
+        )
+        controller = GuiAppController(
+            harness=LocalPrototypeHarness(
+                model_id="qwen3.5:4b",
+                openclaw_discovery=FakeGuiOpenClawDiscovery(),
+                ollama_discovery=FakeGuiOllamaDiscovery(),
+                ollama_loaded_models_discovery=FakeGuiLoadedModelsDiscovery(),
+                hosting_runtime_probe=FakeGuiHostingRuntimeProbe(),
+            )
+        )
+
+        try:
+            controller.set_debug_target_url(remote_platform.modulo_url)
+            controller.start_hosting()
+            stopped = controller.stop_hosting()
+            remote_status = remote_platform.client.get_status()
+
+            self.assertFalse(stopped.hosting_enabled)
+            self.assertEqual(("No network models available yet.",), stopped.buyer_network_models)
+            self.assertEqual((), remote_status.platform.network_models)
+        finally:
+            controller.harness.shutdown()
+            remote_platform.shutdown()
+
     def test_debug_target_updates_use_visibility_from_remote_platform(self) -> None:
         host_harness = LocalPrototypeHarness(
             model_id="gemma4:e2b",

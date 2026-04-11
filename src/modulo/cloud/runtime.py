@@ -187,6 +187,10 @@ class InMemoryModuloService:
     def register_worker(self, worker: WorkerSnapshot) -> None:
         self.registry.register(worker)
 
+    def unregister_worker(self, worker_id: str) -> WorkerSnapshot | None:
+        self.leases.break_for_worker(worker_id)
+        return self.registry.unregister(worker_id)
+
     def heartbeat_worker(self, heartbeat: WorkerHeartbeat) -> WorkerSnapshot | None:
         return self.registry.heartbeat(heartbeat)
 

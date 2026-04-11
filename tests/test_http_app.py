@@ -176,6 +176,17 @@ class ModuloHTTPAppTests(unittest.TestCase):
         self.assertFalse(worker.healthy)
         self.assertEqual(1, worker.advertised_models[0].current_load)
 
+    def test_worker_unregister_removes_worker_from_registry(self) -> None:
+        status, payload = self.app.handle(
+            "POST",
+            "/worker/unregister",
+            json.dumps({"worker_id": "network-1"}).encode("utf-8"),
+        )
+
+        self.assertEqual(200, status)
+        self.assertEqual("unregistered", payload["status"])
+        self.assertIsNone(self.service.registry.get("network-1"))
+
     def test_worker_claim_result_flow(self) -> None:
         job = self.service.submit_chat(
             ChatRequest(model_id="llama3.1:8b", execution_mode=ExecutionMode.NETWORK)

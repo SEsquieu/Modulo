@@ -27,6 +27,9 @@ class WorkerTransport(Protocol):
     def register_worker(self) -> None:
         """Register the worker with the control plane."""
 
+    def unregister_worker(self, worker_id: str) -> None:
+        """Remove the worker from the control plane."""
+
     def heartbeat_worker(self, heartbeat: WorkerHeartbeat) -> None:
         """Update worker liveness and load information."""
 
@@ -100,13 +103,7 @@ class WorkerBridgeRuntime:
     def stop(self) -> WorkerStatusSnapshot:
         if self._status.registered_with_cloud:
             try:
-                self.transport.heartbeat_worker(
-                    WorkerHeartbeat(
-                        worker_id=self.config.worker_id,
-                        healthy=False,
-                        current_load=0,
-                    )
-                )
+                self.transport.unregister_worker(self.config.worker_id)
             except WorkerTransportError as exc:
                 self._status = replace(
                     self._status,

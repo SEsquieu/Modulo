@@ -162,6 +162,14 @@ class InProcessWorkerHTTPTransport:
         )
         _require_ok(status, payload, "register worker")
 
+    def unregister_worker(self, worker_id: str) -> None:
+        status, payload = self.app.handle(
+            "POST",
+            "/worker/unregister",
+            _encode_json({"worker_id": worker_id}),
+        )
+        _require_ok(status, payload, "unregister worker")
+
     def heartbeat_worker(self, heartbeat: WorkerHeartbeat) -> None:
         status, payload = self.app.handle(
             "POST",
@@ -238,6 +246,14 @@ class UrllibWorkerHTTPTransport:
             action="register worker",
         )
         _require_ok(status, payload, "register worker")
+
+    def unregister_worker(self, worker_id: str) -> None:
+        status, payload = self._post(
+            "/worker/unregister",
+            {"worker_id": worker_id},
+            action="unregister worker",
+        )
+        _require_ok(status, payload, "unregister worker")
 
     def heartbeat_worker(self, heartbeat: WorkerHeartbeat) -> None:
         status, payload = self._post(

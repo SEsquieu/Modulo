@@ -261,6 +261,16 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertTrue(status.worker.registered_with_cloud)
         self.assertEqual(WorkerRuntimeState.IDLE, status.worker.runtime_state)
 
+    def test_stop_hosting_unregisters_worker_from_control_plane(self) -> None:
+        self.client.start_hosting()
+
+        stopped = self.client.stop_hosting()
+
+        self.assertFalse(stopped.hosting_enabled)
+        self.assertIsNotNone(stopped.worker)
+        self.assertFalse(stopped.worker.registered_with_cloud)
+        self.assertIsNone(self.service.registry.get("worker-1"))
+
     def test_worker_cycle_completes_claimed_job_and_updates_client_status(self) -> None:
         self.client.start_hosting()
         job = self.service.submit_chat(
