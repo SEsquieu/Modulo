@@ -241,6 +241,6 @@ This does not require a dashboard yet, but it must leave enough truthful data fo
 Add a short summary here when the roadmap is complete:
 
 - summary:
-  - Modulo now proves a bounded private-scope execution path across machines and has a light buyer-side visibility surface for advertised network models through the GUI Debug target.
+  - Modulo now proves a bounded private-scope execution path across machines, including a Cloudflare-hosted backend target, light buyer-side visibility for advertised network models, and immediate worker cleanup when a host goes offline.
 - proof added to repo:
-  - shared control-plane and worker entrypoints, route traces, cross-machine worker transport, and lightweight shared-platform advertising visibility
+  - shared control-plane and worker entrypoints, route traces, cross-machine worker transport, lightweight shared-platform advertising visibility, hosted-backend GUI targeting, improved worker transport error surfacing, and explicit worker unregister on unhost

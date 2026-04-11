@@ -131,6 +131,7 @@ Current next functional proof:
 The current scaffold includes these worker-facing HTTP routes:
 
 - `POST /worker/register`
+- `POST /worker/unregister`
 - `POST /worker/heartbeat`
 - `POST /worker/jobs/claim`
 - `POST /worker/jobs/{job_id}/result`
@@ -162,6 +163,13 @@ High-value next routing behavior to add:
 - lease break/timeout behavior driven by health, load, and execution failures
 
 The current prototype now includes short-lived buyer continuity leases in the cloud routing path so follow-up requests can prefer a recently warm eligible worker without moving routing logic into the client or worker.
+
+Recent functional proof highlights:
+
+- the GUI can target a hosted backend like `https://modulo.grinningfrog.com` from launch
+- the hosted path has been proven end to end through Cloudflare Tunnel for private-scope visibility and routed execution
+- worker transport failures now surface HTTP status and edge/body detail instead of collapsing to `unknown error`
+- stopping hosting now explicitly unregisters the worker so stale advertised models drop out of platform visibility immediately
 
 The client and worker packages are intentionally light right now. They exist to keep the repository shaped correctly for the eventual tray app UX and local bridge architecture while the routing/control-plane core is being proven first.
 

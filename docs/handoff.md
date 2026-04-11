@@ -53,6 +53,9 @@ This file is the quickest way to regain context when switching workstations.
 - the control plane now exposes lightweight shared-platform advertising visibility through `GET /api/platform/status`
 - the prototype session bridge can now read another machine's advertised model list instead of only local in-memory state
 - the GUI `Use` tab can now reflect a remote host's advertised network models when the Debug target URL points at that host
+- the GUI can now launch with a hosted backend target preloaded, for example `https://modulo.grinningfrog.com`
+- worker transport errors now surface HTTP status and edge/body details instead of collapsing to `unknown error`
+- stopping hosting now explicitly unregisters the worker from the cloud registry so advertised models disappear immediately instead of lingering and timing out
 - the GUI shell has been tightened into a consistent pattern:
   - top-level tabs: `Use / Host / Diagnostics / Debug`
   - compact header + primary action + summary card + nested detail tabs
@@ -92,6 +95,7 @@ That matters because the main workstation stores the primary model under `agents
 
 The GUI now explicitly tells the truth about whether the current worker path and latest smoke test are using `REAL` or `PROTOTYPE` execution.
 The host selector only shows local installable models, and the startup path now syncs the actual hosted model to that visible local inventory instead of carrying a hidden default behind the dropdown.
+The current hosted-backend path has been proven through Cloudflare Tunnel against `modulo.grinningfrog.com`, including buyer-side visibility and routed execution.
 
 ## Next recommended starting point
 
@@ -99,8 +103,8 @@ Start with the live network validation run using the commands in [README.md](../
 
 The most likely first useful slice is:
 
-- keep using the GUI Debug target as the lightweight shared-platform selector while validating multiple workstation paths
 - decide whether the next slice should be richer shared discovery in `Use`, or operator-facing route-trace visibility on the host side
+- if continuing hosted-backend work, focus on auth/policy hardening and persistence because the shared path itself is now functionally proven
 - only return to packaging once the shared-network behavior feels truthful enough to lock in
 
 If resuming in architecture mode instead of productization mode, the current non-implementation discussion is:
@@ -191,6 +195,12 @@ Current architecture discussion:
 
 Recent meaningful commits:
 
+- `8c733b0` `Unregister workers when hosting stops`
+- `8361d54` `Surface worker transport HTTP errors`
+- `e53c8d2` `Route GUI hosting through active platform target`
+- `5bd081b` `Seed GUI with hosted platform target`
+- `51132b0` `Document scope governance guardrails`
+- `6d48088` `Refine debug target apply flow`
 - `6cc4633` `Complete single machine routed proof slice`
 - `42cb6b7` `Complete cross machine private proof slice`
 - `9210991` `Capture future host capacity routing note`
