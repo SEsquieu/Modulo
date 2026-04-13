@@ -15,6 +15,7 @@ This file is the quickest way to regain context when switching workstations.
 - `Slice 4: Single-machine routed private proof` is completed
 - `Slice 5: Cross-machine private execution proof` is completed and now proven across separate real networks
 - `Slice 6: Lightweight shared-platform advertising visibility` is completed
+- the next post-proof implementation roadmap is [route_trace_visibility_roadmap.md](./route_trace_visibility_roadmap.md)
 - the current architecture discussion is [private_scope_mvp_design.md](./private_scope_mvp_design.md), which narrows the next remote-execution proof around `Local / Private / Public / Cloud`
 - a future routing note is captured in [future_host_capacity_intelligence.md](./future_host_capacity_intelligence.md) for host capability profiling, warm/cold inventory truth, and dynamic idle swapping
 - the private-scope design doc now explicitly captures scope governance so future `Public` support stays policy-gated and clampable back to `Private`
@@ -102,12 +103,12 @@ The current hosted-backend path has been proven through Cloudflare Tunnel agains
 
 ## Next recommended starting point
 
-Start from the completed [private_mvp_roadmap.md](./private_mvp_roadmap.md) and the now-proven shared path in [README.md](../README.md).
+Start from the completed [private_mvp_roadmap.md](./private_mvp_roadmap.md), then continue with [route_trace_visibility_roadmap.md](./route_trace_visibility_roadmap.md) before returning to productization.
 
 The most likely first useful slice is:
 
+- `route_trace_visibility_roadmap.md`
 - richer shared discovery and source truth in `Use`, especially around `Local / Private / Public / Cloud`
-- operator-facing route-trace visibility so shared execution is explainable when it succeeds or fails
 - auth/policy hardening and persistence now that the shared path itself is functionally proven
 - only return to packaging once the shared-network behavior feels truthful enough to lock in
 
@@ -180,6 +181,7 @@ Primary sequencing doc:
 Active implementation doc:
 
 - [private_mvp_roadmap.md](./private_mvp_roadmap.md)
+- [route_trace_visibility_roadmap.md](./route_trace_visibility_roadmap.md)
 
 Current architecture discussion:
 

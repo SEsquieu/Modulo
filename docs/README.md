@@ -20,6 +20,7 @@ Current source of truth:
 - [private_networks_design.md](./private_networks_design.md): architectural note for access-controlled private Modulo networks inside an org boundary
 - [private_scope_mvp_design.md](./private_scope_mvp_design.md): implementation-narrowing doc for treating the first bounded remote-execution proof as `Private` scope
 - [private_mvp_roadmap.md](./private_mvp_roadmap.md): mini roadmap for the first private-scope remote execution proof
+- [route_trace_visibility_roadmap.md](./route_trace_visibility_roadmap.md): mini roadmap for surfacing routed execution truth after the private proof is real
 
 Current emphasis:
 

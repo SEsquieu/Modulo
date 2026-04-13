@@ -125,6 +125,7 @@ Current next functional proof:
 
 - [docs/private_scope_mvp_design.md](./docs/private_scope_mvp_design.md) narrows the source/scope model so the next remote-execution work does not harden a singular `network` pool
 - [docs/private_mvp_roadmap.md](./docs/private_mvp_roadmap.md) defines the first bounded private-scope remote-execution MVP proof before packaging work resumes
+- [docs/route_trace_visibility_roadmap.md](./docs/route_trace_visibility_roadmap.md) defines the next post-proof slice so routed execution becomes explainable before packaging resumes
 
 Recent milestone:
 
