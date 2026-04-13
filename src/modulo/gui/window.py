@@ -64,6 +64,7 @@ class ModuloMainWindow(QMainWindow):
         self._active_action_kind = ""
         self._latest_state: GuiShellState | None = None
         self._active_tasks: list[_AsyncGuiTask] = []
+        self._use_model_tree_expanded_keys: set[str] = set()
         self.setWindowTitle("Modulo")
         self.resize(880, 720)
         self.setMinimumSize(720, 520)
@@ -967,23 +968,44 @@ class ModuloMainWindow(QMainWindow):
             self._apply_selected_use_model(model_id)
             return
         item.setExpanded(not item.isExpanded())
+        self._remember_use_model_tree_expansion_state()
+
+    def _remember_use_model_tree_expansion_state(self) -> None:
+        expanded_keys: set[str] = set()
+
+        def visit(item: QTreeWidgetItem) -> None:
+            key = item.data(0, Qt.ItemDataRole.UserRole + 1)
+            if item.childCount() and item.isExpanded() and isinstance(key, str) and key:
+                expanded_keys.add(key)
+            for index in range(item.childCount()):
+                visit(item.child(index))
+
+        for index in range(self.use_model_tree.topLevelItemCount()):
+            visit(self.use_model_tree.topLevelItem(index))
+        self._use_model_tree_expanded_keys = expanded_keys
 
     def _rebuild_use_model_tree(self, state: GuiShellState) -> None:
+        self._remember_use_model_tree_expansion_state()
         self.use_model_tree.clear()
         selected_item: QTreeWidgetItem | None = None
         for source in state.use_model_menu_sources:
             source_item = QTreeWidgetItem([source.source_label])
             source_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            source_key = f"source:{source.source_label}"
+            source_item.setData(0, Qt.ItemDataRole.UserRole + 1, source_key)
             self.use_model_tree.addTopLevelItem(source_item)
-            source_item.setExpanded(True)
+            source_item.setExpanded(source_key in self._use_model_tree_expanded_keys or not self._use_model_tree_expanded_keys)
             for scope in source.scopes:
                 scope_item = QTreeWidgetItem([scope.scope_label])
                 scope_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+                scope_key = f"{source_key}/scope:{scope.scope_label}"
+                scope_item.setData(0, Qt.ItemDataRole.UserRole + 1, scope_key)
                 source_item.addChild(scope_item)
-                scope_item.setExpanded(True)
+                scope_item.setExpanded(scope_key in self._use_model_tree_expanded_keys or not self._use_model_tree_expanded_keys)
                 for model in scope.models:
                     model_item = QTreeWidgetItem([model.label])
                     model_item.setData(0, Qt.ItemDataRole.UserRole, model.model_id)
+                    model_item.setData(0, Qt.ItemDataRole.UserRole + 1, f"{scope_key}/model:{model.model_id}")
                     scope_item.addChild(model_item)
                     if model.model_id == state.use_selected_model_id:
                         selected_item = model_item
