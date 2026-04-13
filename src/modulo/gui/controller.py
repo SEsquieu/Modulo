@@ -433,27 +433,27 @@ class GuiAppController:
     def _use_summary(status: ClientStatus) -> str:
         return status.use.summary
 
-    @staticmethod
-    def _use_route_health_value(status: ClientStatus) -> str:
-        route_target = status.use.route.active_route_target
-        if route_target == "OpenClaw":
-            return "Healthy"
-        if route_target == "OpenClaw (staged)":
-            return "Staged"
+    def _use_route_health_value(self, status: ClientStatus) -> str:
+        if status.openclaw.configured and self._selected_mount_shape_id == "openai_api":
+            return "Ready"
+        if not self._selected_mount_shape_id:
+            return "Needs mount"
+        if self._selected_mount_shape_id == "openai_api" and status.openclaw.connection_plan.apply_ready:
+            return "Needs apply"
         if not status.platform.connected:
             return "Attention"
-        return "Local only"
+        return "Shape only"
 
-    @staticmethod
-    def _use_route_health_summary(status: ClientStatus) -> str:
-        route_target = status.use.route.active_route_target
-        if route_target == "OpenClaw":
-            return "Requests have a mounted edge available through the current OpenClaw route."
-        if route_target == "OpenClaw (staged)":
-            return "A mount path is staged, but it is not applied yet."
+    def _use_route_health_summary(self, status: ClientStatus) -> str:
+        if status.openclaw.configured and self._selected_mount_shape_id == "openai_api":
+            return "A mounted edge is configured, so requests can leave this client through the selected route."
+        if not self._selected_mount_shape_id:
+            return "Choose a mount shape before Modulo can mark this route ready."
+        if self._selected_mount_shape_id == "openai_api" and status.openclaw.connection_plan.apply_ready:
+            return "The OpenAI-compatible mount is staged, but it still needs to be applied."
         if not status.platform.connected:
-            return "Shared scopes are visible as truth, but route execution stays read-only until the active target is reachable."
-        return "Models can still be selected and reviewed, but no mounted edge is configured yet."
+            return "The selected route still needs a reachable platform target before shared execution can be trusted."
+        return "A shape is selected, but no consumer edge is configured yet."
 
     def _use_mount_status_value(self, status: ClientStatus) -> str:
         if not self._selected_mount_shape_id:
@@ -897,30 +897,36 @@ class GuiAppController:
             return "Cloud"
         return "Unknown"
 
-    @staticmethod
-    def _use_route_details(status: ClientStatus) -> tuple[str, ...]:
+    def _use_route_details(self, status: ClientStatus) -> tuple[str, ...]:
         route = status.use.route
+        if status.openclaw.configured and self._selected_mount_shape_id == "openai_api":
+            path = "OpenAI API via OpenClaw"
+            reason = "Mounted edge is configured and ready."
+        elif not self._selected_mount_shape_id:
+            path = "No mounted edge"
+            reason = "Choose a mount shape before requests can leave this client."
+        elif self._selected_mount_shape_id == "openai_api" and status.openclaw.connection_plan.apply_ready:
+            path = "OpenAI API mount"
+            reason = "OpenClaw is staged but not applied yet."
+        elif self._selected_mount_shape_id == "ollama":
+            path = "Ollama shape"
+            reason = "The shape is selected, but no consumer edge is configured yet."
+        elif self._selected_mount_shape_id == "modulo_native":
+            path = "Modulo Native"
+            reason = "The shape is selected, but no native consumer edge is configured yet."
+        else:
+            path = "Unknown"
+            reason = "Route state is not ready yet."
+
         details = [
-            f"Route: {route.active_route_target or 'Not configured'}",
-            f"Selected source: {GuiAppController._use_model_source_label(route.selected_source)}",
+            f"Model: {route.selected_model_label or 'No model selected'}",
+            f"Source: {GuiAppController._use_model_source_label(route.selected_source)}",
+            f"Path: {path}",
+            f"Status: {self._use_route_health_value(status)}",
+            f"Reason: {reason}",
         ]
-        if route.active_provider:
-            details.append(f"Provider: {route.active_provider}")
-        if route.active_base_url:
-            details.append(f"Base URL: {route.active_base_url}")
-        if route.selected_model_label and route.selected_model_label != "No model selected.":
-            details.append(f"Selected model: {route.selected_model_label}")
-        if route.route_policy_summary:
-            details.append(f"Policy: {route.route_policy_summary}")
-        details.extend(route.route_policy_restrictions)
-        if status.platform.account_summary:
-            details.append(f"Account: {status.platform.account_summary}")
-        if status.platform.credits_summary:
-            details.append(f"Credits: {status.platform.credits_summary}")
-        if status.platform.buyer_config_summary:
-            details.append(f"Config: {status.platform.buyer_config_summary}")
-        if status.openclaw.connection_plan.apply_ready:
-            details.append(f"Plan: {status.openclaw.connection_plan.summary}")
+        if status.platform.connected and route.selected_scope in {"private", "public", "cloud"}:
+            details.append(f"Scope: {route.selected_scope.title()}")
         return tuple(line for line in details if line)
 
     @staticmethod
