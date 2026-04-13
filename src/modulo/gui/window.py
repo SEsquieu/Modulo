@@ -224,6 +224,10 @@ class ModuloMainWindow(QMainWindow):
         self.mount_shape_combo.setFont(combo_font)
         self.mount_shape_combo.view().setFont(combo_font)
         self.mount_shape_combo.currentIndexChanged.connect(self._apply_selected_mount_shape)
+        self.mount_consumer_combo = QComboBox()
+        self.mount_consumer_combo.setFont(combo_font)
+        self.mount_consumer_combo.view().setFont(combo_font)
+        self.mount_consumer_combo.currentIndexChanged.connect(self._apply_selected_mount_consumer)
         self.mount_card_value = QLabel()
         self.mount_card_value.setWordWrap(True)
         self.mount_consumer_summary_label = QLabel()
@@ -668,6 +672,10 @@ class ModuloMainWindow(QMainWindow):
         mount_shape_row.addWidget(self._build_section_label("Shape"))
         mount_shape_row.addWidget(self.mount_shape_combo, 1)
         layout.addLayout(mount_shape_row)
+        mount_consumer_row = QHBoxLayout()
+        mount_consumer_row.addWidget(self._build_section_label("Consumer"))
+        mount_consumer_row.addWidget(self.mount_consumer_combo, 1)
+        layout.addLayout(mount_consumer_row)
         layout.addWidget(self._build_host_card("Mounted Edge", self.mount_card_value))
         layout.addWidget(self.mount_consumer_summary_label)
         layout.addWidget(self.mount_details_label)
@@ -907,6 +915,14 @@ class ModuloMainWindow(QMainWindow):
         if self._latest_state is not None and shape_id == self._latest_state.mount_selected_shape_id:
             return
         self._apply_state(self.controller.select_mount_shape(shape_id))
+
+    def _apply_selected_mount_consumer(self) -> None:
+        consumer_id = self.mount_consumer_combo.currentData()
+        if not isinstance(consumer_id, str):
+            return
+        if self._latest_state is not None and consumer_id == self._latest_state.mount_selected_consumer_id:
+            return
+        self._apply_state(self.controller.select_mount_consumer(consumer_id))
 
     def _start_hosting_async(self) -> None:
         self._run_async_state_action(
@@ -1237,6 +1253,28 @@ class ModuloMainWindow(QMainWindow):
             self.mount_shape_combo.blockSignals(True)
             self.mount_shape_combo.setCurrentIndex(selected_mount_index)
             self.mount_shape_combo.blockSignals(False)
+        mount_consumer_ids = tuple(
+            self.mount_consumer_combo.itemData(index)
+            for index in range(self.mount_consumer_combo.count())
+        )
+        if mount_consumer_ids != state.mount_available_consumer_ids:
+            self.mount_consumer_combo.blockSignals(True)
+            self.mount_consumer_combo.clear()
+            for label, consumer_id in zip(
+                state.mount_available_consumer_labels,
+                state.mount_available_consumer_ids,
+                strict=False,
+            ):
+                self.mount_consumer_combo.addItem(label, consumer_id)
+            self.mount_consumer_combo.blockSignals(False)
+        selected_consumer_index = self.mount_consumer_combo.findData(state.mount_selected_consumer_id)
+        if (
+            selected_consumer_index >= 0
+            and selected_consumer_index != self.mount_consumer_combo.currentIndex()
+        ):
+            self.mount_consumer_combo.blockSignals(True)
+            self.mount_consumer_combo.setCurrentIndex(selected_consumer_index)
+            self.mount_consumer_combo.blockSignals(False)
         self.mount_card_value.setText(
             "\n".join(
                 (
@@ -1271,7 +1309,7 @@ class ModuloMainWindow(QMainWindow):
         self.use_private_models_label.setText("\n".join(state.use_private_model_lines))
         self.use_public_models_label.setText("\n".join(state.use_public_model_lines))
         self.use_cloud_models_label.setText("\n".join(state.buyer_cloud_models))
-        openclaw_visible = state.mount_selected_shape_id == "openai_api"
+        openclaw_visible = state.mount_selected_consumer_id == "openclaw"
         for widget in (
             self.openclaw_status_label,
             self.openclaw_summary_label,
