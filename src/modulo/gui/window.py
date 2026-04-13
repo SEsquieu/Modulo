@@ -358,10 +358,7 @@ class ModuloMainWindow(QMainWindow):
         self.use_detail_tabs = QTabWidget()
         self.use_detail_tabs.addTab(self._build_use_route_page(), "Route")
         self.use_detail_tabs.addTab(self._build_use_mount_page(), "Mount")
-        self.use_detail_tabs.addTab(self._build_use_local_page(), "Local")
-        self.use_detail_tabs.addTab(self._build_use_private_page(), "Private")
-        self.use_detail_tabs.addTab(self._build_use_public_page(), "Public")
-        self.use_detail_tabs.addTab(self._build_use_cloud_page(), "Cloud")
+        self.use_detail_tabs.addTab(self._build_use_sources_page(), "Sources")
         self.use_detail_tabs.setSizePolicy(
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Maximum,
@@ -705,41 +702,18 @@ class ModuloMainWindow(QMainWindow):
         page.setLayout(layout)
         return page
 
-    def _build_use_local_page(self) -> QWidget:
+    def _build_use_sources_page(self) -> QWidget:
         page = QWidget()
         layout = QVBoxLayout()
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
+        layout.addWidget(self._build_section_label("Local"))
         layout.addWidget(self.use_local_models_label)
-        layout.addStretch(1)
-        page.setLayout(layout)
-        return page
-
-    def _build_use_private_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout()
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(6)
+        layout.addWidget(self._build_section_label("Private"))
         layout.addWidget(self.use_private_models_label)
-        layout.addStretch(1)
-        page.setLayout(layout)
-        return page
-
-    def _build_use_public_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout()
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(6)
+        layout.addWidget(self._build_section_label("Public"))
         layout.addWidget(self.use_public_models_label)
-        layout.addStretch(1)
-        page.setLayout(layout)
-        return page
-
-    def _build_use_cloud_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout()
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(6)
+        layout.addWidget(self._build_section_label("Cloud"))
         layout.addWidget(self.use_cloud_models_label)
         layout.addStretch(1)
         page.setLayout(layout)
