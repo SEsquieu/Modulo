@@ -46,6 +46,7 @@ Roadmap reference:
 - [docs/host_warm_state_roadmap.md](./docs/host_warm_state_roadmap.md)
 - [docs/private_scope_mvp_design.md](./docs/private_scope_mvp_design.md)
 - [docs/private_mvp_roadmap.md](./docs/private_mvp_roadmap.md)
+- [docs/continue_consumer_roadmap.md](./docs/continue_consumer_roadmap.md)
 
 ## Running the demo server
 
@@ -131,6 +132,7 @@ Current next functional proof:
 - [docs/private_mvp_roadmap.md](./docs/private_mvp_roadmap.md) defines the first bounded private-scope remote-execution MVP proof before packaging work resumes
 - [docs/route_trace_visibility_roadmap.md](./docs/route_trace_visibility_roadmap.md) defines the next post-proof slice so routed execution becomes explainable before packaging resumes
 - [docs/use_side_truth_roadmap.md](./docs/use_side_truth_roadmap.md) defines the next `Use`-side truth pass so model source visibility is clear before packaging resumes
+- [docs/continue_consumer_roadmap.md](./docs/continue_consumer_roadmap.md) now tracks the first non-OpenClaw external consumer path through `Mount -> OpenAI API -> Continue (VSCode)`
 - [docs/platform_layering_spec.md](./docs/platform_layering_spec.md) captures the canonical tray-first layering model so the current GUI does not drift into a dashboard-shaped product
 
 Recent milestone:

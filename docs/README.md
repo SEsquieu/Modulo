@@ -23,12 +23,14 @@ Current source of truth:
 - [private_mvp_roadmap.md](./private_mvp_roadmap.md): mini roadmap for the first private-scope remote execution proof
 - [route_trace_visibility_roadmap.md](./route_trace_visibility_roadmap.md): mini roadmap for surfacing routed execution truth after the private proof is real
 - [use_side_truth_roadmap.md](./use_side_truth_roadmap.md): mini roadmap for making the `Use` side truthful about `Local / Private / Public / Cloud` visibility and routing
+- [continue_consumer_roadmap.md](./continue_consumer_roadmap.md): mini roadmap for making `Continue (VSCode)` the first non-OpenClaw mounted consumer through the `OpenAI API` shape
 
 Current emphasis:
 
 - the cross-network private execution proof is now real
 - route-trace visibility is now completed
 - the `Use`-side truth roadmap is now completed
+- the Continue consumer roadmap is now the newest focused consumer-integration roadmap
 - productization is intentionally deferred while shared-path truth, second-layer GUI refinement, and policy harden
 - the current UI should be treated as a second-layer surface while the product continues to aim toward a tray-first release
 - the current live GUI cleanup is focused on:

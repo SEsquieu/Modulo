@@ -27,6 +27,8 @@ This file is the quickest way to regain context when switching workstations.
 - `Slice 3: Use tab truth pass` is completed
 - `Slice 4: Policy and empty-state trust pass` is completed
 - the full use-side truth roadmap is now completed
+- the next focused consumer roadmap is [continue_consumer_roadmap.md](./continue_consumer_roadmap.md)
+- `Slice 1: Continue consumer registry entry` is completed
 - the current GUI refinement work after the completed `Use` roadmap is focused on making the second-layer `Use` flow feel calmer and more product-true without drifting toward dashboard behavior
 - the `Mount` consumer registry now includes `Continue (VSCode)` under the `OpenAI API` shape so a second external consumer can be staged without changing the shape-first binding model
 - the canonical product-shape guidance is now [platform_layering_spec.md](./platform_layering_spec.md)
@@ -154,10 +156,13 @@ The current hosted-backend path has been proven through Cloudflare Tunnel agains
 
 Start from the completed [private_mvp_roadmap.md](./private_mvp_roadmap.md), the completed [route_trace_visibility_roadmap.md](./route_trace_visibility_roadmap.md), and the completed [use_side_truth_roadmap.md](./use_side_truth_roadmap.md) before choosing the next implementation chunk.
 
+For the next external consumer slice, continue from [continue_consumer_roadmap.md](./continue_consumer_roadmap.md).
+
 The most likely first useful slice is:
 
 - a next roadmap chunk that keeps the tray-first product direction intact while refining what should surface at the `Use` layer versus `Mount` and `Scopes`
 - continue the second-layer GUI cleanup around `Use` and `Mount`, especially where the current shell still feels more like a proving surface than the eventual tray-first product
+- complete the next Continue consumer slices: config ownership, safe apply/rollback, and mount-surface truth
 - align that `Use` work with [platform_layering_spec.md](./platform_layering_spec.md) so the current GUI keeps serving as the second-layer proving surface instead of hardening into a dashboard
 - auth/policy hardening and persistence now that the shared path itself is functionally proven
 - only return to packaging once the shared-network behavior feels truthful enough to lock in
@@ -233,6 +238,7 @@ Active implementation doc:
 - [private_mvp_roadmap.md](./private_mvp_roadmap.md)
 - [route_trace_visibility_roadmap.md](./route_trace_visibility_roadmap.md)
 - [use_side_truth_roadmap.md](./use_side_truth_roadmap.md)
+- [continue_consumer_roadmap.md](./continue_consumer_roadmap.md)
 
 Current architecture discussion:
 
