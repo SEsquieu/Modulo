@@ -23,7 +23,7 @@ This file is the quickest way to regain context when switching workstations.
 - the full route-trace visibility roadmap is now completed
 - the next active implementation roadmap is [use_side_truth_roadmap.md](./use_side_truth_roadmap.md)
 - `Slice 1: Use-source contract tightening` is completed
-- `Slice 2: Private/shared visibility fetch truth` is in progress
+- `Slice 2: Private/shared visibility fetch truth` is completed
 - `Slice 3: Use tab truth pass` is pending
 - `Slice 4: Policy and empty-state trust pass` is pending
 - the canonical product-shape guidance is now [platform_layering_spec.md](./platform_layering_spec.md)
@@ -66,6 +66,7 @@ The release direction remains tray-first, with deeper truth and control exposed 
 - a localhost test now proves the same control-plane server plus remote-worker shape that will be used for the real network validation
 - the GUI now includes a `Debug` tab that surfaces the current platform URL, ready-to-run private-network worker/request commands, and an interactive network probe target
 - the control plane now exposes lightweight shared-platform advertising visibility through `GET /api/platform/status`
+- the platform/session visibility path now distinguishes `Private`, `Public`, and `Cloud` source truth explicitly, while preserving older network-model fields for compatibility
 - the control plane now also exposes the latest routed execution through `GET /api/platform/trace/latest`
 - the prototype session bridge can now read another machine's advertised model list instead of only local in-memory state
 - the prototype route-trace provider can now read another machine's latest routed execution trace through the same active target flow
@@ -117,6 +118,7 @@ That matters because the main workstation stores the primary model under `agents
 
 - `Use` tab: model source selection shell, active route card, nested `Route / Local / Network / Cloud` sections, OpenClaw route truth
 - the next truth pass on `Use` should move this surface toward grouped `Local / Private / Public / Cloud` sources with nested model lists
+- the underlying session/platform fetch path now carries active-target and per-source visibility summaries, so the next `Use` slice can focus on presentation instead of inventing source truth
 - `Host` tab: hosting model selection, warm-state card, execution-path truth, host toggle, worker/runtime details
 - `Diagnostics` tab: smoke test summary card plus nested `Smoke / Activity / Errors`
 - `Diagnostics` tab: smoke test summary card plus nested `Smoke / Route / Activity / Errors`

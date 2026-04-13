@@ -149,12 +149,18 @@ class PlatformSessionStatus:
     details: str = (
         "Attach a client-owned session bridge to fetch platform truth independently of hosting."
     )
+    active_target_url: str = ""
     account_summary: str = "No account context has been fetched yet."
     network_models: tuple[PlatformModelListing, ...] = ()
+    private_models: tuple[PlatformModelListing, ...] = ()
+    public_models: tuple[PlatformModelListing, ...] = ()
     cloud_models: tuple[PlatformModelListing, ...] = ()
     credits_summary: str = "Unavailable"
     buyer_routing_summary: str = "Buyer routing state has not been fetched yet."
     buyer_config_summary: str = "Buyer model selection and routing preferences have not been fetched yet."
+    private_visibility_summary: str = "Private visibility has not been fetched yet."
+    public_visibility_summary: str = "Public visibility has not been fetched yet."
+    cloud_visibility_summary: str = "Cloud visibility has not been fetched yet."
 
 
 @dataclass(frozen=True)
@@ -980,6 +986,8 @@ class ModuloClientSupervisor:
             )
             for model_id in hosting_setup.installed_model_ids
         )
+        private_source_models = platform_status.private_models or platform_status.network_models
+        public_source_models = platform_status.public_models
         private_models = tuple(
             UseModelOption(
                 model_id=model.model_id,
@@ -988,7 +996,17 @@ class ModuloClientSupervisor:
                 scope="private",
                 summary=model.summary,
             )
-            for model in platform_status.network_models
+            for model in private_source_models
+        )
+        public_models = tuple(
+            UseModelOption(
+                model_id=model.model_id,
+                display_name=model.display_name,
+                source="public",
+                scope="public",
+                summary=model.summary,
+            )
+            for model in public_source_models
         )
         cloud_models = tuple(
             UseModelOption(
@@ -1025,7 +1043,9 @@ class ModuloClientSupervisor:
                     else "unavailable"
                 ),
                 summary=(
-                    f"{len(private_models)} private/shared model(s) are currently visible from the active platform target."
+                    platform_status.private_visibility_summary
+                    if platform_status.private_visibility_summary
+                    else f"{len(private_models)} private/shared model(s) are currently visible from the active platform target."
                     if private_models
                     else "No private/shared models are currently visible from the active platform target."
                     if platform_status.connected
@@ -1043,11 +1063,23 @@ class ModuloClientSupervisor:
             UseScopeStatus(
                 scope_id="public",
                 display_label="Public",
-                state="unsupported",
-                summary="Public scope is intentionally not exposed in the current prototype path.",
-                models=(),
-                route_allowed=False,
-                route_restriction="Public routing is reserved for a later policy-aware slice.",
+                state=(
+                    "active"
+                    if public_models
+                    else "unsupported"
+                ),
+                summary=(
+                    platform_status.public_visibility_summary
+                    if platform_status.public_visibility_summary
+                    else "Public scope is intentionally not exposed in the current prototype path."
+                ),
+                models=public_models,
+                route_allowed=bool(public_models),
+                route_restriction=(
+                    ""
+                    if public_models
+                    else "Public routing is reserved for a later policy-aware slice."
+                ),
                 deletable=True,
             ),
             UseScopeStatus(
@@ -1061,7 +1093,9 @@ class ModuloClientSupervisor:
                     else "unavailable"
                 ),
                 summary=(
-                    f"{len(cloud_models)} cloud model(s) are currently visible from the active platform target."
+                    platform_status.cloud_visibility_summary
+                    if platform_status.cloud_visibility_summary
+                    else f"{len(cloud_models)} cloud model(s) are currently visible from the active platform target."
                     if cloud_models
                     else "No cloud models are currently visible from the active platform target."
                     if platform_status.connected

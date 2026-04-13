@@ -96,6 +96,16 @@ class LocalPrototypeSessionBridge(ClientSessionBridge):
                     ),
                 )
 
+        private_models = tuple(
+            PlatformModelListing(
+                model_id=model.model_id,
+                display_name=model.display_name,
+                source="private",
+                summary=model.summary,
+            )
+            for model in network_models.values()
+        )
+
         cloud_models = tuple(
             PlatformModelListing(
                 model_id=model.model_id,
@@ -108,10 +118,10 @@ class LocalPrototypeSessionBridge(ClientSessionBridge):
 
         if network_models:
             network_summary = (
-                f"{len(network_models)} network model(s) are currently advertised by healthy workers."
+                f"{len(network_models)} private/shared model(s) are currently visible from the active platform target."
             )
         else:
-            network_summary = "No network models are currently advertised in the local prototype."
+            network_summary = "No private/shared models are currently visible from the active platform target."
 
         health = self.service.health_summary()
         details = (
@@ -122,13 +132,21 @@ class LocalPrototypeSessionBridge(ClientSessionBridge):
             connected=True,
             summary="Platform session bridge is connected to the local prototype control plane.",
             details=details,
+            active_target_url=self.modulo_url,
             account_summary="Prototype account context is local-only and not authenticated yet.",
             network_models=tuple(network_models.values()),
+            private_models=private_models,
+            public_models=(),
             cloud_models=cloud_models,
             credits_summary="Prototype credits are not implemented yet.",
             buyer_routing_summary=network_summary,
             buyer_config_summary=(
                 "Buyer routing defaults to platform-managed selection in the local prototype."
+            ),
+            private_visibility_summary=network_summary,
+            public_visibility_summary="Public scope is not yet exposed in the current prototype path.",
+            cloud_visibility_summary=(
+                f"{len(cloud_models)} cloud model(s) are currently visible from the active platform target."
             ),
         )
 
@@ -161,28 +179,39 @@ class LocalPrototypeSessionBridge(ClientSessionBridge):
                 connected=False,
                 summary="Platform session bridge could not read the remote control plane.",
                 details=f"Target {target_url} returned an HTTP error: {message}",
+                active_target_url=target_url,
                 account_summary="Remote platform status is unavailable.",
                 credits_summary="Unavailable",
                 buyer_routing_summary="Network model visibility is unavailable for the selected target.",
                 buyer_config_summary="Remote buyer routing state could not be fetched.",
+                private_visibility_summary="Private/shared visibility is unavailable for the selected target.",
+                public_visibility_summary="Public visibility is unavailable for the selected target.",
+                cloud_visibility_summary="Cloud visibility is unavailable for the selected target.",
             )
         except Exception as exc:
             return PlatformSessionStatus(
                 connected=False,
                 summary="Platform session bridge could not reach the remote control plane.",
                 details=f"Target {target_url} could not be queried: {exc}",
+                active_target_url=target_url,
                 account_summary="Remote platform status is unavailable.",
                 credits_summary="Unavailable",
                 buyer_routing_summary="Network model visibility is unavailable for the selected target.",
                 buyer_config_summary="Remote buyer routing state could not be fetched.",
+                private_visibility_summary="Private/shared visibility is unavailable for the selected target.",
+                public_visibility_summary="Public visibility is unavailable for the selected target.",
+                cloud_visibility_summary="Cloud visibility is unavailable for the selected target.",
             )
 
         return PlatformSessionStatus(
             connected=bool(payload.get("connected", True)),
             summary=str(payload.get("summary", "Platform session bridge is connected to the shared control plane.")),
             details=str(payload.get("details", "")),
+            active_target_url=str(payload.get("active_target_url", target_url)),
             account_summary=str(payload.get("account_summary", "Remote platform account context is unavailable.")),
             network_models=self._platform_models_from_payload(payload.get("network_models"), source="network"),
+            private_models=self._platform_models_from_payload(payload.get("private_models"), source="private"),
+            public_models=self._platform_models_from_payload(payload.get("public_models"), source="public"),
             cloud_models=self._platform_models_from_payload(payload.get("cloud_models"), source="cloud"),
             credits_summary=str(payload.get("credits_summary", "Unavailable")),
             buyer_routing_summary=str(
@@ -195,6 +224,24 @@ class LocalPrototypeSessionBridge(ClientSessionBridge):
                 payload.get(
                     "buyer_config_summary",
                     "Buyer routing defaults to platform-managed selection in the current prototype.",
+                )
+            ),
+            private_visibility_summary=str(
+                payload.get(
+                    "private_visibility_summary",
+                    "Private/shared visibility was fetched from the shared control plane.",
+                )
+            ),
+            public_visibility_summary=str(
+                payload.get(
+                    "public_visibility_summary",
+                    "Public visibility is not available on the selected target.",
+                )
+            ),
+            cloud_visibility_summary=str(
+                payload.get(
+                    "cloud_visibility_summary",
+                    "Cloud visibility was fetched from the shared control plane.",
                 )
             ),
         )

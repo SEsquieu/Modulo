@@ -218,7 +218,7 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertIn("install openclaw first", state.openclaw_guidance_summary.lower())
         self.assertTrue(state.openclaw_next_steps)
         self.assertIn("not installed", state.openclaw_plan_summary.lower())
-        self.assertIn("No network models", state.buyer_platform_summary)
+        self.assertIn("No private/shared models", state.buyer_platform_summary)
         self.assertIn("local-only", state.buyer_account_summary)
         self.assertIn("Prototype credits", state.buyer_credits_summary)
         self.assertIn("platform-managed", state.buyer_config_summary)
@@ -289,7 +289,7 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertIn("configured", started.openclaw_summary.lower())
         self.assertIn("without editing local OpenClaw files", started.openclaw_details)
         self.assertTrue(started.buyer_network_models)
-        self.assertIn("currently advertised", started.buyer_platform_summary)
+        self.assertIn("private/shared model", started.buyer_platform_summary.lower())
         self.assertIn("platform-managed", started.buyer_config_summary)
         self.assertFalse(started.start_action_enabled)
         self.assertTrue(started.stop_action_enabled)
@@ -563,7 +563,7 @@ class GuiAppControllerTests(unittest.TestCase):
 
             state = buyer_controller.set_debug_target_url(host_harness.modulo_url)
 
-            self.assertIn("currently advertised", state.buyer_platform_summary)
+            self.assertIn("private/shared model", state.buyer_platform_summary.lower())
             self.assertTrue(any("gemma4:e2b" in line for line in state.buyer_network_models))
             self.assertIn("network:gemma4:e2b", state.use_available_model_ids)
             self.assertIn(host_harness.modulo_url, state.debug_summary)

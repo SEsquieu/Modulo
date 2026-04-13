@@ -157,10 +157,17 @@ class ModuloHTTPApp:
             }
             for model in SUPPORTED_MODELS.values()
         ]
+        private_models = [
+            {
+                **model,
+                "source": "private",
+            }
+            for model in network_models.values()
+        ]
         network_summary = (
-            f"{len(network_models)} network model(s) are currently advertised by healthy workers."
+            f"{len(network_models)} private/shared model(s) are currently visible from the active platform target."
             if network_models
-            else "No network models are currently advertised on this platform target."
+            else "No private/shared models are currently visible from the active platform target."
         )
         health = self.service.health_summary()
         details = (
@@ -171,13 +178,21 @@ class ModuloHTTPApp:
             "connected": True,
             "summary": "Platform session bridge is connected to the shared control plane.",
             "details": details,
+            "active_target_url": "",
             "account_summary": "Prototype account context is local-only and not authenticated yet.",
             "network_models": list(network_models.values()),
+            "private_models": private_models,
+            "public_models": [],
             "cloud_models": cloud_models,
             "credits_summary": "Prototype credits are not implemented yet.",
             "buyer_routing_summary": network_summary,
             "buyer_config_summary": (
                 "Buyer routing defaults to platform-managed selection in the current prototype."
+            ),
+            "private_visibility_summary": network_summary,
+            "public_visibility_summary": "Public scope is not yet exposed on this platform target.",
+            "cloud_visibility_summary": (
+                f"{len(cloud_models)} cloud model(s) are currently visible from the active platform target."
             ),
         }
 

@@ -67,10 +67,15 @@ class ModuloHTTPAppTests(unittest.TestCase):
         self.assertEqual(200, status)
         self.assertTrue(payload["connected"])
         self.assertIn("shared control plane", payload["summary"])
-        self.assertIn("currently advertised", payload["buyer_routing_summary"])
+        self.assertIn("private/shared", payload["buyer_routing_summary"].lower())
         self.assertTrue(payload["network_models"])
+        self.assertTrue(payload["private_models"])
+        self.assertEqual([], payload["public_models"])
         self.assertEqual("llama3.1:8b", payload["network_models"][0]["model_id"])
         self.assertEqual("network", payload["network_models"][0]["source"])
+        self.assertEqual("llama3.1:8b", payload["private_models"][0]["model_id"])
+        self.assertEqual("private", payload["private_models"][0]["source"])
+        self.assertIn("public scope is not yet exposed", payload["public_visibility_summary"].lower())
 
     def test_get_latest_route_trace_returns_default_when_no_trace_exists(self) -> None:
         status, payload = self.app.handle("GET", "/api/platform/trace/latest")

@@ -83,12 +83,19 @@ Notes:
 
 - prefer one truthful fetch path over duplicated local-only versus remote-only logic
 
-Status: in progress
+Status: completed
 
 Completion note:
 
 - summary:
+  - taught the session-bridge and control-plane visibility fetch path to speak more directly in `Private / Public / Cloud` terms while preserving the older network-model field for compatibility
+  - added active-target awareness and per-source visibility summaries so the client can explain why shared sources are empty or unavailable without guessing
+  - kept `Public` intentionally empty and policy-reserved while making `Private` truth follow the active platform target for both local and remote reads
 - proof added to repo:
+  - richer `PlatformSessionStatus` source visibility fields in `src/modulo/client/app.py`
+  - local and remote session-bridge fetch updates in `src/modulo/prototype.py`
+  - control-plane status payload updates in `src/modulo/cloud/http.py`
+  - coverage in `tests/test_client_worker.py`, `tests/test_prototype.py`, and `tests/test_http_app.py`
 
 ### Slice 3: Use tab truth pass
 
@@ -111,7 +118,7 @@ Notes:
 
 - keep the top-level `Use` flow calm enough that it still points toward the eventual tray-first release
 
-Status: pending
+Status: in progress
 
 Completion note:
 

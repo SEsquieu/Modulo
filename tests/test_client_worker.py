@@ -203,6 +203,7 @@ class FakeSessionBridge:
             connected=True,
             summary="Platform session is connected.",
             details="fake session bridge",
+            active_target_url="https://modulo.grinningfrog.com",
             account_summary="Prototype account: local-dev-user",
             network_models=(
                 PlatformModelListing(
@@ -212,6 +213,15 @@ class FakeSessionBridge:
                     summary="Advertised by the Modulo network.",
                 ),
             ),
+            private_models=(
+                PlatformModelListing(
+                    model_id="network/llama3.1:8b",
+                    display_name="Network Llama 3.1 8B",
+                    source="private",
+                    summary="Advertised by the Modulo private/shared path.",
+                ),
+            ),
+            public_models=(),
             cloud_models=(
                 PlatformModelListing(
                     model_id="cloud/gpt-4.1-mini",
@@ -223,6 +233,9 @@ class FakeSessionBridge:
             credits_summary="12.5 credits available",
             buyer_routing_summary="Buyer routing defaults to platform-managed selection.",
             buyer_config_summary="Buyer config is using platform-managed model selection.",
+            private_visibility_summary="1 private/shared model is currently visible from the active platform target.",
+            public_visibility_summary="Public scope is not yet exposed on the active platform target.",
+            cloud_visibility_summary="1 cloud model is currently visible from the active platform target.",
         )
 
 
@@ -437,11 +450,14 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertEqual("active", status.use.scopes[1].state)
         self.assertEqual("unsupported", status.use.scopes[2].state)
         self.assertEqual("active", status.use.scopes[3].state)
+        self.assertEqual("https://modulo.grinningfrog.com", status.platform.active_target_url)
         self.assertEqual("llama3.1:8b", status.use.route.selected_model_id)
         self.assertEqual("local", status.use.route.selected_source)
         self.assertEqual("local", status.use.route.selected_scope)
         self.assertEqual("Not configured", status.use.route.active_route_target)
         self.assertTrue(status.use.route.route_policy_restrictions)
+        self.assertIn("private/shared model", status.use.scopes[1].summary.lower())
+        self.assertIn("public scope is not yet exposed", status.use.scopes[2].summary.lower())
 
     def test_client_status_includes_latest_route_trace_summary(self) -> None:
         status = self.client.get_status()

@@ -378,9 +378,13 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertIn("local prototype control plane", status.platform.summary)
         self.assertIn("local-only", status.platform.account_summary)
         self.assertEqual((), status.platform.network_models)
+        self.assertEqual((), status.platform.private_models)
+        self.assertEqual((), status.platform.public_models)
         self.assertTrue(status.platform.cloud_models)
-        self.assertIn("No network models", status.platform.buyer_routing_summary)
+        self.assertIn("No private/shared models", status.platform.buyer_routing_summary)
         self.assertIn("platform-managed", status.platform.buyer_config_summary)
+        self.assertIn("private/shared", status.platform.private_visibility_summary.lower())
+        self.assertIn("public scope is not yet exposed", status.platform.public_visibility_summary.lower())
         self.assertFalse(status.latest_route_trace.available)
 
     def test_session_bridge_reflects_network_models_after_hosting_registers(self) -> None:
@@ -394,8 +398,11 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
 
         self.assertTrue(status.platform.connected)
         self.assertEqual(1, len(status.platform.network_models))
+        self.assertEqual(1, len(status.platform.private_models))
+        self.assertEqual((), status.platform.public_models)
         self.assertEqual("network", status.platform.network_models[0].source)
-        self.assertIn("currently advertised", status.platform.buyer_routing_summary)
+        self.assertEqual("private", status.platform.private_models[0].source)
+        self.assertIn("private/shared", status.platform.buyer_routing_summary.lower())
 
     def test_route_trace_provider_reflects_latest_local_trace_after_round_trip(self) -> None:
         harness = LocalPrototypeHarness(
@@ -433,8 +440,12 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
             self.assertTrue(status.platform.connected)
             self.assertIn("shared control plane", status.platform.summary)
             self.assertEqual(1, len(status.platform.network_models))
+            self.assertEqual(1, len(status.platform.private_models))
+            self.assertEqual((), status.platform.public_models)
             self.assertEqual("qwen3.5:4b", status.platform.network_models[0].model_id)
-            self.assertIn("currently advertised", status.platform.buyer_routing_summary)
+            self.assertEqual("qwen3.5:4b", status.platform.private_models[0].model_id)
+            self.assertIn("private/shared", status.platform.buyer_routing_summary.lower())
+            self.assertIn("public scope is not yet exposed", status.platform.public_visibility_summary.lower())
         finally:
             buyer_harness.shutdown()
             host_harness.shutdown()
