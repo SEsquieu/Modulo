@@ -27,6 +27,7 @@ This file is the quickest way to regain context when switching workstations.
 - `Slice 3: Use tab truth pass` is completed
 - `Slice 4: Policy and empty-state trust pass` is completed
 - the full use-side truth roadmap is now completed
+- the current GUI refinement work after the completed `Use` roadmap is focused on making the second-layer `Use` flow feel calmer and more product-true without drifting toward dashboard behavior
 - the canonical product-shape guidance is now [platform_layering_spec.md](./platform_layering_spec.md)
 - the current architecture discussion is [private_scope_mvp_design.md](./private_scope_mvp_design.md), which narrows the next remote-execution proof around `Local / Private / Public / Cloud`
 - a future routing note is captured in [future_host_capacity_intelligence.md](./future_host_capacity_intelligence.md) for host capability profiling, warm/cold inventory truth, and dynamic idle swapping
@@ -123,6 +124,7 @@ That matters because the main workstation stores the primary model under `agents
   - top level: `Local / Private / Public / Cloud`
   - middle level: friendly scope labels such as `This machine` or private-scope names
   - leaf level: actual selectable models
+- the `Use` picker now preserves manual branch expansion and collapse while the GUI refreshes, so the control does not fight the user while it is open
 - `Mount` now starts blank by default, with no auto-selected shape or consumer
 - `Mount` now behaves as a user-driven wizard:
   - choose `Shape`
@@ -132,12 +134,12 @@ That matters because the main workstation stores the primary model under `agents
 - `Mount` now filters a consumer dropdown from the selected shape, but it never auto-populates the consumer selection
 - the redundant `Mounted Edge` card is gone, so the tab only shows the current step, relevant guidance, and consumer-specific setup when it matters
 - the `Active Route` card now carries the high-level use summary directly: model, source, shape, mount, status, and one short reason
+- the `Active Route` card now treats `Status` as a simple `Ready / Not ready` signal and leaves the more specific next step to the shorter `Reason` line
 - `Use` selection truth now follows the actual chosen source scope, so selecting a private model surfaces `Private` instead of falling back to stale local route metadata
 - `Sources` now groups `Local / Private / Public / Cloud` in one place instead of splitting them into four separate sub-tabs
 - `Use` now treats `Public` as policy-reserved, `Private` as explicitly empty when no hosts are advertising, and shared scopes as read-only when the active target is unreachable
 - the underlying session/platform fetch path now carries active-target and per-source visibility summaries, so `Use` truth is no longer inferred from mixed network/OpenClaw state
 - `Host` tab: hosting model selection, warm-state card, execution-path truth, host toggle, worker/runtime details
-- `Diagnostics` tab: smoke test summary card plus nested `Smoke / Activity / Errors`
 - `Diagnostics` tab: smoke test summary card plus nested `Smoke / Route / Activity / Errors`
 - the Diagnostics `Route` view now uses clearer operator wording for successful routes, no-route outcomes, retries, and filtered workers
 - footer: left-aligned `Modulo / Hosting / Worker` key:value status with colored values, plus right-aligned transient notices
@@ -152,7 +154,8 @@ Start from the completed [private_mvp_roadmap.md](./private_mvp_roadmap.md), the
 
 The most likely first useful slice is:
 
-- a next roadmap chunk that keeps the tray-first product direction intact while deciding what should surface at the `Use` layer versus `Mount` and `Scopes`
+- a next roadmap chunk that keeps the tray-first product direction intact while refining what should surface at the `Use` layer versus `Mount` and `Scopes`
+- continue the second-layer GUI cleanup around `Use` and `Mount`, especially where the current shell still feels more like a proving surface than the eventual tray-first product
 - align that `Use` work with [platform_layering_spec.md](./platform_layering_spec.md) so the current GUI keeps serving as the second-layer proving surface instead of hardening into a dashboard
 - auth/policy hardening and persistence now that the shared path itself is functionally proven
 - only return to packaging once the shared-network behavior feels truthful enough to lock in
@@ -280,9 +283,18 @@ Recent meaningful commits:
 - `a9e5563` `Refine info card styling for sleek terminal UI`
 - `14bd1b6` `Sync initial host model to local inventory`
 - `f6bf222` `Align docs with hosted backend proof`
+- `368854d` `Make mount setup explicit and user-driven`
+- `50f2982` `Tighten active route card guidance copy`
+- `d115b81` `Simplify use route readiness status`
+- `fd0ef84` `Group use selector models by source`
+- `f438b47` `Add nested use model picker`
+- `369b781` `Replace nested model menu with anchored picker`
+- `840b9b4` `Preserve use picker tree expansion state`
+- `3d5d5b2` `Keep selected use branch from reopening`
 
 If resuming cold, start by reading:
 
 1. [handoff.md](./handoff.md)
-2. [private_scope_mvp_design.md](./private_scope_mvp_design.md)
-3. [private_mvp_roadmap.md](./private_mvp_roadmap.md)
+2. [platform_layering_spec.md](./platform_layering_spec.md)
+3. [private_scope_mvp_design.md](./private_scope_mvp_design.md)
+4. [private_mvp_roadmap.md](./private_mvp_roadmap.md)

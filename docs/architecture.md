@@ -36,6 +36,11 @@ The `client` package now contains the real supervision, readiness, session-bridg
 
 The current GUI should be treated as a second-layer proving surface, not the final primary product shell.
 That means we can keep building richer truth into it now, while still designing toward a tray-first release where `Use`, `Host`, `Scopes`, `Mount`, and `Health` stay simpler at the surface.
+In practical terms, the current GUI is now being refined around:
+
+- a calmer `Use` surface with an active route card plus deeper `Sources` and `Mount` sections
+- a shape-first, consumer-second `Mount` flow that stages real edge changes only after explicit confirmation
+- a scope-aware model picker that groups selectable models under `Local / Private / Public / Cloud` and friendly scope names
 
 ## Boundary rules
 

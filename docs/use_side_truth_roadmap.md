@@ -179,3 +179,24 @@ Add a short summary here when the roadmap is complete:
   - `tests/test_prototype.py`
   - `tests/test_http_app.py`
   - `tests/test_gui_controller.py`
+
+## Post-completion refinements
+
+After the roadmap was completed, the second-layer `Use` GUI continued to evolve in place without reopening the roadmap itself.
+
+Important follow-on refinements already landed:
+
+- the `Use` shell was simplified further so the active route card carries the main readiness truth directly
+- `Mount` now starts blank by default and behaves more like a wizard:
+  - choose `Shape`
+  - choose compatible `Consumer`
+  - review the staged setup
+  - explicitly confirm before real edge changes are applied
+- the route summary now treats `Status` as a simple `Ready / Not ready` signal while `Reason` stays short and actionable
+- the `Use` model picker moved from flat/grouped combo behavior to an anchored nested picker with:
+  - top-level source groups
+  - middle-level scope labels
+  - selectable model leaves
+- the anchored picker now preserves branch expansion state while the GUI refreshes
+
+These refinements should be treated as the current live shape of the second-layer `Use` surface, even though they were implemented after the formal roadmap was marked complete.

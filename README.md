@@ -110,13 +110,17 @@ This launches the barebones PySide6 desktop shell against the current live clien
 
 The GUI currently includes:
 
-- a `Use / Host / Diagnostics` shell with consistent nested-tab navigation
+- a `Use / Host / Diagnostics` shell with consistent nested-tab navigation, plus a deeper `Debug` surface
 - a `Debug` tab with current platform URL plus ready-to-run worker and request commands for private-network validation
 - an interactive `Debug` probe surface that can target another workstation's platform URL and run a real `/api/chat` network test
 - lightweight shared-platform advertising visibility, so the `Use` tab can reflect another workstation's advertised network models when the Debug target points at that host
-- a `Use` tab with active route summary, OpenClaw route truth, and local/network/cloud source visibility
+- a `Use` tab with:
+  - an active route summary card
+  - a `Sources` section for `Local / Private / Public / Cloud`
+  - a `Mount` section that now behaves like a shape-first, consumer-second wizard
+  - an anchored nested model picker grouped by source and scope
 - a `Host` tab with local-only model selection, warm-state card, host toggle, and worker/runtime detail tabs
-- a `Diagnostics` tab with smoke-test summary, activity, and error views
+- a `Diagnostics` tab with smoke-test summary, route-trace, activity, and error views
 - explicit execution-path truth in host and diagnostics views so `REAL` and `PROTOTYPE` runs are clearly labeled
 - async host actions and smoke tests so long Ollama calls do not freeze the UI
 - a split footer with left-side shell status and right-side transient notices
@@ -135,6 +139,7 @@ Recent milestone:
 - this moves Modulo beyond local-only proof into real distributed validation
 - current next work should focus on truth, visibility, and policy around the shared path rather than packaging
 - the newest tracked emphasis after route-trace visibility is the `Use` side: making `Local / Private / Public / Cloud` visibility honest and easy to trust
+- the newest untracked GUI refinement work is making the second-layer `Use` and `Mount` flow feel calmer and more tray-first without losing truth
 - the guiding product rule is now explicit: the current GUI is the deeper proving surface, while the release product should stay shallow, tray-first, and Hamachi-simple
 
 ## Current platform surface

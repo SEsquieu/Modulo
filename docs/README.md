@@ -28,8 +28,13 @@ Current emphasis:
 
 - the cross-network private execution proof is now real
 - route-trace visibility is now completed
-- productization is intentionally deferred while shared-path truth, `Use`-side visibility, and policy harden
+- the `Use`-side truth roadmap is now completed
+- productization is intentionally deferred while shared-path truth, second-layer GUI refinement, and policy harden
 - the current UI should be treated as a second-layer surface while the product continues to aim toward a tray-first release
+- the current live GUI cleanup is focused on:
+  - calmer `Use` and `Mount` semantics
+  - a more trustworthy `Active Route` summary
+  - a nested anchored `Use` model picker that respects `Local / Private / Public / Cloud` and real scope names
 
 Recommended next docs to add:
 
