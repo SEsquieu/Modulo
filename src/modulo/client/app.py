@@ -158,6 +158,48 @@ class PlatformSessionStatus:
 
 
 @dataclass(frozen=True)
+class UseModelOption:
+    model_id: str
+    display_name: str
+    source: str
+    scope: str
+    summary: str = ""
+
+
+@dataclass(frozen=True)
+class UseScopeStatus:
+    scope_id: str
+    display_label: str
+    state: str = "unavailable"
+    summary: str = ""
+    models: tuple[UseModelOption, ...] = ()
+    route_allowed: bool = False
+    route_restriction: str = ""
+    muted: bool = False
+    deletable: bool = False
+
+
+@dataclass(frozen=True)
+class UseRouteStatus:
+    selected_model_id: str = ""
+    selected_model_label: str = "No model selected."
+    selected_source: str = ""
+    selected_scope: str = ""
+    active_route_target: str = "Not configured"
+    active_provider: str = ""
+    active_base_url: str = ""
+    route_policy_summary: str = "Use-side routing truth has not been prepared yet."
+    route_policy_restrictions: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class UseSideStatus:
+    summary: str = "No use-side source truth is available yet."
+    scopes: tuple[UseScopeStatus, ...] = ()
+    route: UseRouteStatus = UseRouteStatus()
+
+
+@dataclass(frozen=True)
 class RouteTraceFilteredWorker:
     worker_id: str
     reason_code: str
@@ -317,6 +359,7 @@ class ClientStatus:
     hosting_enabled: bool = False
     openclaw: OpenClawConfigurationStatus = OpenClawConfigurationStatus()
     platform: PlatformSessionStatus = PlatformSessionStatus()
+    use: UseSideStatus = UseSideStatus()
     latest_route_trace: RouteTraceStatus = RouteTraceStatus()
     hosting_setup: HostingSetupStatus = HostingSetupStatus()
     activity: ActivityVisibilityStatus = ActivityVisibilityStatus()
@@ -539,14 +582,21 @@ class ModuloClientSupervisor:
     def get_status(self) -> ClientStatus:
         worker_status = self.worker_bridge.get_status()
         openclaw_status = self.get_openclaw_status()
+        platform_status = self.get_platform_session_status()
+        hosting_setup = self.get_hosting_setup_status()
         return ClientStatus(
             connected_to_modulo=self.connected_to_modulo,
             openclaw_configured=openclaw_status.configured,
             hosting_enabled=worker_status.desired_running,
             openclaw=openclaw_status,
-            platform=self.get_platform_session_status(),
+            platform=platform_status,
+            use=self.get_use_side_status(
+                openclaw_status=openclaw_status,
+                platform_status=platform_status,
+                hosting_setup=hosting_setup,
+            ),
             latest_route_trace=self.get_latest_route_trace_status(),
-            hosting_setup=self.get_hosting_setup_status(),
+            hosting_setup=hosting_setup,
             activity=self.get_activity_visibility(),
             worker=worker_status,
             smoke_test=self._last_smoke_test,
@@ -912,6 +962,195 @@ class ModuloClientSupervisor:
         if self.session_bridge is None:
             return PlatformSessionStatus()
         return self.session_bridge.fetch_platform_status()
+
+    def get_use_side_status(
+        self,
+        *,
+        openclaw_status: OpenClawConfigurationStatus,
+        platform_status: PlatformSessionStatus,
+        hosting_setup: HostingSetupStatus,
+    ) -> UseSideStatus:
+        local_models = tuple(
+            UseModelOption(
+                model_id=model_id,
+                display_name=model_id,
+                source="local",
+                scope="local",
+                summary="Installed on this machine.",
+            )
+            for model_id in hosting_setup.installed_model_ids
+        )
+        private_models = tuple(
+            UseModelOption(
+                model_id=model.model_id,
+                display_name=model.display_name,
+                source="private",
+                scope="private",
+                summary=model.summary,
+            )
+            for model in platform_status.network_models
+        )
+        cloud_models = tuple(
+            UseModelOption(
+                model_id=model.model_id,
+                display_name=model.display_name,
+                source="cloud",
+                scope="cloud",
+                summary=model.summary,
+            )
+            for model in platform_status.cloud_models
+        )
+
+        scopes = (
+            UseScopeStatus(
+                scope_id="local",
+                display_label="Local",
+                state="active" if local_models else "empty",
+                summary=(
+                    f"{len(local_models)} local model(s) are available on this machine."
+                    if local_models
+                    else "No local models are installed yet."
+                ),
+                models=local_models,
+                route_allowed=bool(local_models),
+            ),
+            UseScopeStatus(
+                scope_id="private",
+                display_label="Private",
+                state=(
+                    "active"
+                    if private_models
+                    else "visible"
+                    if platform_status.connected
+                    else "unavailable"
+                ),
+                summary=(
+                    f"{len(private_models)} private/shared model(s) are currently visible from the active platform target."
+                    if private_models
+                    else "No private/shared models are currently visible from the active platform target."
+                    if platform_status.connected
+                    else "Private/shared visibility is unavailable until the platform session is connected."
+                ),
+                models=private_models,
+                route_allowed=platform_status.connected,
+                route_restriction=(
+                    ""
+                    if platform_status.connected
+                    else "Connect to a platform target before private/shared visibility can be trusted."
+                ),
+                deletable=True,
+            ),
+            UseScopeStatus(
+                scope_id="public",
+                display_label="Public",
+                state="unsupported",
+                summary="Public scope is intentionally not exposed in the current prototype path.",
+                models=(),
+                route_allowed=False,
+                route_restriction="Public routing is reserved for a later policy-aware slice.",
+                deletable=True,
+            ),
+            UseScopeStatus(
+                scope_id="cloud",
+                display_label="Cloud",
+                state=(
+                    "active"
+                    if cloud_models
+                    else "visible"
+                    if platform_status.connected
+                    else "unavailable"
+                ),
+                summary=(
+                    f"{len(cloud_models)} cloud model(s) are currently visible from the active platform target."
+                    if cloud_models
+                    else "No cloud models are currently visible from the active platform target."
+                    if platform_status.connected
+                    else "Cloud visibility is unavailable until the platform session is connected."
+                ),
+                models=cloud_models,
+                route_allowed=bool(cloud_models),
+                route_restriction=(
+                    ""
+                    if cloud_models
+                    else "Cloud models may be visible before cloud routing is fully surfaced in the client."
+                ),
+                deletable=True,
+            ),
+        )
+
+        route_target = (
+            "OpenClaw"
+            if openclaw_status.configured
+            else "OpenClaw (staged)"
+            if openclaw_status.connection_plan.apply_ready
+            else "Not configured"
+        )
+        route_restrictions: list[str] = []
+        if not openclaw_status.configured:
+            route_restrictions.append(
+                "Routing setup is still staged or incomplete, so selected models are visibility truth first."
+            )
+        if not platform_status.connected:
+            route_restrictions.append(
+                "Shared source visibility cannot be trusted until the platform session is connected."
+            )
+        if not private_models:
+            route_restrictions.append(
+                "Private scope is currently empty because no shared hosts are advertising models to the active target."
+            )
+        selected_model_id, selected_model_label, selected_source, selected_scope = self._default_use_selection(
+            local_models=local_models,
+            private_models=private_models,
+            cloud_models=cloud_models,
+            openclaw_status=openclaw_status,
+        )
+
+        return UseSideStatus(
+            summary=(
+                "Use-side model visibility is grouped by source so Local, Private, Public, and Cloud can stay simple at the surface."
+            ),
+            scopes=scopes,
+            route=UseRouteStatus(
+                selected_model_id=selected_model_id,
+                selected_model_label=selected_model_label,
+                selected_source=selected_source,
+                selected_scope=selected_scope,
+                active_route_target=route_target,
+                active_provider=openclaw_status.current_provider,
+                active_base_url=openclaw_status.current_base_url,
+                route_policy_summary=(
+                    platform_status.buyer_routing_summary
+                    if platform_status.buyer_routing_summary
+                    else "Use-side routing policy has not been fetched yet."
+                ),
+                route_policy_restrictions=tuple(route_restrictions),
+            ),
+        )
+
+    @staticmethod
+    def _default_use_selection(
+        *,
+        local_models: tuple[UseModelOption, ...],
+        private_models: tuple[UseModelOption, ...],
+        cloud_models: tuple[UseModelOption, ...],
+        openclaw_status: OpenClawConfigurationStatus,
+    ) -> tuple[str, str, str, str]:
+        primary = openclaw_status.current_primary_model
+        if primary:
+            if "/" in primary:
+                provider, model_id = primary.split("/", 1)
+            else:
+                provider, model_id = "", primary
+            if provider == "ollama":
+                for item in local_models:
+                    if item.model_id == model_id:
+                        return item.model_id, item.display_name, item.source, item.scope
+            for item in (*private_models, *cloud_models):
+                if item.model_id == primary or item.model_id == model_id:
+                    return item.model_id, item.display_name, item.source, item.scope
+        for item in (*local_models, *private_models, *cloud_models):
+            return item.model_id, item.display_name, item.source, item.scope
+        return "", "No model selected.", "", ""
 
     def get_activity_visibility(self) -> ActivityVisibilityStatus:
         if self.activity_provider is None:

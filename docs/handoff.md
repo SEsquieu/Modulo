@@ -22,8 +22,8 @@ This file is the quickest way to regain context when switching workstations.
 - `Slice 4: Operator trust pass` is completed
 - the full route-trace visibility roadmap is now completed
 - the next active implementation roadmap is [use_side_truth_roadmap.md](./use_side_truth_roadmap.md)
-- `Slice 1: Use-source contract tightening` is pending
-- `Slice 2: Private/shared visibility fetch truth` is pending
+- `Slice 1: Use-source contract tightening` is completed
+- `Slice 2: Private/shared visibility fetch truth` is in progress
 - `Slice 3: Use tab truth pass` is pending
 - `Slice 4: Policy and empty-state trust pass` is pending
 - the canonical product-shape guidance is now [platform_layering_spec.md](./platform_layering_spec.md)
@@ -70,6 +70,7 @@ The release direction remains tray-first, with deeper truth and control exposed 
 - the prototype session bridge can now read another machine's advertised model list instead of only local in-memory state
 - the prototype route-trace provider can now read another machine's latest routed execution trace through the same active target flow
 - the GUI `Use` tab can now reflect a remote host's advertised network models when the Debug target URL points at that host
+- the client now has a dedicated `Use` contract that groups source visibility under `Local / Private / Public / Cloud` and separates visible models from route-policy truth
 - the GUI can now launch with a hosted backend target preloaded, for example `https://modulo.grinningfrog.com`
 - worker transport errors now surface HTTP status and edge/body details instead of collapsing to `unknown error`
 - stopping hosting now explicitly unregisters the worker from the cloud registry so advertised models disappear immediately instead of lingering and timing out

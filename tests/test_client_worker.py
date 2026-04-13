@@ -428,6 +428,20 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertIn("credits", status.platform.credits_summary)
         self.assertIn("platform-managed", status.platform.buyer_config_summary)
         self.assertIsNotNone(status.worker)
+        self.assertEqual(4, len(status.use.scopes))
+        self.assertEqual("Local", status.use.scopes[0].display_label)
+        self.assertEqual("Private", status.use.scopes[1].display_label)
+        self.assertEqual("Public", status.use.scopes[2].display_label)
+        self.assertEqual("Cloud", status.use.scopes[3].display_label)
+        self.assertEqual("active", status.use.scopes[0].state)
+        self.assertEqual("active", status.use.scopes[1].state)
+        self.assertEqual("unsupported", status.use.scopes[2].state)
+        self.assertEqual("active", status.use.scopes[3].state)
+        self.assertEqual("llama3.1:8b", status.use.route.selected_model_id)
+        self.assertEqual("local", status.use.route.selected_source)
+        self.assertEqual("local", status.use.route.selected_scope)
+        self.assertEqual("Not configured", status.use.route.active_route_target)
+        self.assertTrue(status.use.route.route_policy_restrictions)
 
     def test_client_status_includes_latest_route_trace_summary(self) -> None:
         status = self.client.get_status()
@@ -441,6 +455,31 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertEqual("completed", status.latest_route_trace.final_status)
         self.assertIn("Scope private", status.latest_route_trace.summary)
         self.assertIn("Matched requested model", status.latest_route_trace.details)
+
+    def test_use_side_status_distinguishes_visibility_from_route_policy(self) -> None:
+        self.client.openclaw_discovery = InstalledOpenClawDiscovery()
+        self.client.stage_openclaw_connection()
+
+        status = self.client.get_status()
+
+        self.assertEqual("OpenClaw (staged)", status.use.route.active_route_target)
+        self.assertEqual("ollama", status.use.route.active_provider)
+        self.assertEqual("http://127.0.0.1:11434", status.use.route.active_base_url)
+        self.assertIn("staged or incomplete", status.use.route.route_policy_restrictions[0].lower())
+        self.assertEqual(1, len(status.use.scopes[1].models))
+        self.assertEqual("private", status.use.scopes[1].models[0].scope)
+        self.assertEqual("network/llama3.1:8b", status.use.scopes[1].models[0].model_id)
+        self.assertTrue(status.use.scopes[1].deletable)
+
+    def test_use_side_status_marks_shared_sources_unavailable_without_session_bridge(self) -> None:
+        self.client.session_bridge = None
+
+        status = self.client.get_status()
+
+        self.assertEqual("unavailable", status.use.scopes[1].state)
+        self.assertEqual("unavailable", status.use.scopes[3].state)
+        self.assertFalse(status.use.scopes[1].route_allowed)
+        self.assertIn("platform session is connected", status.use.route.route_policy_restrictions[1].lower())
 
     def test_hosting_setup_includes_ollama_discovery_state(self) -> None:
         status = self.client.get_status()

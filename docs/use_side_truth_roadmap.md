@@ -50,12 +50,18 @@ Notes:
 - keep the contract narrow and user-facing
 - avoid locking in enterprise-heavy naming at the UI layer
 
-Status: pending
+Status: completed
 
 Completion note:
 
 - summary:
+  - added a dedicated `Use`-side client contract so source visibility, selected model truth, and route-policy truth no longer have to be inferred from mixed platform and OpenClaw state
+  - grouped the current client-facing sources under `Local / Private / Public / Cloud`, including room for future scope state such as mute/delete without forcing that UI yet
+  - made the contract explicitly distinguish visible models from allowed routing so the client can be honest even when support is partial or staged
 - proof added to repo:
+  - `UseModelOption`, `UseScopeStatus`, `UseRouteStatus`, and `UseSideStatus` in `src/modulo/client/app.py`
+  - `ClientStatus.use` plus grouped source construction in `src/modulo/client/app.py`
+  - contract coverage in `tests/test_client_worker.py`
 
 ### Slice 2: Private/shared visibility fetch truth
 
@@ -77,7 +83,7 @@ Notes:
 
 - prefer one truthful fetch path over duplicated local-only versus remote-only logic
 
-Status: pending
+Status: in progress
 
 Completion note:
 
