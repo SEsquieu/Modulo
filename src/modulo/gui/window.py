@@ -988,20 +988,27 @@ class ModuloMainWindow(QMainWindow):
         self._remember_use_model_tree_expansion_state()
         self.use_model_tree.clear()
         selected_item: QTreeWidgetItem | None = None
+        expandable_items: list[tuple[QTreeWidgetItem, str]] = []
         for source in state.use_model_menu_sources:
             source_item = QTreeWidgetItem([source.source_label])
             source_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
             source_key = f"source:{source.source_label}"
             source_item.setData(0, Qt.ItemDataRole.UserRole + 1, source_key)
             self.use_model_tree.addTopLevelItem(source_item)
-            source_item.setExpanded(source_key in self._use_model_tree_expanded_keys or not self._use_model_tree_expanded_keys)
+            expandable_items.append((source_item, source_key))
+            source_item.setExpanded(
+                source_key in self._use_model_tree_expanded_keys or not self._use_model_tree_expanded_keys
+            )
             for scope in source.scopes:
                 scope_item = QTreeWidgetItem([scope.scope_label])
                 scope_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
                 scope_key = f"{source_key}/scope:{scope.scope_label}"
                 scope_item.setData(0, Qt.ItemDataRole.UserRole + 1, scope_key)
                 source_item.addChild(scope_item)
-                scope_item.setExpanded(scope_key in self._use_model_tree_expanded_keys or not self._use_model_tree_expanded_keys)
+                expandable_items.append((scope_item, scope_key))
+                scope_item.setExpanded(
+                    scope_key in self._use_model_tree_expanded_keys or not self._use_model_tree_expanded_keys
+                )
                 for model in scope.models:
                     model_item = QTreeWidgetItem([model.label])
                     model_item.setData(0, Qt.ItemDataRole.UserRole, model.model_id)
@@ -1011,6 +1018,9 @@ class ModuloMainWindow(QMainWindow):
                         selected_item = model_item
         if selected_item is not None:
             self.use_model_tree.setCurrentItem(selected_item)
+        if self._use_model_tree_expanded_keys:
+            for item, key in expandable_items:
+                item.setExpanded(key in self._use_model_tree_expanded_keys)
 
     def _start_hosting_async(self) -> None:
         self._run_async_state_action(
