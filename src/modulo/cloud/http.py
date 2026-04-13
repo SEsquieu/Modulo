@@ -8,6 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
 from modulo.common.catalog import SUPPORTED_MODELS
+from modulo.client.app import RouteTraceStatus
 from modulo.common.contracts import (
     ChatMessage,
     ChatRequest,
@@ -42,6 +43,9 @@ class ModuloHTTPApp:
 
         if method == "GET" and path == "/api/platform/status":
             return HTTPStatus.OK, self._handle_platform_status()
+
+        if method == "GET" and path == "/api/platform/trace/latest":
+            return HTTPStatus.OK, self._handle_latest_route_trace()
 
         if method == "POST" and path == "/api/chat":
             try:
@@ -176,6 +180,13 @@ class ModuloHTTPApp:
                 "Buyer routing defaults to platform-managed selection in the current prototype."
             ),
         }
+
+    def _handle_latest_route_trace(self) -> dict[str, Any]:
+        traces = self.service.list_traces()
+        if not traces:
+            return RouteTraceStatus().to_payload()
+        latest = max(traces, key=lambda item: (item.updated_at_tick, item.created_at_tick))
+        return RouteTraceStatus.from_record(latest).to_payload()
 
     def _handle_chat(self, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
         model_id = payload.get("model")

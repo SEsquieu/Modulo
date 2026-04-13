@@ -72,6 +72,37 @@ class ModuloHTTPAppTests(unittest.TestCase):
         self.assertEqual("llama3.1:8b", payload["network_models"][0]["model_id"])
         self.assertEqual("network", payload["network_models"][0]["source"])
 
+    def test_get_latest_route_trace_returns_default_when_no_trace_exists(self) -> None:
+        status, payload = self.app.handle("GET", "/api/platform/trace/latest")
+
+        self.assertEqual(200, status)
+        self.assertFalse(payload["available"])
+        self.assertIn("No routed execution trace", payload["summary"])
+
+    def test_get_latest_route_trace_returns_latest_trace_after_chat(self) -> None:
+        self.app.handle(
+            "POST",
+            "/api/chat",
+            json.dumps(
+                {
+                    "model": "llama3.1:8b",
+                    "buyer_id": "buyer-1",
+                    "scope": "private",
+                    "messages": [{"role": "user", "content": "hi"}],
+                    "stream": False,
+                }
+            ).encode("utf-8"),
+        )
+
+        status, payload = self.app.handle("GET", "/api/platform/trace/latest")
+
+        self.assertEqual(200, status)
+        self.assertTrue(payload["available"])
+        self.assertEqual("llama3.1:8b", payload["model_id"])
+        self.assertEqual("network-1", payload["selected_worker_id"])
+        self.assertEqual("private", payload["scope"])
+        self.assertEqual("completed", payload["final_status"])
+
     def test_post_chat_returns_ollama_shaped_response(self) -> None:
         status, payload = self.app.handle(
             "POST",

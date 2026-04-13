@@ -381,6 +381,7 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertTrue(status.platform.cloud_models)
         self.assertIn("No network models", status.platform.buyer_routing_summary)
         self.assertIn("platform-managed", status.platform.buyer_config_summary)
+        self.assertFalse(status.latest_route_trace.available)
 
     def test_session_bridge_reflects_network_models_after_hosting_registers(self) -> None:
         harness = LocalPrototypeHarness(
@@ -395,6 +396,22 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
         self.assertEqual(1, len(status.platform.network_models))
         self.assertEqual("network", status.platform.network_models[0].source)
         self.assertIn("currently advertised", status.platform.buyer_routing_summary)
+
+    def test_route_trace_provider_reflects_latest_local_trace_after_round_trip(self) -> None:
+        harness = LocalPrototypeHarness(
+            openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_discovery=InstalledLlamaDiscovery(),
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
+        )
+
+        result = harness.run_round_trip("trace visibility local")
+        status = harness.client.get_status()
+
+        self.assertTrue(status.latest_route_trace.available)
+        self.assertEqual(result.trace_id, status.latest_route_trace.trace_id)
+        self.assertEqual("private", status.latest_route_trace.scope)
+        self.assertEqual(harness.worker_id, status.latest_route_trace.selected_worker_id)
+        self.assertEqual("completed", status.latest_route_trace.final_status)
 
     def test_session_bridge_can_read_remote_platform_visibility(self) -> None:
         host_harness = LocalPrototypeHarness(
@@ -418,6 +435,36 @@ class LocalPrototypeHarnessTests(unittest.TestCase):
             self.assertEqual(1, len(status.platform.network_models))
             self.assertEqual("qwen3.5:4b", status.platform.network_models[0].model_id)
             self.assertIn("currently advertised", status.platform.buyer_routing_summary)
+        finally:
+            buyer_harness.shutdown()
+            host_harness.shutdown()
+
+    def test_route_trace_provider_can_read_remote_latest_trace(self) -> None:
+        host_harness = LocalPrototypeHarness(
+            model_id="qwen3.5:4b",
+            openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_discovery=InstalledQwenDiscovery(),
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
+            hosting_runtime_probe=BlockedRuntimeProbe(),
+        )
+        buyer_harness = LocalPrototypeHarness(
+            openclaw_discovery=FakePrototypeOpenClawDiscovery(),
+            ollama_discovery=InstalledLlamaDiscovery(),
+            ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
+            hosting_runtime_probe=BlockedRuntimeProbe(),
+        )
+
+        try:
+            result = host_harness.run_round_trip("remote trace visibility", buyer_id="buyer-remote")
+            buyer_harness.set_platform_target_url(host_harness.modulo_url)
+
+            status = buyer_harness.client.get_status()
+
+            self.assertTrue(status.latest_route_trace.available)
+            self.assertEqual(result.trace_id, status.latest_route_trace.trace_id)
+            self.assertEqual("private", status.latest_route_trace.scope)
+            self.assertEqual(host_harness.worker_id, status.latest_route_trace.selected_worker_id)
+            self.assertEqual("completed", status.latest_route_trace.final_status)
         finally:
             buyer_harness.shutdown()
             host_harness.shutdown()

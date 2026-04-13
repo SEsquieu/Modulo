@@ -241,6 +241,74 @@ class RouteTraceStatus:
             details="\n".join(details),
         )
 
+    @classmethod
+    def from_payload(cls, payload: object) -> "RouteTraceStatus":
+        if not isinstance(payload, dict):
+            return cls()
+        raw_filtered = payload.get("filtered_workers")
+        filtered_workers: tuple[RouteTraceFilteredWorker, ...] = ()
+        if isinstance(raw_filtered, list):
+            filtered_workers = tuple(
+                RouteTraceFilteredWorker(
+                    worker_id=str(item.get("worker_id", "")),
+                    reason_code=str(item.get("reason_code", "")),
+                    detail=str(item.get("detail", "")),
+                )
+                for item in raw_filtered
+                if isinstance(item, dict)
+            )
+        return cls(
+            available=bool(payload.get("available", False)),
+            trace_id=str(payload.get("trace_id", "")),
+            model_id=str(payload.get("model_id", "")),
+            source=str(payload.get("source", "")),
+            scope=str(payload.get("scope", "")),
+            private_network_id=str(payload.get("private_network_id", "")),
+            selected_worker_id=str(payload.get("selected_worker_id", "")),
+            selected_worker_kind=str(payload.get("selected_worker_kind", "")),
+            route_reason=str(payload.get("route_reason", "")),
+            route_reason_code=str(payload.get("route_reason_code", "")),
+            retry_count=int(payload.get("retry_count", 0) or 0),
+            attempt_number=int(payload.get("attempt_number", 0) or 0),
+            final_status=str(payload.get("final_status", "")),
+            final_error=str(payload.get("final_error", "")),
+            continuity_used=bool(payload.get("continuity_used", False)),
+            warm_path_used=bool(payload.get("warm_path_used", False)),
+            filtered_workers=filtered_workers,
+            summary=str(payload.get("summary", cls().summary)),
+            details=str(payload.get("details", cls().details)),
+        )
+
+    def to_payload(self) -> dict[str, object]:
+        return {
+            "available": self.available,
+            "trace_id": self.trace_id,
+            "model_id": self.model_id,
+            "source": self.source,
+            "scope": self.scope,
+            "private_network_id": self.private_network_id,
+            "selected_worker_id": self.selected_worker_id,
+            "selected_worker_kind": self.selected_worker_kind,
+            "route_reason": self.route_reason,
+            "route_reason_code": self.route_reason_code,
+            "retry_count": self.retry_count,
+            "attempt_number": self.attempt_number,
+            "final_status": self.final_status,
+            "final_error": self.final_error,
+            "continuity_used": self.continuity_used,
+            "warm_path_used": self.warm_path_used,
+            "filtered_workers": [
+                {
+                    "worker_id": item.worker_id,
+                    "reason_code": item.reason_code,
+                    "detail": item.detail,
+                }
+                for item in self.filtered_workers
+            ],
+            "summary": self.summary,
+            "details": self.details,
+        }
+
 
 @dataclass(frozen=True)
 class ClientStatus:

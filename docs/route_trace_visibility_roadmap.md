@@ -74,12 +74,19 @@ Notes:
 
 - prefer one truthful fetch path over duplicated local-only and remote-only logic
 
-Status: in progress
+Status: completed
 
 Completion note:
 
 - summary:
+  - added one shared latest-trace fetch shape for both local prototype and hosted targets
+  - exposed the latest routed execution through a dedicated control-plane read endpoint instead of GUI-only state
+  - taught the prototype harness to carry latest route-trace truth through the same active target flow used for shared visibility
 - proof added to repo:
+  - `GET /api/platform/trace/latest` in `src/modulo/cloud/http.py`
+  - `LocalPrototypeRouteTraceProvider` in `src/modulo/prototype.py`
+  - latest-trace payload helpers in `src/modulo/client/app.py`
+  - HTTP and prototype coverage in `tests/test_http_app.py` and `tests/test_prototype.py`
 
 ### Slice 3: Diagnostics route-trace view
 
@@ -97,7 +104,7 @@ Notes:
 
 - this should feel like the existing `Smoke / Activity / Errors` pattern, not a new dashboard
 
-Status: not started
+Status: in progress
 
 Completion note:
 

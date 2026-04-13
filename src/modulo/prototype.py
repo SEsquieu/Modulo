@@ -12,12 +12,14 @@ from urllib import error as urllib_error
 from modulo.client.app import (
     ActivityEntry,
     ActivityVisibilityStatus,
+    ClientRouteTraceProvider,
     ClientSessionBridge,
     ClientStatus,
     HostingPrewarmResult,
     ModuloClientSupervisor,
     PlatformModelListing,
     PlatformSessionStatus,
+    RouteTraceStatus,
     SmokeTestResult,
 )
 from modulo.client.openclaw_discovery import OpenClawDiscovery
@@ -227,6 +229,52 @@ class LocalPrototypeSessionBridge(ClientSessionBridge):
 
 
 @dataclass(frozen=True)
+class LocalPrototypeRouteTraceProvider(ClientRouteTraceProvider):
+    service: InMemoryModuloService
+    modulo_url: str = ""
+    lan_platform_url: str = ""
+    target_url: str = ""
+
+    def set_target_url(self, url: str) -> None:
+        object.__setattr__(self, "target_url", url.strip())
+
+    def get_latest_route_trace(self) -> RouteTraceStatus:
+        remote_target = self._remote_target_url()
+        if remote_target:
+            return self._fetch_remote_latest_route_trace(remote_target)
+
+        traces = self.service.list_traces()
+        if not traces:
+            return RouteTraceStatus()
+        latest = max(traces, key=lambda item: (item.updated_at_tick, item.created_at_tick))
+        return RouteTraceStatus.from_record(latest)
+
+    def _remote_target_url(self) -> str:
+        normalized_target = self.target_url.rstrip("/")
+        if not normalized_target:
+            return ""
+        local_targets = {self.modulo_url.rstrip("/")}
+        if self.lan_platform_url:
+            local_targets.add(self.lan_platform_url.rstrip("/"))
+        if normalized_target in local_targets:
+            return ""
+        return normalized_target
+
+    def _fetch_remote_latest_route_trace(self, target_url: str) -> RouteTraceStatus:
+        req = request.Request(f"{target_url}/api/platform/trace/latest", method="GET")
+        try:
+            with request.urlopen(req, timeout=5.0) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except Exception:
+            return RouteTraceStatus(
+                available=False,
+                summary="Latest route trace could not be read from the selected target.",
+                details=f"Target {target_url} did not return route-trace visibility.",
+            )
+        return RouteTraceStatus.from_payload(payload)
+
+
+@dataclass(frozen=True)
 class LocalOllamaModelPrewarmer:
     base_url: str = "http://127.0.0.1:11434"
     keep_alive: str = "10m"
@@ -339,6 +387,12 @@ class LocalPrototypeHarness:
         self.client = ModuloClientSupervisor(
             worker_bridge=bridge,
             session_bridge=LocalPrototypeSessionBridge(
+                service=self.service,
+                modulo_url=self.modulo_url,
+                lan_platform_url=self.lan_platform_url,
+                target_url=self.lan_platform_url or self.modulo_url,
+            ),
+            route_trace_provider=LocalPrototypeRouteTraceProvider(
                 service=self.service,
                 modulo_url=self.modulo_url,
                 lan_platform_url=self.lan_platform_url,
@@ -498,6 +552,9 @@ class LocalPrototypeHarness:
         session_bridge = self.client.session_bridge
         if session_bridge is not None and hasattr(session_bridge, "set_target_url"):
             session_bridge.set_target_url(normalized_target)
+        route_trace_provider = self.client.route_trace_provider
+        if route_trace_provider is not None and hasattr(route_trace_provider, "set_target_url"):
+            route_trace_provider.set_target_url(normalized_target)
 
         worker_target_url = self._worker_target_url_for(normalized_target)
         current_config = self.client.worker_bridge.config

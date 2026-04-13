@@ -17,7 +17,8 @@ This file is the quickest way to regain context when switching workstations.
 - `Slice 6: Lightweight shared-platform advertising visibility` is completed
 - the next post-proof implementation roadmap is [route_trace_visibility_roadmap.md](./route_trace_visibility_roadmap.md)
 - `Slice 1: Route-trace client contract` is completed
-- `Slice 2: Prototype and hosted trace fetch path` is now active
+- `Slice 2: Prototype and hosted trace fetch path` is completed
+- `Slice 3: Diagnostics route-trace view` is now active
 - the current architecture discussion is [private_scope_mvp_design.md](./private_scope_mvp_design.md), which narrows the next remote-execution proof around `Local / Private / Public / Cloud`
 - a future routing note is captured in [future_host_capacity_intelligence.md](./future_host_capacity_intelligence.md) for host capability profiling, warm/cold inventory truth, and dynamic idle swapping
 - the private-scope design doc now explicitly captures scope governance so future `Public` support stays policy-gated and clampable back to `Private`
@@ -54,7 +55,9 @@ This file is the quickest way to regain context when switching workstations.
 - a localhost test now proves the same control-plane server plus remote-worker shape that will be used for the real network validation
 - the GUI now includes a `Debug` tab that surfaces the current platform URL, ready-to-run private-network worker/request commands, and an interactive network probe target
 - the control plane now exposes lightweight shared-platform advertising visibility through `GET /api/platform/status`
+- the control plane now also exposes the latest routed execution through `GET /api/platform/trace/latest`
 - the prototype session bridge can now read another machine's advertised model list instead of only local in-memory state
+- the prototype route-trace provider can now read another machine's latest routed execution trace through the same active target flow
 - the GUI `Use` tab can now reflect a remote host's advertised network models when the Debug target URL points at that host
 - the GUI can now launch with a hosted backend target preloaded, for example `https://modulo.grinningfrog.com`
 - worker transport errors now surface HTTP status and edge/body details instead of collapsing to `unknown error`
