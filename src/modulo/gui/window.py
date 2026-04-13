@@ -216,8 +216,10 @@ class ModuloMainWindow(QMainWindow):
         self.use_route_details_label.setWordWrap(True)
         self.use_local_models_label = QLabel()
         self.use_local_models_label.setWordWrap(True)
-        self.use_network_models_label = QLabel()
-        self.use_network_models_label.setWordWrap(True)
+        self.use_private_models_label = QLabel()
+        self.use_private_models_label.setWordWrap(True)
+        self.use_public_models_label = QLabel()
+        self.use_public_models_label.setWordWrap(True)
         self.use_cloud_models_label = QLabel()
         self.use_cloud_models_label.setWordWrap(True)
         self.openclaw_status_label = QLabel()
@@ -338,7 +340,8 @@ class ModuloMainWindow(QMainWindow):
         self.use_detail_tabs = QTabWidget()
         self.use_detail_tabs.addTab(self._build_use_route_page(), "Route")
         self.use_detail_tabs.addTab(self._build_use_local_page(), "Local")
-        self.use_detail_tabs.addTab(self._build_use_network_page(), "Network")
+        self.use_detail_tabs.addTab(self._build_use_private_page(), "Private")
+        self.use_detail_tabs.addTab(self._build_use_public_page(), "Public")
         self.use_detail_tabs.addTab(self._build_use_cloud_page(), "Cloud")
         self.use_detail_tabs.setSizePolicy(
             QSizePolicy.Policy.Expanding,
@@ -646,11 +649,10 @@ class ModuloMainWindow(QMainWindow):
         layout = QVBoxLayout()
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
-        layout.addWidget(self.openclaw_status_label)
-        layout.addWidget(self.openclaw_summary_label)
+        layout.addWidget(self.use_summary_label)
         layout.addWidget(self.use_route_details_label)
+        layout.addWidget(self.openclaw_status_label)
         layout.addWidget(self.openclaw_guidance_label)
-        layout.addWidget(self.openclaw_plan_summary_label)
         route_actions = QHBoxLayout()
         route_actions.addWidget(self.apply_openclaw_button, 0)
         route_actions.addStretch(1)
@@ -669,12 +671,22 @@ class ModuloMainWindow(QMainWindow):
         page.setLayout(layout)
         return page
 
-    def _build_use_network_page(self) -> QWidget:
+    def _build_use_private_page(self) -> QWidget:
         page = QWidget()
         layout = QVBoxLayout()
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
-        layout.addWidget(self.use_network_models_label)
+        layout.addWidget(self.use_private_models_label)
+        layout.addStretch(1)
+        page.setLayout(layout)
+        return page
+
+    def _build_use_public_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout()
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(6)
+        layout.addWidget(self.use_public_models_label)
         layout.addStretch(1)
         page.setLayout(layout)
         return page
@@ -1200,16 +1212,12 @@ class ModuloMainWindow(QMainWindow):
         self.openclaw_status_label.setText(
             f"OpenClaw: {state.openclaw_status_badge}"
         )
-        self.openclaw_summary_label.setText(state.use_summary)
+        self.use_summary_label.setText(state.use_summary)
         self.use_route_details_label.setText("\n".join(state.use_route_details))
         self.openclaw_guidance_label.setText(f"Next: {state.openclaw_guidance_summary}")
-        self.openclaw_plan_summary_label.setText(
-            f"Plan: {state.openclaw_plan_summary}"
-            if state.openclaw_plan_summary and state.openclaw_plan_apply_enabled
-            else ""
-        )
         self.use_local_models_label.setText("\n".join(state.use_local_model_lines))
-        self.use_network_models_label.setText("\n".join(state.buyer_network_models))
+        self.use_private_models_label.setText("\n".join(state.use_private_model_lines))
+        self.use_public_models_label.setText("\n".join(state.use_public_model_lines))
         self.use_cloud_models_label.setText("\n".join(state.buyer_cloud_models))
 
         combo_model_ids = tuple(

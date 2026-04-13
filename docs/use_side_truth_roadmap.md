@@ -118,12 +118,18 @@ Notes:
 
 - keep the top-level `Use` flow calm enough that it still points toward the eventual tray-first release
 
-Status: in progress
+Status: completed
 
 Completion note:
 
 - summary:
+  - rewired the `Use` UI to read from the dedicated `Use` contract instead of stitching together older buyer/network/OpenClaw fields
+  - grouped source visibility into `Route / Local / Private / Public / Cloud` sections so the shell now matches the product-facing source model more closely
+  - kept the active route card and selector simple while burying deeper route and source truth under nested sections
 - proof added to repo:
+  - `Use`-side controller state and grouped source helpers in `src/modulo/gui/controller.py`
+  - `Use` tab section updates in `src/modulo/gui/window.py`
+  - GUI controller coverage in `tests/test_gui_controller.py`
 
 ### Slice 4: Policy and empty-state trust pass
 
@@ -142,7 +148,7 @@ Notes:
 
 - this slice is about trust wording and policy-aware truth, not deep authorization implementation
 
-Status: pending
+Status: in progress
 
 Completion note:
 

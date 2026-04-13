@@ -24,7 +24,7 @@ This file is the quickest way to regain context when switching workstations.
 - the next active implementation roadmap is [use_side_truth_roadmap.md](./use_side_truth_roadmap.md)
 - `Slice 1: Use-source contract tightening` is completed
 - `Slice 2: Private/shared visibility fetch truth` is completed
-- `Slice 3: Use tab truth pass` is pending
+- `Slice 3: Use tab truth pass` is completed
 - `Slice 4: Policy and empty-state trust pass` is pending
 - the canonical product-shape guidance is now [platform_layering_spec.md](./platform_layering_spec.md)
 - the current architecture discussion is [private_scope_mvp_design.md](./private_scope_mvp_design.md), which narrows the next remote-execution proof around `Local / Private / Public / Cloud`
@@ -116,8 +116,8 @@ That matters because the main workstation stores the primary model under `agents
 
 ## Latest GUI truth
 
-- `Use` tab: model source selection shell, active route card, nested `Route / Local / Network / Cloud` sections, OpenClaw route truth
-- the next truth pass on `Use` should move this surface toward grouped `Local / Private / Public / Cloud` sources with nested model lists
+- `Use` tab: model source selection shell, active route card, nested `Route / Local / Private / Public / Cloud` sections, OpenClaw route truth
+- the next truth pass on `Use` should focus on policy-aware and empty-state trust wording, not on inventing new source grouping
 - the underlying session/platform fetch path now carries active-target and per-source visibility summaries, so the next `Use` slice can focus on presentation instead of inventing source truth
 - `Host` tab: hosting model selection, warm-state card, execution-path truth, host toggle, worker/runtime details
 - `Diagnostics` tab: smoke test summary card plus nested `Smoke / Activity / Errors`

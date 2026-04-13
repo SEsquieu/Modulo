@@ -57,6 +57,8 @@ class GuiShellState:
     use_provider_label: str = ""
     use_route_details: tuple[str, ...] = ()
     use_local_model_lines: tuple[str, ...] = ()
+    use_private_model_lines: tuple[str, ...] = ()
+    use_public_model_lines: tuple[str, ...] = ()
     hosting_selected_model_id: str = ""
     hosting_available_model_ids: tuple[str, ...] = ()
     hosting_available_model_labels: tuple[str, ...] = ()
@@ -226,12 +228,10 @@ class GuiAppController:
                 status=status,
                 available_model_ids=use_available_model_ids,
             )
-        use_selected_model_label = self._use_selected_model_label(
-            self._selected_use_model_id,
-            use_available_model_ids,
-            use_available_model_labels,
+        use_selected_model_label = status.use.route.selected_model_label
+        use_selected_model_source = self._use_model_source_label(
+            status.use.route.selected_source or self._selected_use_model_id
         )
-        use_selected_model_source = self._use_model_source_label(self._selected_use_model_id)
 
         return GuiShellState(
             connected_to_modulo=onboarding.connected_to_modulo,
@@ -276,10 +276,12 @@ class GuiAppController:
             use_available_model_labels=use_available_model_labels,
             use_selected_model_label=use_selected_model_label,
             use_selected_model_source=use_selected_model_source,
-            use_route_target=self._use_route_target(status),
-            use_provider_label=self._use_provider_label(status),
+            use_route_target=status.use.route.active_route_target,
+            use_provider_label=status.use.route.active_provider or "Unknown",
             use_route_details=self._use_route_details(status),
             use_local_model_lines=self._use_local_model_lines(status),
+            use_private_model_lines=self._use_scope_model_lines(status, scope_id="private"),
+            use_public_model_lines=self._use_scope_model_lines(status, scope_id="public"),
             hosting_selected_model_id=status.hosting_setup.selected_model_id,
             hosting_available_model_ids=status.hosting_setup.available_model_ids,
             hosting_available_model_labels=status.hosting_setup.available_model_labels,
@@ -386,19 +388,15 @@ class GuiAppController:
 
     @staticmethod
     def _use_status_badge(status: ClientStatus) -> str:
-        if status.openclaw.configured:
+        if status.use.route.active_route_target == "OpenClaw":
             return "Use: Ready"
-        if status.openclaw.installed:
+        if status.use.route.active_route_target == "OpenClaw (staged)":
             return "Use: Configure"
         return "Use: Setup"
 
     @staticmethod
     def _use_summary(status: ClientStatus) -> str:
-        if status.openclaw.configured:
-            return "Choose a model and Modulo will route through the configured OpenClaw path."
-        if status.openclaw.installed:
-            return "Choose a model, then review the route before applying any OpenClaw changes."
-        return "Choose a model, then set up the OpenClaw route."
+        return status.use.summary
 
     @staticmethod
     def _home_subtitle(onboarding: OnboardingStatus) -> str:
@@ -671,10 +669,14 @@ class GuiAppController:
 
     @staticmethod
     def _buyer_model_lines(status: ClientStatus, *, source: str) -> tuple[str, ...]:
-        models = status.platform.network_models if source == "network" else status.platform.cloud_models
+        if source == "network":
+            models = status.platform.private_models or status.platform.network_models
+            empty = "No private models available yet."
+        else:
+            models = status.platform.cloud_models
+            empty = "No cloud models available yet."
         if not models:
-            label = "network" if source == "network" else "cloud"
-            return (f"No {label} models available yet.",)
+            return (empty,)
         return tuple(
             f"{model.display_name} [{model.model_id}]"
             + (f" - {model.summary}" if model.summary else "")
@@ -685,15 +687,13 @@ class GuiAppController:
     def _use_model_options(status: ClientStatus) -> tuple[tuple[str, ...], tuple[str, ...]]:
         option_ids: list[str] = []
         option_labels: list[str] = []
-        for model_id in status.hosting_setup.installed_model_ids:
-            option_ids.append(f"local:{model_id}")
-            option_labels.append(f"🖥 {model_id} (local)")
-        for model in status.platform.network_models:
-            option_ids.append(f"network:{model.model_id}")
-            option_labels.append(f"◎ {model.display_name} (network)")
-        for model in status.platform.cloud_models:
-            option_ids.append(f"cloud:{model.model_id}")
-            option_labels.append(f"☁ {model.display_name} (cloud)")
+        for scope in status.use.scopes:
+            for model in scope.models:
+                scoped_id = f"{model.source}:{model.model_id}"
+                option_ids.append(scoped_id)
+                option_labels.append(
+                    f"{GuiAppController._use_source_icon(model.source)} {model.display_name} ({scope.display_label.lower()})"
+                )
         return tuple(option_ids), tuple(option_labels)
 
     @staticmethod
@@ -733,36 +733,40 @@ class GuiAppController:
 
     @staticmethod
     def _use_model_source_label(selected_use_model_id: str) -> str:
+        if selected_use_model_id == "local":
+            return "Local"
+        if selected_use_model_id == "private":
+            return "Private"
+        if selected_use_model_id == "public":
+            return "Public"
+        if selected_use_model_id == "cloud":
+            return "Cloud"
         if selected_use_model_id.startswith("local:"):
             return "Local"
-        if selected_use_model_id.startswith("network:"):
-            return "Network"
+        if selected_use_model_id.startswith("private:") or selected_use_model_id.startswith("network:"):
+            return "Private"
+        if selected_use_model_id.startswith("public:"):
+            return "Public"
         if selected_use_model_id.startswith("cloud:"):
             return "Cloud"
         return "Unknown"
 
     @staticmethod
-    def _use_route_target(status: ClientStatus) -> str:
-        if status.openclaw.configured:
-            return "OpenClaw"
-        if status.openclaw.connection_plan.apply_ready:
-            return "OpenClaw (staged)"
-        return "Not configured"
-
-    @staticmethod
-    def _use_provider_label(status: ClientStatus) -> str:
-        return status.openclaw.current_provider or "Unknown"
-
-    @staticmethod
     def _use_route_details(status: ClientStatus) -> tuple[str, ...]:
+        route = status.use.route
         details = [
-            f"Route: {GuiAppController._use_route_target(status)}",
-            f"Provider: {status.openclaw.current_provider or 'Unknown'}",
+            f"Route: {route.active_route_target or 'Not configured'}",
+            f"Selected source: {GuiAppController._use_model_source_label(route.selected_source)}",
         ]
-        if status.openclaw.current_base_url:
-            details.append(f"Base URL: {status.openclaw.current_base_url}")
-        if status.openclaw.current_primary_model:
-            details.append(f"Active OpenClaw model: {status.openclaw.current_primary_model}")
+        if route.active_provider:
+            details.append(f"Provider: {route.active_provider}")
+        if route.active_base_url:
+            details.append(f"Base URL: {route.active_base_url}")
+        if route.selected_model_label and route.selected_model_label != "No model selected.":
+            details.append(f"Selected model: {route.selected_model_label}")
+        if route.route_policy_summary:
+            details.append(f"Policy: {route.route_policy_summary}")
+        details.extend(route.route_policy_restrictions)
         if status.platform.account_summary:
             details.append(f"Account: {status.platform.account_summary}")
         if status.platform.credits_summary:
@@ -775,9 +779,34 @@ class GuiAppController:
 
     @staticmethod
     def _use_local_model_lines(status: ClientStatus) -> tuple[str, ...]:
-        if not status.hosting_setup.installed_model_ids:
-            return ("No local models available yet.",)
-        return tuple(f"🖥 {model_id}" for model_id in status.hosting_setup.installed_model_ids)
+        return GuiAppController._use_scope_model_lines(status, scope_id="local")
+
+    @staticmethod
+    def _use_scope_model_lines(status: ClientStatus, *, scope_id: str) -> tuple[str, ...]:
+        scope = next((item for item in status.use.scopes if item.scope_id == scope_id), None)
+        if scope is None:
+            return ("Scope is unavailable.",)
+        if not scope.models:
+            lines = [scope.summary or f"No {scope.display_label.lower()} models available yet."]
+            if scope.route_restriction:
+                lines.append(scope.route_restriction)
+            return tuple(lines)
+        return tuple(
+            f"{GuiAppController._use_source_icon(model.source)} {model.display_name}"
+            + (f" [{model.model_id}]" if model.model_id != model.display_name else "")
+            + (f" - {model.summary}" if model.summary else "")
+            for model in scope.models
+        )
+
+    @staticmethod
+    def _use_source_icon(source: str) -> str:
+        return {
+            "local": "🖥",
+            "private": "◎",
+            "public": "◌",
+            "cloud": "☁",
+            "network": "◎",
+        }.get(source, "•")
 
     @staticmethod
     def _openclaw_status_badge(status: ClientStatus) -> str:
@@ -885,7 +914,7 @@ class GuiAppController:
 
     def _debug_model_id(self, status: ClientStatus) -> str:
         selected_use_model = self._selected_use_model_id
-        if selected_use_model.startswith(("local:", "network:", "cloud:")):
+        if selected_use_model.startswith(("local:", "private:", "public:", "cloud:", "network:")):
             return selected_use_model.split(":", 1)[1]
         if status.hosting_setup.selected_model_id:
             return status.hosting_setup.selected_model_id

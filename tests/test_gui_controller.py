@@ -222,7 +222,7 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertIn("local-only", state.buyer_account_summary)
         self.assertIn("Prototype credits", state.buyer_credits_summary)
         self.assertIn("platform-managed", state.buyer_config_summary)
-        self.assertEqual(("No network models available yet.",), state.buyer_network_models)
+        self.assertEqual(("No private models available yet.",), state.buyer_network_models)
         self.assertTrue(state.buyer_cloud_models)
         self.assertEqual("qwen3.5:4b", state.hosting_selected_model_id)
         self.assertEqual(("qwen3.5:4b",), state.hosting_available_model_ids)
@@ -534,7 +534,7 @@ class GuiAppControllerTests(unittest.TestCase):
             remote_status = remote_platform.client.get_status()
 
             self.assertFalse(stopped.hosting_enabled)
-            self.assertEqual(("No network models available yet.",), stopped.buyer_network_models)
+            self.assertEqual(("No private models available yet.",), stopped.buyer_network_models)
             self.assertEqual((), remote_status.platform.network_models)
         finally:
             controller.harness.shutdown()
@@ -565,7 +565,7 @@ class GuiAppControllerTests(unittest.TestCase):
 
             self.assertIn("private/shared model", state.buyer_platform_summary.lower())
             self.assertTrue(any("gemma4:e2b" in line for line in state.buyer_network_models))
-            self.assertIn("network:gemma4:e2b", state.use_available_model_ids)
+            self.assertIn("private:gemma4:e2b", state.use_available_model_ids)
             self.assertIn(host_harness.modulo_url, state.debug_summary)
         finally:
             buyer_controller.harness.shutdown()
