@@ -215,8 +215,11 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertIn("not changing local OpenClaw", state.openclaw_details)
         self.assertIn("Safe prototype mode", state.openclaw_safety_note)
         self.assertEqual("Local only", state.use_route_health_value)
-        self.assertEqual("Not configured", state.use_mount_status_value)
-        self.assertIn("no mounted edge is configured yet", state.use_mount_status_summary.lower())
+        self.assertEqual("", state.mount_selected_shape_id)
+        self.assertEqual("Not selected", state.mount_selected_shape_label)
+        self.assertEqual("Choose shape", state.use_mount_status_value)
+        self.assertIn("choose a consumer shape", state.use_mount_status_summary.lower())
+        self.assertEqual("Not selected", state.mount_consumer_label)
         self.assertEqual("SETUP NEEDED", state.openclaw_guidance_badge)
         self.assertIn("install openclaw first", state.openclaw_guidance_summary.lower())
         self.assertTrue(state.openclaw_next_steps)
@@ -287,7 +290,10 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertTrue(started.worker_healthy)
         self.assertEqual("Review OpenClaw Setup", started.openclaw_action_label)
         self.assertEqual("Healthy", started.use_route_health_value)
+        self.assertEqual("openai_api", started.mount_selected_shape_id)
+        self.assertEqual("OpenAI API", started.mount_selected_shape_label)
         self.assertEqual("Ready", started.use_mount_status_value)
+        self.assertEqual("OpenClaw", started.mount_consumer_label)
         self.assertIn("mounted edge", started.use_route_health_summary.lower())
         self.assertEqual("CONFIGURED", started.openclaw_status_badge)
         self.assertEqual("READY", started.openclaw_guidance_badge)
@@ -377,11 +383,22 @@ class GuiAppControllerTests(unittest.TestCase):
 
         self.assertFalse(staged.openclaw_configured)
         self.assertEqual("Staged", staged.use_route_health_value)
+        self.assertEqual("openai_api", staged.mount_selected_shape_id)
         self.assertEqual("Staged", staged.use_mount_status_value)
         self.assertEqual("READY TO APPLY", staged.openclaw_guidance_badge)
         self.assertIn("review the staged routing plan", staged.openclaw_guidance_summary.lower())
         self.assertIn("plan", staged.openclaw_plan_summary.lower())
         self.assertTrue(staged.openclaw_plan_changes)
+
+    def test_select_mount_shape_changes_mount_surface_before_consumer_config(self) -> None:
+        state = self.controller.select_mount_shape("ollama")
+
+        self.assertEqual("ollama", state.mount_selected_shape_id)
+        self.assertEqual("Ollama", state.mount_selected_shape_label)
+        self.assertEqual("Shape selected", state.use_mount_status_value)
+        self.assertEqual("Not configured", state.mount_consumer_label)
+        self.assertIn("ollama-shaped mounting", state.use_mount_status_summary.lower())
+        self.assertIn("no consumer-specific setup", "\n".join(state.mount_detail_lines).lower())
 
     def test_parse_error_state_surfaces_attention_guidance(self) -> None:
         self.controller = GuiAppController(

@@ -57,8 +57,15 @@ class GuiShellState:
     use_provider_label: str = ""
     use_route_health_value: str = "Setup"
     use_route_health_summary: str = ""
+    mount_selected_shape_id: str = ""
+    mount_available_shape_ids: tuple[str, ...] = ()
+    mount_available_shape_labels: tuple[str, ...] = ()
+    mount_selected_shape_label: str = ""
     use_mount_status_value: str = "Not configured"
     use_mount_status_summary: str = ""
+    mount_consumer_label: str = "Not selected"
+    mount_consumer_summary: str = ""
+    mount_detail_lines: tuple[str, ...] = ()
     use_route_details: tuple[str, ...] = ()
     use_local_model_lines: tuple[str, ...] = ()
     use_private_model_lines: tuple[str, ...] = ()
@@ -135,6 +142,7 @@ class GuiAppController:
     _last_smoke_test_prompt: str = "Constrained GUI smoke probe"
     _selected_model_id: str = ""
     _selected_use_model_id: str = ""
+    _selected_mount_shape_id: str = ""
     _debug_target_url: str = ""
     _debug_private_network_id: str = ""
     _last_debug_probe: SmokeTestResult | None = None
@@ -148,6 +156,10 @@ class GuiAppController:
         if not self._debug_private_network_id:
             self._debug_private_network_id = (
                 self.harness.client.worker_bridge.config.private_network_id or ""
+            )
+        if not self._selected_mount_shape_id:
+            self._selected_mount_shape_id = self._default_mount_shape_id(
+                self.harness.client.get_status()
             )
         self._sync_debug_target_into_session_bridge()
 
@@ -172,6 +184,10 @@ class GuiAppController:
 
     def select_use_model(self, model_id: str) -> GuiShellState:
         self._selected_use_model_id = model_id
+        return self.refresh()
+
+    def select_mount_shape(self, shape_id: str) -> GuiShellState:
+        self._selected_mount_shape_id = shape_id
         return self.refresh()
 
     def start_hosting(self) -> GuiShellState:
@@ -236,6 +252,10 @@ class GuiAppController:
         use_selected_model_source = self._use_model_source_label(
             status.use.route.selected_source or self._selected_use_model_id
         )
+        mount_shape_ids, mount_shape_labels = self._mount_shape_options()
+        if self._selected_mount_shape_id not in mount_shape_ids:
+            self._selected_mount_shape_id = self._default_mount_shape_id(status)
+        mount_selected_shape_label = self._mount_shape_label(self._selected_mount_shape_id)
 
         return GuiShellState(
             connected_to_modulo=onboarding.connected_to_modulo,
@@ -284,8 +304,15 @@ class GuiAppController:
             use_provider_label=status.use.route.active_provider or "Unknown",
             use_route_health_value=self._use_route_health_value(status),
             use_route_health_summary=self._use_route_health_summary(status),
+            mount_selected_shape_id=self._selected_mount_shape_id,
+            mount_available_shape_ids=mount_shape_ids,
+            mount_available_shape_labels=mount_shape_labels,
+            mount_selected_shape_label=mount_selected_shape_label,
             use_mount_status_value=self._use_mount_status_value(status),
             use_mount_status_summary=self._use_mount_status_summary(status),
+            mount_consumer_label=self._mount_consumer_label(status),
+            mount_consumer_summary=self._mount_consumer_summary(status),
+            mount_detail_lines=self._mount_detail_lines(status),
             use_route_details=self._use_route_details(status),
             use_local_model_lines=self._use_local_model_lines(status),
             use_private_model_lines=self._use_scope_model_lines(status, scope_id="private"),
@@ -428,23 +455,94 @@ class GuiAppController:
             return "Shared scopes are visible as truth, but route execution stays read-only until the active target is reachable."
         return "Models can still be selected and reviewed, but no mounted edge is configured yet."
 
-    @staticmethod
-    def _use_mount_status_value(status: ClientStatus) -> str:
-        if status.openclaw.configured:
+    def _use_mount_status_value(self, status: ClientStatus) -> str:
+        if not self._selected_mount_shape_id:
+            return "Choose shape"
+        if self._selected_mount_shape_id == "openai_api" and status.openclaw.configured:
             return "Ready"
-        if status.openclaw.connection_plan.apply_ready:
+        if self._selected_mount_shape_id == "openai_api" and status.openclaw.connection_plan.apply_ready:
             return "Staged"
+        if self._selected_mount_shape_id in {"ollama", "modulo_native"}:
+            return "Shape selected"
         return "Not configured"
 
-    @staticmethod
-    def _use_mount_status_summary(status: ClientStatus) -> str:
-        if status.openclaw.configured:
+    def _use_mount_status_summary(self, status: ClientStatus) -> str:
+        if not self._selected_mount_shape_id:
+            return "Choose a consumer shape before Modulo can say this mount is ready."
+        if self._selected_mount_shape_id == "openai_api" and status.openclaw.configured:
             return "OpenClaw is the current mounted edge for this client."
-        if status.openclaw.connection_plan.apply_ready:
+        if self._selected_mount_shape_id == "openai_api" and status.openclaw.connection_plan.apply_ready:
             return "OpenClaw is detected and the mount plan is ready to apply."
-        if status.openclaw.installed:
+        if self._selected_mount_shape_id == "openai_api" and status.openclaw.installed:
             return "OpenClaw is installed locally, but Modulo is not mounted into it yet."
+        if self._selected_mount_shape_id == "ollama":
+            return "Ollama-shaped mounting is selected, but no consumer workflow is surfaced yet."
+        if self._selected_mount_shape_id == "modulo_native":
+            return "Modulo Native is selected for future direct consumers."
         return "No mounted edge is configured yet."
+
+    @staticmethod
+    def _mount_shape_options() -> tuple[tuple[str, ...], tuple[str, ...]]:
+        return (
+            ("", "openai_api", "ollama", "modulo_native"),
+            ("Choose shape...", "OpenAI API", "Ollama", "Modulo Native"),
+        )
+
+    @staticmethod
+    def _mount_shape_label(shape_id: str) -> str:
+        return {
+            "openai_api": "OpenAI API",
+            "ollama": "Ollama",
+            "modulo_native": "Modulo Native",
+        }.get(shape_id, "Not selected")
+
+    @staticmethod
+    def _default_mount_shape_id(status: ClientStatus) -> str:
+        if status.openclaw.configured or status.openclaw.connection_plan.apply_ready:
+            return "openai_api"
+        return ""
+
+    def _mount_consumer_label(self, status: ClientStatus) -> str:
+        if self._selected_mount_shape_id == "openai_api":
+            return "OpenClaw"
+        if self._selected_mount_shape_id:
+            return "Not configured"
+        return "Not selected"
+
+    def _mount_consumer_summary(self, status: ClientStatus) -> str:
+        if not self._selected_mount_shape_id:
+            return "Select a consumer shape first, then Modulo can surface the right integration details."
+        if self._selected_mount_shape_id == "openai_api":
+            if status.openclaw.configured:
+                return "OpenClaw is the only mounted consumer surfaced today for the OpenAI-compatible shape."
+            return "OpenClaw is the current OpenAI-compatible consumer Modulo can help configure."
+        if self._selected_mount_shape_id == "ollama":
+            return "This shape will eventually expose an Ollama-style edge for local tools and extensions."
+        return "This shape will eventually expose Modulo-native consumers without provider-specific wrapping."
+
+    def _mount_detail_lines(self, status: ClientStatus) -> tuple[str, ...]:
+        if not self._selected_mount_shape_id:
+            return (
+                "Shape selection comes first.",
+                "After you choose a shape, Modulo will narrow the consumer setup to what actually matters.",
+            )
+        if self._selected_mount_shape_id == "openai_api":
+            details = [
+                f"OpenClaw: {status.openclaw.summary}",
+                f"Next: {self._openclaw_guidance_summary(status)}",
+            ]
+            if status.openclaw.connection_plan.summary:
+                details.append(f"Plan: {status.openclaw.connection_plan.summary}")
+            return tuple(line for line in details if line)
+        if self._selected_mount_shape_id == "ollama":
+            return (
+                "Ollama shape is selected.",
+                "No consumer-specific setup lives here yet.",
+            )
+        return (
+            "Modulo Native shape is selected.",
+            "Direct native consumer setup has not been surfaced yet.",
+        )
 
     @staticmethod
     def _home_subtitle(onboarding: OnboardingStatus) -> str:

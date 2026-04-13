@@ -220,6 +220,16 @@ class ModuloMainWindow(QMainWindow):
         self.use_mount_status_label.setTextFormat(Qt.TextFormat.RichText)
         self.use_mount_status_summary_label = QLabel()
         self.use_mount_status_summary_label.setWordWrap(True)
+        self.mount_shape_combo = QComboBox()
+        self.mount_shape_combo.setFont(combo_font)
+        self.mount_shape_combo.view().setFont(combo_font)
+        self.mount_shape_combo.currentIndexChanged.connect(self._apply_selected_mount_shape)
+        self.mount_card_value = QLabel()
+        self.mount_card_value.setWordWrap(True)
+        self.mount_consumer_summary_label = QLabel()
+        self.mount_consumer_summary_label.setWordWrap(True)
+        self.mount_details_label = QLabel()
+        self.mount_details_label.setWordWrap(True)
         self.use_route_details_label = QLabel()
         self.use_route_details_label.setWordWrap(True)
         self.use_local_models_label = QLabel()
@@ -673,6 +683,13 @@ class ModuloMainWindow(QMainWindow):
         layout = QVBoxLayout()
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
+        mount_shape_row = QHBoxLayout()
+        mount_shape_row.addWidget(self._build_section_label("Shape"))
+        mount_shape_row.addWidget(self.mount_shape_combo, 1)
+        layout.addLayout(mount_shape_row)
+        layout.addWidget(self._build_host_card("Mounted Edge", self.mount_card_value))
+        layout.addWidget(self.mount_consumer_summary_label)
+        layout.addWidget(self.mount_details_label)
         layout.addWidget(self.openclaw_status_label)
         layout.addWidget(self.openclaw_summary_label)
         layout.addWidget(self.openclaw_guidance_label)
@@ -924,6 +941,14 @@ class ModuloMainWindow(QMainWindow):
             if self._latest_state is not None and model_id == self._latest_state.use_selected_model_id:
                 return
             self._apply_state(self.controller.select_use_model(model_id))
+
+    def _apply_selected_mount_shape(self) -> None:
+        shape_id = self.mount_shape_combo.currentData()
+        if not isinstance(shape_id, str):
+            return
+        if self._latest_state is not None and shape_id == self._latest_state.mount_selected_shape_id:
+            return
+        self._apply_state(self.controller.select_mount_shape(shape_id))
 
     def _start_hosting_async(self) -> None:
         self._run_async_state_action(
@@ -1244,6 +1269,37 @@ class ModuloMainWindow(QMainWindow):
             self._kv_status_html("Mount", state.use_mount_status_value)
         )
         self.use_mount_status_summary_label.setText(state.use_mount_status_summary)
+        mount_shape_ids = tuple(
+            self.mount_shape_combo.itemData(index)
+            for index in range(self.mount_shape_combo.count())
+        )
+        if mount_shape_ids != state.mount_available_shape_ids:
+            self.mount_shape_combo.blockSignals(True)
+            self.mount_shape_combo.clear()
+            for label, shape_id in zip(
+                state.mount_available_shape_labels,
+                state.mount_available_shape_ids,
+                strict=False,
+            ):
+                self.mount_shape_combo.addItem(label, shape_id)
+            self.mount_shape_combo.blockSignals(False)
+        selected_mount_index = self.mount_shape_combo.findData(state.mount_selected_shape_id)
+        if selected_mount_index >= 0 and selected_mount_index != self.mount_shape_combo.currentIndex():
+            self.mount_shape_combo.blockSignals(True)
+            self.mount_shape_combo.setCurrentIndex(selected_mount_index)
+            self.mount_shape_combo.blockSignals(False)
+        self.mount_card_value.setText(
+            "\n".join(
+                (
+                    f"Shape: {state.mount_selected_shape_label}",
+                    f"Status: {state.use_mount_status_value}",
+                    f"Consumer: {state.mount_consumer_label}",
+                    f"Model: {state.use_selected_model_label or 'No model selected'}",
+                )
+            )
+        )
+        self.mount_consumer_summary_label.setText(state.mount_consumer_summary)
+        self.mount_details_label.setText("\n".join(state.mount_detail_lines))
         self.openclaw_status_label.setText(
             f"OpenClaw: {state.openclaw_status_badge}"
         )
@@ -1267,6 +1323,18 @@ class ModuloMainWindow(QMainWindow):
         self.use_private_models_label.setText("\n".join(state.use_private_model_lines))
         self.use_public_models_label.setText("\n".join(state.use_public_model_lines))
         self.use_cloud_models_label.setText("\n".join(state.buyer_cloud_models))
+        openclaw_visible = state.mount_selected_shape_id == "openai_api"
+        for widget in (
+            self.openclaw_status_label,
+            self.openclaw_summary_label,
+            self.openclaw_guidance_label,
+            self.openclaw_plan_summary_label,
+            self.connect_button,
+            self.apply_openclaw_button,
+            self.openclaw_details_box,
+            self.openclaw_plan_box,
+        ):
+            widget.setVisible(openclaw_visible)
 
         combo_model_ids = tuple(
             self.hosting_model_combo.itemData(index)
