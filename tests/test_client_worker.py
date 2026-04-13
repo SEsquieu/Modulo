@@ -448,7 +448,7 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertEqual("Cloud", status.use.scopes[3].display_label)
         self.assertEqual("active", status.use.scopes[0].state)
         self.assertEqual("active", status.use.scopes[1].state)
-        self.assertEqual("unsupported", status.use.scopes[2].state)
+        self.assertEqual("reserved", status.use.scopes[2].state)
         self.assertEqual("active", status.use.scopes[3].state)
         self.assertEqual("https://modulo.grinningfrog.com", status.platform.active_target_url)
         self.assertEqual("llama3.1:8b", status.use.route.selected_model_id)
@@ -486,6 +486,8 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertEqual("private", status.use.scopes[1].models[0].scope)
         self.assertEqual("network/llama3.1:8b", status.use.scopes[1].models[0].model_id)
         self.assertTrue(status.use.scopes[1].deletable)
+        self.assertEqual("reserved", status.use.scopes[2].state)
+        self.assertIn("held back", status.use.scopes[2].route_restriction.lower())
 
     def test_use_side_status_marks_shared_sources_unavailable_without_session_bridge(self) -> None:
         self.client.session_bridge = None
@@ -495,7 +497,7 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertEqual("unavailable", status.use.scopes[1].state)
         self.assertEqual("unavailable", status.use.scopes[3].state)
         self.assertFalse(status.use.scopes[1].route_allowed)
-        self.assertIn("platform session is connected", status.use.route.route_policy_restrictions[1].lower())
+        self.assertIn("platform target is reachable", status.use.route.route_policy_restrictions[1].lower())
 
     def test_hosting_setup_includes_ollama_discovery_state(self) -> None:
         status = self.client.get_status()

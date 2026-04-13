@@ -25,7 +25,8 @@ This file is the quickest way to regain context when switching workstations.
 - `Slice 1: Use-source contract tightening` is completed
 - `Slice 2: Private/shared visibility fetch truth` is completed
 - `Slice 3: Use tab truth pass` is completed
-- `Slice 4: Policy and empty-state trust pass` is pending
+- `Slice 4: Policy and empty-state trust pass` is completed
+- the full use-side truth roadmap is now completed
 - the canonical product-shape guidance is now [platform_layering_spec.md](./platform_layering_spec.md)
 - the current architecture discussion is [private_scope_mvp_design.md](./private_scope_mvp_design.md), which narrows the next remote-execution proof around `Local / Private / Public / Cloud`
 - a future routing note is captured in [future_host_capacity_intelligence.md](./future_host_capacity_intelligence.md) for host capability profiling, warm/cold inventory truth, and dynamic idle swapping
@@ -67,6 +68,7 @@ The release direction remains tray-first, with deeper truth and control exposed 
 - the GUI now includes a `Debug` tab that surfaces the current platform URL, ready-to-run private-network worker/request commands, and an interactive network probe target
 - the control plane now exposes lightweight shared-platform advertising visibility through `GET /api/platform/status`
 - the platform/session visibility path now distinguishes `Private`, `Public`, and `Cloud` source truth explicitly, while preserving older network-model fields for compatibility
+- the `Use` source states now distinguish active, empty, reserved, and unavailable cases with policy-aware wording instead of generic missing-data language
 - the control plane now also exposes the latest routed execution through `GET /api/platform/trace/latest`
 - the prototype session bridge can now read another machine's advertised model list instead of only local in-memory state
 - the prototype route-trace provider can now read another machine's latest routed execution trace through the same active target flow
@@ -117,8 +119,8 @@ That matters because the main workstation stores the primary model under `agents
 ## Latest GUI truth
 
 - `Use` tab: model source selection shell, active route card, nested `Route / Local / Private / Public / Cloud` sections, OpenClaw route truth
-- the next truth pass on `Use` should focus on policy-aware and empty-state trust wording, not on inventing new source grouping
-- the underlying session/platform fetch path now carries active-target and per-source visibility summaries, so the next `Use` slice can focus on presentation instead of inventing source truth
+- `Use` now treats `Public` as policy-reserved, `Private` as explicitly empty when no hosts are advertising, and shared scopes as read-only when the active target is unreachable
+- the underlying session/platform fetch path now carries active-target and per-source visibility summaries, so `Use` truth is no longer inferred from mixed network/OpenClaw state
 - `Host` tab: hosting model selection, warm-state card, execution-path truth, host toggle, worker/runtime details
 - `Diagnostics` tab: smoke test summary card plus nested `Smoke / Activity / Errors`
 - `Diagnostics` tab: smoke test summary card plus nested `Smoke / Route / Activity / Errors`
@@ -131,12 +133,11 @@ The current hosted-backend path has been proven through Cloudflare Tunnel agains
 
 ## Next recommended starting point
 
-Start from the completed [private_mvp_roadmap.md](./private_mvp_roadmap.md), the completed [route_trace_visibility_roadmap.md](./route_trace_visibility_roadmap.md), and then continue with [use_side_truth_roadmap.md](./use_side_truth_roadmap.md) before returning to productization.
+Start from the completed [private_mvp_roadmap.md](./private_mvp_roadmap.md), the completed [route_trace_visibility_roadmap.md](./route_trace_visibility_roadmap.md), and the completed [use_side_truth_roadmap.md](./use_side_truth_roadmap.md) before choosing the next implementation chunk.
 
 The most likely first useful slice is:
 
-- `use_side_truth_roadmap.md`
-- sharper shared discovery and source truth in `Use`, especially around `Local / Private / Public / Cloud`
+- a next roadmap chunk that keeps the tray-first product direction intact while deciding what should surface at the `Use` layer versus `Mount` and `Scopes`
 - align that `Use` work with [platform_layering_spec.md](./platform_layering_spec.md) so the current GUI keeps serving as the second-layer proving surface instead of hardening into a dashboard
 - auth/policy hardening and persistence now that the shared path itself is functionally proven
 - only return to packaging once the shared-network behavior feels truthful enough to lock in
@@ -246,6 +247,10 @@ Recent meaningful commits:
 - `c395b1d` `Add interactive debug network probe`
 - `4f36820` `Add diagnostics route trace view`
 - `8fd2127` `Complete route trace trust pass`
+- `cafea86` `Canonize tray-first platform layering`
+- `c77626f` `Add use-side source contract`
+- `c148b6f` `Add use-side visibility fetch truth`
+- `3286dfc` `Reshape use tab around source groups`
 - `3e64fa1` `Complete network addressable worker slice`
 - `4a31eaa` `Complete route trace spine slice`
 - `edd70a8` `Complete private scope routing contracts slice`

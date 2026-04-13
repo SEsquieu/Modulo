@@ -1027,10 +1027,15 @@ class ModuloClientSupervisor:
                 summary=(
                     f"{len(local_models)} local model(s) are available on this machine."
                     if local_models
-                    else "No local models are installed yet."
+                    else "No local models are installed on this machine yet."
                 ),
                 models=local_models,
                 route_allowed=bool(local_models),
+                route_restriction=(
+                    ""
+                    if local_models
+                    else "Install or pull a local model to use this scope."
+                ),
             ),
             UseScopeStatus(
                 scope_id="private",
@@ -1038,7 +1043,7 @@ class ModuloClientSupervisor:
                 state=(
                     "active"
                     if private_models
-                    else "visible"
+                    else "empty"
                     if platform_status.connected
                     else "unavailable"
                 ),
@@ -1047,14 +1052,16 @@ class ModuloClientSupervisor:
                     if platform_status.private_visibility_summary
                     else f"{len(private_models)} private/shared model(s) are currently visible from the active platform target."
                     if private_models
-                    else "No private/shared models are currently visible from the active platform target."
+                    else "No private/shared models are visible from the active platform target right now."
                     if platform_status.connected
-                    else "Private/shared visibility is unavailable until the platform session is connected."
+                    else "Private/shared visibility is unavailable until the platform target is reachable."
                 ),
                 models=private_models,
                 route_allowed=platform_status.connected,
                 route_restriction=(
-                    ""
+                    "No shared hosts are advertising models to the active platform target right now."
+                    if platform_status.connected and not private_models
+                    else ""
                     if platform_status.connected
                     else "Connect to a platform target before private/shared visibility can be trusted."
                 ),
@@ -1066,19 +1073,19 @@ class ModuloClientSupervisor:
                 state=(
                     "active"
                     if public_models
-                    else "unsupported"
+                    else "reserved"
                 ),
                 summary=(
                     platform_status.public_visibility_summary
                     if platform_status.public_visibility_summary
-                    else "Public scope is intentionally not exposed in the current prototype path."
+                    else "Public scope is reserved until policy enables it on a future target."
                 ),
                 models=public_models,
                 route_allowed=bool(public_models),
                 route_restriction=(
                     ""
                     if public_models
-                    else "Public routing is reserved for a later policy-aware slice."
+                    else "Public routing is intentionally held back until policy enables it."
                 ),
                 deletable=True,
             ),
@@ -1088,7 +1095,7 @@ class ModuloClientSupervisor:
                 state=(
                     "active"
                     if cloud_models
-                    else "visible"
+                    else "empty"
                     if platform_status.connected
                     else "unavailable"
                 ),
@@ -1097,16 +1104,16 @@ class ModuloClientSupervisor:
                     if platform_status.cloud_visibility_summary
                     else f"{len(cloud_models)} cloud model(s) are currently visible from the active platform target."
                     if cloud_models
-                    else "No cloud models are currently visible from the active platform target."
+                    else "No cloud models are visible from the active platform target right now."
                     if platform_status.connected
-                    else "Cloud visibility is unavailable until the platform session is connected."
+                    else "Cloud visibility is unavailable until the platform target is reachable."
                 ),
                 models=cloud_models,
                 route_allowed=bool(cloud_models),
                 route_restriction=(
                     ""
                     if cloud_models
-                    else "Cloud models may be visible before cloud routing is fully surfaced in the client."
+                    else "Cloud routing is not visible on the active target right now."
                 ),
                 deletable=True,
             ),
@@ -1122,15 +1129,19 @@ class ModuloClientSupervisor:
         route_restrictions: list[str] = []
         if not openclaw_status.configured:
             route_restrictions.append(
-                "Routing setup is still staged or incomplete, so selected models are visibility truth first."
+                "Route setup is still staged or incomplete, so model visibility is truthful before request execution is guaranteed."
             )
         if not platform_status.connected:
             route_restrictions.append(
-                "Shared source visibility cannot be trusted until the platform session is connected."
+                "Shared scopes stay read-only until the platform target is reachable."
             )
         if not private_models:
             route_restrictions.append(
-                "Private scope is currently empty because no shared hosts are advertising models to the active target."
+                "Private scope is empty on the active target right now."
+            )
+        if not public_models:
+            route_restrictions.append(
+                "Public scope is reserved until policy enables it."
             )
         selected_model_id, selected_model_label, selected_source, selected_scope = self._default_use_selection(
             local_models=local_models,

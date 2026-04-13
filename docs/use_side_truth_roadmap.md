@@ -148,16 +148,34 @@ Notes:
 
 - this slice is about trust wording and policy-aware truth, not deep authorization implementation
 
-Status: in progress
+Status: completed
 
 Completion note:
 
 - summary:
+  - tightened the `Use` source wording so empty, unavailable, and reserved states feel intentional instead of broken
+  - made `Public` explicitly reserved by policy, `Private` explicitly empty when no hosts are advertising, and shared scopes explicitly read-only when the target is not reachable
+  - kept the source model simple while preserving stricter backend meaning underneath
 - proof added to repo:
+  - use-side trust wording updates in `src/modulo/client/app.py`
+  - policy and empty-state coverage in `tests/test_client_worker.py`
 
 ## Completion note
 
 Add a short summary here when the roadmap is complete:
 
 - summary:
+  - added a dedicated `Use` contract around grouped source truth
+  - taught the session/control-plane fetch path to carry `Private / Public / Cloud` visibility more explicitly
+  - reshaped the `Use` tab around grouped source sections
+  - tightened empty, staged, and reserved wording so the `Use` surface feels intentional and trustworthy
 - proof added to repo:
+  - `src/modulo/client/app.py`
+  - `src/modulo/prototype.py`
+  - `src/modulo/cloud/http.py`
+  - `src/modulo/gui/controller.py`
+  - `src/modulo/gui/window.py`
+  - `tests/test_client_worker.py`
+  - `tests/test_prototype.py`
+  - `tests/test_http_app.py`
+  - `tests/test_gui_controller.py`
