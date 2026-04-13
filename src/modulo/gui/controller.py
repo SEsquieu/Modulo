@@ -453,15 +453,7 @@ class GuiAppController:
     def _use_route_health_value(self, status: ClientStatus) -> str:
         if status.openclaw.configured and self._selected_mount_shape_id == "openai_api":
             return "Ready"
-        if not self._selected_mount_shape_id:
-            return "Needs mount"
-        if not self._selected_mount_consumer_id:
-            return "Choose consumer"
-        if self._selected_mount_shape_id == "openai_api" and status.openclaw.connection_plan.apply_ready:
-            return "Needs apply"
-        if not status.platform.connected:
-            return "Attention"
-        return "Shape only"
+        return "Not ready"
 
     def _use_route_health_summary(self, status: ClientStatus) -> str:
         if status.openclaw.configured and self._selected_mount_shape_id == "openai_api":

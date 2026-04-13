@@ -1221,7 +1221,7 @@ class ModuloMainWindow(QMainWindow):
             self.use_model_combo.blockSignals(True)
             self.use_model_combo.setCurrentIndex(selected_use_index)
             self.use_model_combo.blockSignals(False)
-        self.use_card_value.setText("\n".join(state.use_route_details))
+        self.use_card_value.setText(self._use_route_card_html(state.use_route_details))
 
         self.use_route_health_label.setText(
             self._kv_status_html("Route", state.use_route_health_value)
@@ -1448,6 +1448,22 @@ class ModuloMainWindow(QMainWindow):
         else:
             color = "#ff7b72"
         return f"{label}: <b><span style='color: {color};'>{value}</span></b>"
+
+    @staticmethod
+    def _use_route_card_html(details: tuple[str, ...]) -> str:
+        rows: list[str] = []
+        for detail in details:
+            if ": " not in detail:
+                rows.append(detail)
+                continue
+            label, value = detail.split(": ", 1)
+            if label == "Status":
+                ok = value.strip().lower() == "ready"
+                color = "#7ee787" if ok else "#ff7b72"
+                rows.append(f"{label}: <b><span style='color: {color};'>{value}</span></b>")
+                continue
+            rows.append(f"{label}: <b>{value}</b>")
+        return "<br>".join(rows)
 
 
 def launch_gui(controller: GuiAppController | None = None) -> int:
