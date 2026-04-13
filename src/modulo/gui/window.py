@@ -16,13 +16,14 @@ try:
         QLabel,
         QLineEdit,
         QMainWindow,
-        QMenu,
         QProgressBar,
         QPushButton,
         QPlainTextEdit,
         QScrollArea,
         QSizePolicy,
         QTabWidget,
+        QTreeWidget,
+        QTreeWidgetItem,
         QVBoxLayout,
         QWidget,
     )
@@ -210,9 +211,23 @@ class ModuloMainWindow(QMainWindow):
         self.use_model_button = QPushButton("Choose model...")
         self.use_model_button.setFont(combo_font)
         self.use_model_button.setStyleSheet("text-align: left; padding: 6px 10px;")
-        self._use_model_menu = QMenu(self)
-        self._use_model_menu.setFont(combo_font)
-        self.use_model_button.setMenu(self._use_model_menu)
+        self.use_model_button.clicked.connect(self._toggle_use_model_picker)
+        self._use_model_picker_popup = QFrame(self, Qt.WindowType.Popup)
+        self._use_model_picker_popup.setObjectName("UseModelPicker")
+        self._use_model_picker_popup.setFrameShape(QFrame.Shape.Box)
+        self._use_model_picker_popup.setLineWidth(2)
+        self._use_model_picker_popup.setMinimumWidth(360)
+        self._use_model_picker_popup.setMaximumHeight(360)
+        self._use_model_picker_popup_layout = QVBoxLayout()
+        self._use_model_picker_popup_layout.setContentsMargins(8, 8, 8, 8)
+        self._use_model_picker_popup_layout.setSpacing(6)
+        self.use_model_tree = QTreeWidget()
+        self.use_model_tree.setHeaderHidden(True)
+        self.use_model_tree.setUniformRowHeights(True)
+        self.use_model_tree.setIndentation(18)
+        self.use_model_tree.itemClicked.connect(self._handle_use_model_tree_click)
+        self._use_model_picker_popup_layout.addWidget(self.use_model_tree)
+        self._use_model_picker_popup.setLayout(self._use_model_picker_popup_layout)
         self.use_card_value = QLabel()
         self.use_card_value.setWordWrap(True)
         self.use_route_health_label = QLabel()
@@ -905,7 +920,9 @@ class ModuloMainWindow(QMainWindow):
         if not model_id:
             return
         if self._latest_state is not None and model_id == self._latest_state.use_selected_model_id:
+            self._use_model_picker_popup.hide()
             return
+        self._use_model_picker_popup.hide()
         self._apply_state(self.controller.select_use_model(model_id))
 
     def _apply_selected_mount_shape(self) -> None:
@@ -924,17 +941,54 @@ class ModuloMainWindow(QMainWindow):
             return
         self._apply_state(self.controller.select_mount_consumer(consumer_id))
 
-    def _rebuild_use_model_menu(self, state: GuiShellState) -> None:
-        self._use_model_menu.clear()
+    def _toggle_use_model_picker(self) -> None:
+        if self._use_model_picker_popup.isVisible():
+            self._use_model_picker_popup.hide()
+            return
+        self._show_use_model_picker()
+
+    def _show_use_model_picker(self) -> None:
+        row_height = self.use_model_tree.sizeHintForRow(0)
+        if row_height <= 0:
+            row_height = 22
+        self._use_model_picker_popup.resize(
+            max(self.use_model_button.width(), 360),
+            min(360, max(220, row_height * 10 + 24)),
+        )
+        popup_pos = self.use_model_button.mapToGlobal(self.use_model_button.rect().bottomLeft())
+        self._use_model_picker_popup.move(popup_pos)
+        self._use_model_picker_popup.show()
+        self.use_model_tree.setFocus()
+
+    def _handle_use_model_tree_click(self, item: QTreeWidgetItem, column: int) -> None:
+        del column
+        model_id = item.data(0, Qt.ItemDataRole.UserRole)
+        if isinstance(model_id, str) and model_id:
+            self._apply_selected_use_model(model_id)
+            return
+        item.setExpanded(not item.isExpanded())
+
+    def _rebuild_use_model_tree(self, state: GuiShellState) -> None:
+        self.use_model_tree.clear()
+        selected_item: QTreeWidgetItem | None = None
         for source in state.use_model_menu_sources:
-            source_menu = self._use_model_menu.addMenu(source.source_label)
+            source_item = QTreeWidgetItem([source.source_label])
+            source_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            self.use_model_tree.addTopLevelItem(source_item)
+            source_item.setExpanded(True)
             for scope in source.scopes:
-                scope_menu = source_menu.addMenu(scope.scope_label)
+                scope_item = QTreeWidgetItem([scope.scope_label])
+                scope_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+                source_item.addChild(scope_item)
+                scope_item.setExpanded(True)
                 for model in scope.models:
-                    action = scope_menu.addAction(model.label)
-                    action.triggered.connect(
-                        lambda checked=False, model_id=model.model_id: self._apply_selected_use_model(model_id)
-                    )
+                    model_item = QTreeWidgetItem([model.label])
+                    model_item.setData(0, Qt.ItemDataRole.UserRole, model.model_id)
+                    scope_item.addChild(model_item)
+                    if model.model_id == state.use_selected_model_id:
+                        selected_item = model_item
+        if selected_item is not None:
+            self.use_model_tree.setCurrentItem(selected_item)
 
     def _start_hosting_async(self) -> None:
         self._run_async_state_action(
@@ -1151,6 +1205,8 @@ class ModuloMainWindow(QMainWindow):
         self.apply_openclaw_button.setText(state.openclaw_plan_apply_label)
         self.apply_openclaw_button.setEnabled(state.openclaw_plan_apply_enabled and controls_enabled)
         self.use_model_button.setEnabled(bool(state.use_available_model_ids) and controls_enabled)
+        if not self.use_model_button.isEnabled():
+            self._use_model_picker_popup.hide()
         self.hosting_model_combo.setEnabled(state.hosting_setup_action_enabled and controls_enabled)
         self.host_toggle_button.setText("Stop" if state.hosting_enabled else "Host")
         self._apply_host_toggle_style(hosting_enabled=state.hosting_enabled)
@@ -1217,7 +1273,7 @@ class ModuloMainWindow(QMainWindow):
         )
 
         self.use_state_badge_label.setText(state.use_status_badge)
-        self._rebuild_use_model_menu(state)
+        self._rebuild_use_model_tree(state)
         self.use_model_button.setText(state.use_selected_model_label or "Choose model...")
         self.use_card_value.setText(self._use_route_card_html(state.use_route_details))
 
