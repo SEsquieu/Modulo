@@ -884,13 +884,25 @@ class GuiAppController:
         option_ids: list[str] = []
         option_labels: list[str] = []
         for scope in status.use.scopes:
+            if not scope.models:
+                continue
+            option_ids.append(GuiAppController._use_scope_header_id(scope.scope_id))
+            option_labels.append(scope.display_label)
             for model in scope.models:
                 scoped_id = f"{model.source}:{model.model_id}"
                 option_ids.append(scoped_id)
                 option_labels.append(
-                    f"{GuiAppController._use_source_icon(model.source)} {model.display_name} ({scope.display_label.lower()})"
+                    f"  {GuiAppController._use_source_icon(model.source)} {model.display_name}"
                 )
         return tuple(option_ids), tuple(option_labels)
+
+    @staticmethod
+    def _use_scope_header_id(scope_id: str) -> str:
+        return f"__header__:{scope_id}"
+
+    @staticmethod
+    def _is_use_scope_header(option_id: str) -> bool:
+        return option_id.startswith("__header__:")
 
     @staticmethod
     def _initial_use_model_id(
@@ -911,7 +923,10 @@ class GuiAppController:
             local_scoped = f"local:{model_id}"
             if local_scoped in available_model_ids:
                 return local_scoped
-        return available_model_ids[0] if available_model_ids else ""
+        for option_id in available_model_ids:
+            if not GuiAppController._is_use_scope_header(option_id):
+                return option_id
+        return ""
 
     @staticmethod
     def _use_selected_model_label(

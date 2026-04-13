@@ -900,7 +900,7 @@ class ModuloMainWindow(QMainWindow):
 
     def _apply_selected_use_model(self) -> None:
         model_id = self.use_model_combo.currentData()
-        if isinstance(model_id, str) and model_id:
+        if isinstance(model_id, str) and model_id and not model_id.startswith("__header__:"):
             if self._latest_state is not None and model_id == self._latest_state.use_selected_model_id:
                 return
             self._apply_state(self.controller.select_use_model(model_id))
@@ -1209,12 +1209,15 @@ class ModuloMainWindow(QMainWindow):
         if combo_use_model_ids != state.use_available_model_ids:
             self.use_model_combo.blockSignals(True)
             self.use_model_combo.clear()
-            for label, model_id in zip(
+            for index, (label, model_id) in enumerate(zip(
                 state.use_available_model_labels,
                 state.use_available_model_ids,
                 strict=False,
-            ):
+            )):
                 self.use_model_combo.addItem(label, model_id)
+                item = self.use_model_combo.model().item(index)
+                if item is not None and isinstance(model_id, str) and model_id.startswith("__header__:"):
+                    item.setEnabled(False)
             self.use_model_combo.blockSignals(False)
         selected_use_index = self.use_model_combo.findData(state.use_selected_model_id)
         if selected_use_index >= 0 and selected_use_index != self.use_model_combo.currentIndex():
