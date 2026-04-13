@@ -51,6 +51,7 @@ class GuiShellState:
     use_selected_model_id: str = ""
     use_available_model_ids: tuple[str, ...] = ()
     use_available_model_labels: tuple[str, ...] = ()
+    use_model_menu_sources: tuple["GuiUseModelMenuSource", ...] = ()
     use_selected_model_label: str = ""
     use_selected_model_source: str = ""
     use_route_target: str = ""
@@ -137,6 +138,24 @@ class GuiShellState:
     debug_probe_result_label: str = "Not run yet"
     debug_probe_summary: str = "No debug network probe has run yet."
     debug_probe_details: str = ""
+
+
+@dataclass(frozen=True)
+class GuiUseModelMenuItem:
+    model_id: str
+    label: str
+
+
+@dataclass(frozen=True)
+class GuiUseModelMenuScope:
+    scope_label: str
+    models: tuple[GuiUseModelMenuItem, ...] = ()
+
+
+@dataclass(frozen=True)
+class GuiUseModelMenuSource:
+    source_label: str
+    scopes: tuple[GuiUseModelMenuScope, ...] = ()
 
 
 @dataclass
@@ -312,6 +331,7 @@ class GuiAppController:
             use_selected_model_id=self._selected_use_model_id,
             use_available_model_ids=use_available_model_ids,
             use_available_model_labels=use_available_model_labels,
+            use_model_menu_sources=self._use_model_menu_sources(status),
             use_selected_model_label=use_selected_model_label,
             use_selected_model_source=use_selected_model_source,
             use_route_target=status.use.route.active_route_target,
@@ -884,25 +904,53 @@ class GuiAppController:
         option_ids: list[str] = []
         option_labels: list[str] = []
         for scope in status.use.scopes:
-            if not scope.models:
-                continue
-            option_ids.append(GuiAppController._use_scope_header_id(scope.scope_id))
-            option_labels.append(scope.display_label)
             for model in scope.models:
                 scoped_id = f"{model.source}:{model.model_id}"
                 option_ids.append(scoped_id)
-                option_labels.append(
-                    f"  {GuiAppController._use_source_icon(model.source)} {model.display_name}"
-                )
+                option_labels.append(f"{GuiAppController._use_source_icon(model.source)} {model.display_name}")
         return tuple(option_ids), tuple(option_labels)
 
     @staticmethod
-    def _use_scope_header_id(scope_id: str) -> str:
-        return f"__header__:{scope_id}"
+    def _use_model_menu_sources(status: ClientStatus) -> tuple[GuiUseModelMenuSource, ...]:
+        source_groups: dict[str, list[GuiUseModelMenuScope]] = {}
+        source_order: list[str] = []
+        for scope in status.use.scopes:
+            if not scope.models:
+                continue
+            source_id = scope.models[0].source
+            if source_id not in source_groups:
+                source_groups[source_id] = []
+                source_order.append(source_id)
+            scope_label = "This machine" if source_id == "local" else scope.display_label
+            source_groups[source_id].append(
+                GuiUseModelMenuScope(
+                    scope_label=scope_label,
+                    models=tuple(
+                        GuiUseModelMenuItem(
+                            model_id=f"{model.source}:{model.model_id}",
+                            label=model.display_name,
+                        )
+                        for model in scope.models
+                    ),
+                )
+            )
+        return tuple(
+            GuiUseModelMenuSource(
+                source_label=GuiAppController._use_source_group_label(source_id),
+                scopes=tuple(source_groups[source_id]),
+            )
+            for source_id in source_order
+        )
 
     @staticmethod
-    def _is_use_scope_header(option_id: str) -> bool:
-        return option_id.startswith("__header__:")
+    def _use_source_group_label(source_id: str) -> str:
+        return {
+            "local": "Local",
+            "network": "Private",
+            "private": "Private",
+            "public": "Public",
+            "cloud": "Cloud",
+        }.get(source_id, source_id.title())
 
     @staticmethod
     def _initial_use_model_id(
@@ -923,10 +971,7 @@ class GuiAppController:
             local_scoped = f"local:{model_id}"
             if local_scoped in available_model_ids:
                 return local_scoped
-        for option_id in available_model_ids:
-            if not GuiAppController._is_use_scope_header(option_id):
-                return option_id
-        return ""
+        return available_model_ids[0] if available_model_ids else ""
 
     @staticmethod
     def _use_selected_model_label(

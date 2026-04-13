@@ -119,6 +119,10 @@ That matters because the main workstation stores the primary model under `agents
 ## Latest GUI truth
 
 - `Use` tab: model source selection shell, active route card, nested `Sources / Mount` sections
+- the `Use` model picker is now a nested dropdown:
+  - top level: `Local / Private / Public / Cloud`
+  - middle level: friendly scope labels such as `This machine` or private-scope names
+  - leaf level: actual selectable models
 - `Mount` now starts blank by default, with no auto-selected shape or consumer
 - `Mount` now behaves as a user-driven wizard:
   - choose `Shape`

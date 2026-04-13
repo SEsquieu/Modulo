@@ -16,6 +16,7 @@ try:
         QLabel,
         QLineEdit,
         QMainWindow,
+        QMenu,
         QProgressBar,
         QPushButton,
         QPlainTextEdit,
@@ -205,11 +206,13 @@ class ModuloMainWindow(QMainWindow):
         self.use_state_badge_label.setStyleSheet("font-size: 18px; font-weight: 700;")
         self.use_summary_label = QLabel()
         self.use_summary_label.setWordWrap(True)
-        self.use_model_combo = QComboBox()
         combo_font = QFont("Consolas", 11)
-        self.use_model_combo.setFont(combo_font)
-        self.use_model_combo.view().setFont(combo_font)
-        self.use_model_combo.currentIndexChanged.connect(self._apply_selected_use_model)
+        self.use_model_button = QPushButton("Choose model...")
+        self.use_model_button.setFont(combo_font)
+        self.use_model_button.setStyleSheet("text-align: left; padding: 6px 10px;")
+        self._use_model_menu = QMenu(self)
+        self._use_model_menu.setFont(combo_font)
+        self.use_model_button.setMenu(self._use_model_menu)
         self.use_card_value = QLabel()
         self.use_card_value.setWordWrap(True)
         self.use_route_health_label = QLabel()
@@ -354,7 +357,7 @@ class ModuloMainWindow(QMainWindow):
         use_layout.addLayout(use_header_row)
         use_model_row = QHBoxLayout()
         use_model_row.addWidget(QLabel("Model"))
-        use_model_row.addWidget(self.use_model_combo, 1)
+        use_model_row.addWidget(self.use_model_button, 1)
         use_layout.addLayout(use_model_row)
         use_layout.addWidget(self._build_host_card("Active Route", self.use_card_value))
         self.use_detail_tabs = QTabWidget()
@@ -898,12 +901,12 @@ class ModuloMainWindow(QMainWindow):
                 action=True,
             )
 
-    def _apply_selected_use_model(self) -> None:
-        model_id = self.use_model_combo.currentData()
-        if isinstance(model_id, str) and model_id and not model_id.startswith("__header__:"):
-            if self._latest_state is not None and model_id == self._latest_state.use_selected_model_id:
-                return
-            self._apply_state(self.controller.select_use_model(model_id))
+    def _apply_selected_use_model(self, model_id: str) -> None:
+        if not model_id:
+            return
+        if self._latest_state is not None and model_id == self._latest_state.use_selected_model_id:
+            return
+        self._apply_state(self.controller.select_use_model(model_id))
 
     def _apply_selected_mount_shape(self) -> None:
         shape_id = self.mount_shape_combo.currentData()
@@ -920,6 +923,18 @@ class ModuloMainWindow(QMainWindow):
         if self._latest_state is not None and consumer_id == self._latest_state.mount_selected_consumer_id:
             return
         self._apply_state(self.controller.select_mount_consumer(consumer_id))
+
+    def _rebuild_use_model_menu(self, state: GuiShellState) -> None:
+        self._use_model_menu.clear()
+        for source in state.use_model_menu_sources:
+            source_menu = self._use_model_menu.addMenu(source.source_label)
+            for scope in source.scopes:
+                scope_menu = source_menu.addMenu(scope.scope_label)
+                for model in scope.models:
+                    action = scope_menu.addAction(model.label)
+                    action.triggered.connect(
+                        lambda checked=False, model_id=model.model_id: self._apply_selected_use_model(model_id)
+                    )
 
     def _start_hosting_async(self) -> None:
         self._run_async_state_action(
@@ -1135,7 +1150,7 @@ class ModuloMainWindow(QMainWindow):
         self.connect_button.setEnabled(state.connect_action_enabled and controls_enabled)
         self.apply_openclaw_button.setText(state.openclaw_plan_apply_label)
         self.apply_openclaw_button.setEnabled(state.openclaw_plan_apply_enabled and controls_enabled)
-        self.use_model_combo.setEnabled(bool(state.use_available_model_ids) and controls_enabled)
+        self.use_model_button.setEnabled(bool(state.use_available_model_ids) and controls_enabled)
         self.hosting_model_combo.setEnabled(state.hosting_setup_action_enabled and controls_enabled)
         self.host_toggle_button.setText("Stop" if state.hosting_enabled else "Host")
         self._apply_host_toggle_style(hosting_enabled=state.hosting_enabled)
@@ -1202,28 +1217,8 @@ class ModuloMainWindow(QMainWindow):
         )
 
         self.use_state_badge_label.setText(state.use_status_badge)
-        combo_use_model_ids = tuple(
-            self.use_model_combo.itemData(index)
-            for index in range(self.use_model_combo.count())
-        )
-        if combo_use_model_ids != state.use_available_model_ids:
-            self.use_model_combo.blockSignals(True)
-            self.use_model_combo.clear()
-            for index, (label, model_id) in enumerate(zip(
-                state.use_available_model_labels,
-                state.use_available_model_ids,
-                strict=False,
-            )):
-                self.use_model_combo.addItem(label, model_id)
-                item = self.use_model_combo.model().item(index)
-                if item is not None and isinstance(model_id, str) and model_id.startswith("__header__:"):
-                    item.setEnabled(False)
-            self.use_model_combo.blockSignals(False)
-        selected_use_index = self.use_model_combo.findData(state.use_selected_model_id)
-        if selected_use_index >= 0 and selected_use_index != self.use_model_combo.currentIndex():
-            self.use_model_combo.blockSignals(True)
-            self.use_model_combo.setCurrentIndex(selected_use_index)
-            self.use_model_combo.blockSignals(False)
+        self._rebuild_use_model_menu(state)
+        self.use_model_button.setText(state.use_selected_model_label or "Choose model...")
         self.use_card_value.setText(self._use_route_card_html(state.use_route_details))
 
         self.use_route_health_label.setText(
