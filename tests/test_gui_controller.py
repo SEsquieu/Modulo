@@ -5,7 +5,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from modulo.gui.controller import GuiAppController
-from modulo.client.app import HostingPrewarmResult
+from modulo.client.app import HostingPrewarmResult, RouteTraceFilteredWorker, RouteTraceStatus
 from modulo.client.ollama_discovery import OllamaDiscoveryStatus
 from modulo.client.ollama_loaded_models import LoadedOllamaModel, OllamaLoadedModelsStatus
 from modulo.client.openclaw_discovery import OpenClawDiscoveryStatus
@@ -157,6 +157,34 @@ class BrokenGuiOpenClawDiscovery:
         )
 
 
+class FakeFailedRouteTraceProvider:
+    def get_latest_route_trace(self) -> RouteTraceStatus:
+        return RouteTraceStatus(
+            available=True,
+            model_id="gemma4:e2b",
+            source="network",
+            scope="private",
+            route_reason="No eligible execution target was available.",
+            route_reason_code="no_eligible_target",
+            retry_count=1,
+            attempt_number=2,
+            final_status="no_route",
+            final_error="No eligible execution target found.",
+            filtered_workers=(
+                RouteTraceFilteredWorker(
+                    worker_id="worker-cold",
+                    reason_code="worker_unhealthy",
+                    detail="Worker is not currently healthy.",
+                ),
+                RouteTraceFilteredWorker(
+                    worker_id="worker-busy",
+                    reason_code="worker_at_capacity",
+                    detail="Worker current load meets or exceeds max concurrency.",
+                ),
+            ),
+        )
+
+
 class GuiAppControllerTests(unittest.TestCase):
     def setUp(self) -> None:
         self.controller = GuiAppController(
@@ -281,14 +309,28 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertIn("Response:", smoked.diagnostics_details)
         self.assertIn("Execution mode: PROTOTYPE", smoked.diagnostics_details)
         self.assertEqual("Completed", smoked.route_trace_result_label)
-        self.assertIn("Scope private", smoked.route_trace_summary)
-        self.assertIn("Selected worker:", smoked.route_trace_details)
-        self.assertIn("Final status: completed", smoked.route_trace_details)
+        self.assertIn("routed through Private in Private scope", smoked.route_trace_summary)
+        self.assertIn("Outcome: Completed", smoked.route_trace_details)
+        self.assertIn("Worker:", smoked.route_trace_details)
+        self.assertIn("Why this route:", smoked.route_trace_details)
         self.assertIn("Latest routing sent", smoked.continuity_summary)
         self.assertTrue(smoked.activity_lines)
         self.assertTrue(smoked.last_job_id)
         self.assertEqual("completed", smoked.last_job_status)
         self.assertIn("finished with status completed", smoked.worker_activity_summary)
+
+    def test_failed_route_trace_uses_operator_friendly_language(self) -> None:
+        self.controller.harness.client.route_trace_provider = FakeFailedRouteTraceProvider()
+
+        state = self.controller.refresh()
+
+        self.assertEqual("No route found", state.route_trace_result_label)
+        self.assertIn("could not complete in Private scope", state.route_trace_summary)
+        self.assertIn("Outcome: No route found", state.route_trace_details)
+        self.assertIn("No worker selected", state.route_trace_details)
+        self.assertIn("Attempts: 2 total (1 retry)", state.route_trace_details)
+        self.assertIn("worker-cold: skipped because it was unhealthy", state.route_trace_details)
+        self.assertIn("worker-busy: skipped because it was already at capacity", state.route_trace_details)
 
     def test_real_execution_mode_surfaces_in_gui_state(self) -> None:
         self.controller = GuiAppController(

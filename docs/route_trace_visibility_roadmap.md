@@ -134,16 +134,33 @@ Notes:
 - this slice is where we make the route-trace surface actually pleasant to use
 - avoid dumping raw internal objects into the GUI
 
-Status: in progress
+Status: completed
 
 Completion note:
 
 - summary:
+  - tightened the Diagnostics Route wording so the latest trace reads like an operator-facing explanation instead of a raw internal dump
+  - added stable success and failure summaries that explain source, scope, worker selection, retries, and no-route outcomes in human terms
+  - translated filtered-worker reasons into clearer skip language while keeping the deeper trace truth one layer down in Diagnostics
 - proof added to repo:
+  - operator-friendly route summary/detail helpers in `src/modulo/gui/controller.py`
+  - GUI controller coverage for both successful and failed routed traces in `tests/test_gui_controller.py`
 
 ## Completion note
 
 Add a short summary here when the roadmap is complete:
 
 - summary:
+  - added a dedicated client-facing route-trace contract
+  - exposed latest route traces through local prototype and hosted fetch paths
+  - surfaced route visibility in Diagnostics with a final trust pass for operator-friendly success and failure wording
 - proof added to repo:
+  - `src/modulo/client/app.py`
+  - `src/modulo/cloud/http.py`
+  - `src/modulo/prototype.py`
+  - `src/modulo/gui/controller.py`
+  - `src/modulo/gui/window.py`
+  - `tests/test_client_worker.py`
+  - `tests/test_http_app.py`
+  - `tests/test_prototype.py`
+  - `tests/test_gui_controller.py`

@@ -19,7 +19,8 @@ This file is the quickest way to regain context when switching workstations.
 - `Slice 1: Route-trace client contract` is completed
 - `Slice 2: Prototype and hosted trace fetch path` is completed
 - `Slice 3: Diagnostics route-trace view` is completed
-- `Slice 4: Operator trust pass` is now active
+- `Slice 4: Operator trust pass` is completed
+- the full route-trace visibility roadmap is now completed
 - the current architecture discussion is [private_scope_mvp_design.md](./private_scope_mvp_design.md), which narrows the next remote-execution proof around `Local / Private / Public / Cloud`
 - a future routing note is captured in [future_host_capacity_intelligence.md](./future_host_capacity_intelligence.md) for host capability profiling, warm/cold inventory truth, and dynamic idle swapping
 - the private-scope design doc now explicitly captures scope governance so future `Public` support stays policy-gated and clampable back to `Private`
@@ -102,6 +103,7 @@ That matters because the main workstation stores the primary model under `agents
 - `Host` tab: hosting model selection, warm-state card, execution-path truth, host toggle, worker/runtime details
 - `Diagnostics` tab: smoke test summary card plus nested `Smoke / Activity / Errors`
 - `Diagnostics` tab: smoke test summary card plus nested `Smoke / Route / Activity / Errors`
+- the Diagnostics `Route` view now uses clearer operator wording for successful routes, no-route outcomes, retries, and filtered workers
 - footer: left-aligned `Modulo / Hosting / Worker` key:value status with colored values, plus right-aligned transient notices
 
 The GUI now explicitly tells the truth about whether the current worker path and latest smoke test are using `REAL` or `PROTOTYPE` execution.
@@ -110,11 +112,10 @@ The current hosted-backend path has been proven through Cloudflare Tunnel agains
 
 ## Next recommended starting point
 
-Start from the completed [private_mvp_roadmap.md](./private_mvp_roadmap.md), then continue with [route_trace_visibility_roadmap.md](./route_trace_visibility_roadmap.md) before returning to productization.
+Start from the completed [private_mvp_roadmap.md](./private_mvp_roadmap.md) and the completed [route_trace_visibility_roadmap.md](./route_trace_visibility_roadmap.md) before returning to productization.
 
 The most likely first useful slice is:
 
-- `route_trace_visibility_roadmap.md`
 - richer shared discovery and source truth in `Use`, especially around `Local / Private / Public / Cloud`
 - auth/policy hardening and persistence now that the shared path itself is functionally proven
 - only return to packaging once the shared-network behavior feels truthful enough to lock in
@@ -220,6 +221,8 @@ Recent meaningful commits:
 - `9210991` `Capture future host capacity routing note`
 - `9d56be0` `Add debug tab for network validation`
 - `c395b1d` `Add interactive debug network probe`
+- `4f36820` `Add diagnostics route trace view`
+- `8fd2127` `Complete route trace trust pass`
 - `3e64fa1` `Complete network addressable worker slice`
 - `4a31eaa` `Complete route trace spine slice`
 - `edd70a8` `Complete private scope routing contracts slice`

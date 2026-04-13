@@ -493,30 +493,139 @@ class GuiAppController:
             return "Not captured"
         if trace.final_status == "completed":
             return "Completed"
+        if trace.final_status in {"failed", "error"}:
+            return "Needs attention"
+        if trace.final_status == "no_route":
+            return "No route found"
         if trace.final_status:
             return trace.final_status.replace("_", " ").title()
         return "Captured"
 
-    @staticmethod
-    def _route_trace_summary(status: ClientStatus) -> str:
+    @classmethod
+    def _route_trace_summary(cls, status: ClientStatus) -> str:
         trace = status.latest_route_trace
-        return trace.summary
+        if not trace.available:
+            return trace.summary
 
-    @staticmethod
-    def _route_trace_details(status: ClientStatus) -> str:
+        source = cls._route_trace_source_label(trace.source)
+        scope = cls._route_trace_scope_label(trace.scope)
+        if trace.final_status == "completed":
+            worker = trace.selected_worker_id or "an available worker"
+            return f"Latest request routed through {source} in {scope} scope to {worker} and completed successfully."
+        if trace.selected_worker_id:
+            return (
+                f"Latest request routed through {source} in {scope} scope to "
+                f"{trace.selected_worker_id}, but it ended with {cls._route_trace_outcome_label(trace.final_status).lower()}."
+            )
+        if trace.route_reason:
+            return f"Latest request could not complete in {scope} scope. {trace.route_reason}"
+        return f"Latest request did not find an eligible route in {scope} scope."
+
+    @classmethod
+    def _route_trace_details(cls, status: ClientStatus) -> str:
         trace = status.latest_route_trace
         if not trace.available:
             return trace.details
-        lines = [trace.details]
+
+        lines = [
+            f"Model: {trace.model_id or 'Unknown'}",
+            f"Source: {cls._route_trace_source_label(trace.source)}",
+            f"Scope: {cls._route_trace_scope_label(trace.scope)}",
+        ]
+        if trace.private_network_id:
+            lines.append(f"Private network: {trace.private_network_id}")
+        lines.append(f"Outcome: {cls._route_trace_outcome_label(trace.final_status)}")
+        lines.append(
+            f"Worker: {trace.selected_worker_id or 'No worker selected'}"
+            + (
+                f" ({cls._route_trace_worker_kind_label(trace.selected_worker_kind)})"
+                if trace.selected_worker_kind
+                else ""
+            )
+        )
+        if trace.route_reason or trace.route_reason_code:
+            lines.append(
+                f"Why this route: {trace.route_reason or cls._route_trace_reason_label(trace.route_reason_code)}"
+            )
+        if trace.attempt_number or trace.retry_count:
+            total_attempts = max(trace.attempt_number, trace.retry_count + 1)
+            lines.append(f"Attempts: {total_attempts} total ({trace.retry_count} retr{'y' if trace.retry_count == 1 else 'ies'})")
+        if trace.continuity_used:
+            lines.append("Continuity: reused a recent worker path")
+        if trace.warm_path_used:
+            lines.append("Warm path: preferred a worker that was already warm")
+        if trace.final_error:
+            lines.append(f"Error: {trace.final_error}")
         if trace.filtered_workers:
             lines.append("")
             lines.append("Filtered workers:")
             for item in trace.filtered_workers:
-                detail = f" - {item.worker_id}: {item.reason_code}"
+                detail = f" - {item.worker_id}: {cls._route_trace_filtered_reason_label(item.reason_code)}"
                 if item.detail:
                     detail = f"{detail} ({item.detail})"
                 lines.append(detail)
         return "\n".join(lines)
+
+    @staticmethod
+    def _route_trace_source_label(source: str) -> str:
+        return {
+            "local": "Local",
+            "network": "Private",
+            "public": "Public",
+            "cloud": "Cloud",
+        }.get(source, source.replace("_", " ").title() if source else "Unknown")
+
+    @staticmethod
+    def _route_trace_scope_label(scope: str) -> str:
+        return {
+            "local": "Local",
+            "private": "Private",
+            "public": "Public",
+            "cloud": "Cloud",
+        }.get(scope, scope.replace("_", " ").title() if scope else "Unknown")
+
+    @staticmethod
+    def _route_trace_outcome_label(final_status: str) -> str:
+        return {
+            "completed": "Completed",
+            "failed": "Failed",
+            "error": "Failed",
+            "no_route": "No route found",
+            "cancelled": "Cancelled",
+        }.get(final_status, final_status.replace("_", " ").title() if final_status else "Captured")
+
+    @staticmethod
+    def _route_trace_worker_kind_label(kind: str) -> str:
+        return {
+            "local": "local host",
+            "network": "network host",
+            "cloud": "cloud host",
+        }.get(kind, kind.replace("_", " ").title() if kind else "worker")
+
+    @staticmethod
+    def _route_trace_reason_label(reason_code: str) -> str:
+        return {
+            "selected_requested_mode": "Selected the best healthy worker for the requested route.",
+            "buyer_continuity_lease": "Stayed with a recent worker for continuity.",
+            "cloud_fallback_exact_match": "Private routing had no eligible worker, so an exact cloud fallback was chosen.",
+            "no_eligible_target": "No eligible execution target was available.",
+            "unsupported_model": "The requested model is not supported for this route.",
+            "streaming_disabled": "Streaming is disabled for this route.",
+            "tool_calling_disabled": "Tool calling is disabled for this route.",
+            "healthy_exact_match": "Matched the requested model on a healthy worker.",
+        }.get(reason_code, reason_code.replace("_", " ").capitalize() if reason_code else "Unavailable")
+
+    @staticmethod
+    def _route_trace_filtered_reason_label(reason_code: str) -> str:
+        return {
+            "excluded_worker": "skipped because it was explicitly excluded",
+            "worker_kind_mismatch": "skipped because it was the wrong worker type",
+            "worker_unhealthy": "skipped because it was unhealthy",
+            "private_network_mismatch": "skipped because it belonged to a different private network",
+            "scope_mismatch": "skipped because its scope did not match",
+            "model_not_advertised": "skipped because it did not advertise this model",
+            "worker_at_capacity": "skipped because it was already at capacity",
+        }.get(reason_code, reason_code.replace("_", " ") if reason_code else "filtered")
 
     @staticmethod
     def _execution_mode_badge(
