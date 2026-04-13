@@ -356,9 +356,8 @@ class ModuloMainWindow(QMainWindow):
         use_layout.addLayout(use_model_row)
         use_layout.addWidget(self._build_host_card("Active Route", self.use_card_value))
         self.use_detail_tabs = QTabWidget()
-        self.use_detail_tabs.addTab(self._build_use_route_page(), "Route")
-        self.use_detail_tabs.addTab(self._build_use_mount_page(), "Mount")
         self.use_detail_tabs.addTab(self._build_use_sources_page(), "Sources")
+        self.use_detail_tabs.addTab(self._build_use_mount_page(), "Mount")
         self.use_detail_tabs.setSizePolicy(
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Maximum,
@@ -656,21 +655,6 @@ class ModuloMainWindow(QMainWindow):
         layout.addWidget(self.worker_jobs_label)
         layout.addWidget(self.worker_last_job_label)
         layout.addWidget(self.worker_error_label)
-        layout.addStretch(1)
-        page.setLayout(layout)
-        return page
-
-    def _build_use_route_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout()
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(6)
-        layout.addWidget(self.use_summary_label)
-        layout.addWidget(self.use_route_health_label)
-        layout.addWidget(self.use_route_health_summary_label)
-        layout.addWidget(self.use_mount_status_label)
-        layout.addWidget(self.use_mount_status_summary_label)
-        layout.addWidget(self.use_route_details_label)
         layout.addStretch(1)
         page.setLayout(layout)
         return page
@@ -1224,16 +1208,7 @@ class ModuloMainWindow(QMainWindow):
             self.use_model_combo.blockSignals(True)
             self.use_model_combo.setCurrentIndex(selected_use_index)
             self.use_model_combo.blockSignals(False)
-        self.use_card_value.setText(
-            "\n".join(
-                (
-                    f"Model: {state.use_selected_model_label or 'No model selected'}",
-                    f"Source: {state.use_selected_model_source or 'Unknown'}",
-                    f"Route: {state.use_route_target or 'Unknown'}",
-                    f"Provider: {state.use_provider_label or 'Unknown'}",
-                )
-            )
-        )
+        self.use_card_value.setText("\n".join(state.use_route_details))
 
         self.use_route_health_label.setText(
             self._kv_status_html("Route", state.use_route_health_value)
@@ -1278,7 +1253,6 @@ class ModuloMainWindow(QMainWindow):
             f"OpenClaw: {state.openclaw_status_badge}"
         )
         self.use_summary_label.setText(state.use_summary)
-        self.use_route_details_label.setText("\n".join(state.use_route_details))
         self.openclaw_summary_label.setText(state.openclaw_summary)
         self.openclaw_guidance_label.setText(f"Next: {state.openclaw_guidance_summary}")
         self.openclaw_plan_summary_label.setText(state.openclaw_plan_summary)

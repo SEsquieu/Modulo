@@ -939,29 +939,26 @@ class GuiAppController:
             status=status,
             selected_use_model_id=self._selected_use_model_id,
         )
+        shape_label = self._mount_shape_label(self._selected_mount_shape_id)
+        mount_label = self._mount_consumer_label(status)
         if status.openclaw.configured and self._selected_mount_shape_id == "openai_api":
-            path = "OpenAI API"
             reason = "OpenClaw is configured for the selected OpenAI-compatible path."
         elif not self._selected_mount_shape_id:
-            path = "Not selected"
             reason = "Choose a mount shape before requests can leave this client."
         elif self._selected_mount_shape_id == "openai_api" and status.openclaw.connection_plan.apply_ready:
-            path = "OpenAI API"
             reason = "OpenClaw is staged but not applied yet."
         elif self._selected_mount_shape_id == "ollama":
-            path = "Ollama"
             reason = "Choose or configure an Ollama-compatible consumer next."
         elif self._selected_mount_shape_id == "modulo_native":
-            path = "Modulo Native"
             reason = "Choose or configure a Modulo-native consumer next."
         else:
-            path = "Unknown"
             reason = "Route state is not ready yet."
 
         details = [
             f"Model: {selected_model_label or 'No model selected'}",
             f"Source: {selected_source_label or 'Unknown'}",
-            f"Path: {path}",
+            f"Shape: {shape_label}",
+            f"Mount: {mount_label}",
             f"Status: {self._use_route_health_value(status)}",
             f"Reason: {reason}",
         ]
