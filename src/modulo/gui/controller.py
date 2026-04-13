@@ -476,6 +476,19 @@ class GuiAppController:
             return "The selected route still needs a reachable platform target before shared execution can be trusted."
         return "The shape and consumer are selected, but the edge still needs attention before it is fully ready."
 
+    def _use_route_reason(self, status: ClientStatus) -> str:
+        if status.openclaw.configured and self._selected_mount_shape_id == "openai_api":
+            return "Ready to use through OpenClaw."
+        if not self._selected_mount_shape_id:
+            return "Choose a shape."
+        if not self._selected_mount_consumer_id:
+            return "Choose a consumer."
+        if self._selected_mount_shape_id == "openai_api" and status.openclaw.connection_plan.apply_ready:
+            return "Confirm the staged setup."
+        if not status.platform.connected:
+            return "Reconnect the platform target."
+        return "Finish the edge setup."
+
     def _use_mount_status_value(self, status: ClientStatus) -> str:
         if not self._selected_mount_shape_id:
             return "Choose shape"
@@ -983,7 +996,7 @@ class GuiAppController:
         )
         shape_label = self._mount_shape_label(self._selected_mount_shape_id)
         mount_label = self._mount_consumer_label(status)
-        reason = self._use_route_health_summary(status)
+        reason = self._use_route_reason(status)
 
         details = [
             f"Model: {selected_model_label or 'No model selected'}",
