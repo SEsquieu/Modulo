@@ -212,6 +212,14 @@ class ModuloMainWindow(QMainWindow):
         self.use_model_combo.currentIndexChanged.connect(self._apply_selected_use_model)
         self.use_card_value = QLabel()
         self.use_card_value.setWordWrap(True)
+        self.use_route_health_label = QLabel()
+        self.use_route_health_label.setTextFormat(Qt.TextFormat.RichText)
+        self.use_route_health_summary_label = QLabel()
+        self.use_route_health_summary_label.setWordWrap(True)
+        self.use_mount_status_label = QLabel()
+        self.use_mount_status_label.setTextFormat(Qt.TextFormat.RichText)
+        self.use_mount_status_summary_label = QLabel()
+        self.use_mount_status_summary_label.setWordWrap(True)
         self.use_route_details_label = QLabel()
         self.use_route_details_label.setWordWrap(True)
         self.use_local_models_label = QLabel()
@@ -330,7 +338,7 @@ class ModuloMainWindow(QMainWindow):
         use_layout = QVBoxLayout()
         use_header_row = QHBoxLayout()
         use_header_row.addWidget(self.use_state_badge_label, 1)
-        use_header_row.addWidget(self.connect_button, 0)
+        use_header_row.addStretch(1)
         use_layout.addLayout(use_header_row)
         use_model_row = QHBoxLayout()
         use_model_row.addWidget(QLabel("Model"))
@@ -339,6 +347,7 @@ class ModuloMainWindow(QMainWindow):
         use_layout.addWidget(self._build_host_card("Active Route", self.use_card_value))
         self.use_detail_tabs = QTabWidget()
         self.use_detail_tabs.addTab(self._build_use_route_page(), "Route")
+        self.use_detail_tabs.addTab(self._build_use_mount_page(), "Mount")
         self.use_detail_tabs.addTab(self._build_use_local_page(), "Local")
         self.use_detail_tabs.addTab(self._build_use_private_page(), "Private")
         self.use_detail_tabs.addTab(self._build_use_public_page(), "Public")
@@ -650,13 +659,31 @@ class ModuloMainWindow(QMainWindow):
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
         layout.addWidget(self.use_summary_label)
+        layout.addWidget(self.use_route_health_label)
+        layout.addWidget(self.use_route_health_summary_label)
+        layout.addWidget(self.use_mount_status_label)
+        layout.addWidget(self.use_mount_status_summary_label)
         layout.addWidget(self.use_route_details_label)
+        layout.addStretch(1)
+        page.setLayout(layout)
+        return page
+
+    def _build_use_mount_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout()
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(6)
         layout.addWidget(self.openclaw_status_label)
+        layout.addWidget(self.openclaw_summary_label)
         layout.addWidget(self.openclaw_guidance_label)
+        layout.addWidget(self.openclaw_plan_summary_label)
         route_actions = QHBoxLayout()
+        route_actions.addWidget(self.connect_button, 0)
         route_actions.addWidget(self.apply_openclaw_button, 0)
         route_actions.addStretch(1)
         layout.addLayout(route_actions)
+        layout.addWidget(self.openclaw_details_box)
+        layout.addWidget(self.openclaw_plan_box)
         layout.addStretch(1)
         page.setLayout(layout)
         return page
@@ -1209,12 +1236,33 @@ class ModuloMainWindow(QMainWindow):
             )
         )
 
+        self.use_route_health_label.setText(
+            self._kv_status_html("Route", state.use_route_health_value)
+        )
+        self.use_route_health_summary_label.setText(state.use_route_health_summary)
+        self.use_mount_status_label.setText(
+            self._kv_status_html("Mount", state.use_mount_status_value)
+        )
+        self.use_mount_status_summary_label.setText(state.use_mount_status_summary)
         self.openclaw_status_label.setText(
             f"OpenClaw: {state.openclaw_status_badge}"
         )
         self.use_summary_label.setText(state.use_summary)
         self.use_route_details_label.setText("\n".join(state.use_route_details))
+        self.openclaw_summary_label.setText(state.openclaw_summary)
         self.openclaw_guidance_label.setText(f"Next: {state.openclaw_guidance_summary}")
+        self.openclaw_plan_summary_label.setText(state.openclaw_plan_summary)
+        self.openclaw_details_box.setPlainText(state.openclaw_details)
+        self.openclaw_plan_box.setPlainText(
+            "\n".join(
+                line
+                for line in (
+                    state.openclaw_plan_details,
+                    *state.openclaw_plan_changes,
+                )
+                if line
+            )
+        )
         self.use_local_models_label.setText("\n".join(state.use_local_model_lines))
         self.use_private_models_label.setText("\n".join(state.use_private_model_lines))
         self.use_public_models_label.setText("\n".join(state.use_public_model_lines))
@@ -1348,6 +1396,17 @@ class ModuloMainWindow(QMainWindow):
     def _footer_status_html(value: str, *, ok: bool) -> str:
         color = "#7ee787" if ok else "#ff7b72"
         return f"<b><span style='color: {color};'>{value}</span></b>"
+
+    @staticmethod
+    def _kv_status_html(label: str, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized in {"healthy", "ready"}:
+            color = "#7ee787"
+        elif normalized in {"staged", "local only"}:
+            color = "#ffd866"
+        else:
+            color = "#ff7b72"
+        return f"{label}: <b><span style='color: {color};'>{value}</span></b>"
 
 
 def launch_gui(controller: GuiAppController | None = None) -> int:

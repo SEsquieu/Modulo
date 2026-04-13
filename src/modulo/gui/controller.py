@@ -55,6 +55,10 @@ class GuiShellState:
     use_selected_model_source: str = ""
     use_route_target: str = ""
     use_provider_label: str = ""
+    use_route_health_value: str = "Setup"
+    use_route_health_summary: str = ""
+    use_mount_status_value: str = "Not configured"
+    use_mount_status_summary: str = ""
     use_route_details: tuple[str, ...] = ()
     use_local_model_lines: tuple[str, ...] = ()
     use_private_model_lines: tuple[str, ...] = ()
@@ -278,6 +282,10 @@ class GuiAppController:
             use_selected_model_source=use_selected_model_source,
             use_route_target=status.use.route.active_route_target,
             use_provider_label=status.use.route.active_provider or "Unknown",
+            use_route_health_value=self._use_route_health_value(status),
+            use_route_health_summary=self._use_route_health_summary(status),
+            use_mount_status_value=self._use_mount_status_value(status),
+            use_mount_status_summary=self._use_mount_status_summary(status),
             use_route_details=self._use_route_details(status),
             use_local_model_lines=self._use_local_model_lines(status),
             use_private_model_lines=self._use_scope_model_lines(status, scope_id="private"),
@@ -397,6 +405,46 @@ class GuiAppController:
     @staticmethod
     def _use_summary(status: ClientStatus) -> str:
         return status.use.summary
+
+    @staticmethod
+    def _use_route_health_value(status: ClientStatus) -> str:
+        route_target = status.use.route.active_route_target
+        if route_target == "OpenClaw":
+            return "Healthy"
+        if route_target == "OpenClaw (staged)":
+            return "Staged"
+        if not status.platform.connected:
+            return "Attention"
+        return "Local only"
+
+    @staticmethod
+    def _use_route_health_summary(status: ClientStatus) -> str:
+        route_target = status.use.route.active_route_target
+        if route_target == "OpenClaw":
+            return "Requests have a mounted edge available through the current OpenClaw route."
+        if route_target == "OpenClaw (staged)":
+            return "A mount path is staged, but it is not applied yet."
+        if not status.platform.connected:
+            return "Shared scopes are visible as truth, but route execution stays read-only until the active target is reachable."
+        return "Models can still be selected and reviewed, but no mounted edge is configured yet."
+
+    @staticmethod
+    def _use_mount_status_value(status: ClientStatus) -> str:
+        if status.openclaw.configured:
+            return "Ready"
+        if status.openclaw.connection_plan.apply_ready:
+            return "Staged"
+        return "Not configured"
+
+    @staticmethod
+    def _use_mount_status_summary(status: ClientStatus) -> str:
+        if status.openclaw.configured:
+            return "OpenClaw is the current mounted edge for this client."
+        if status.openclaw.connection_plan.apply_ready:
+            return "OpenClaw is detected and the mount plan is ready to apply."
+        if status.openclaw.installed:
+            return "OpenClaw is installed locally, but Modulo is not mounted into it yet."
+        return "No mounted edge is configured yet."
 
     @staticmethod
     def _home_subtitle(onboarding: OnboardingStatus) -> str:
