@@ -21,6 +21,11 @@ This file is the quickest way to regain context when switching workstations.
 - `Slice 3: Diagnostics route-trace view` is completed
 - `Slice 4: Operator trust pass` is completed
 - the full route-trace visibility roadmap is now completed
+- the next active implementation roadmap is [use_side_truth_roadmap.md](./use_side_truth_roadmap.md)
+- `Slice 1: Use-source contract tightening` is pending
+- `Slice 2: Private/shared visibility fetch truth` is pending
+- `Slice 3: Use tab truth pass` is pending
+- `Slice 4: Policy and empty-state trust pass` is pending
 - the current architecture discussion is [private_scope_mvp_design.md](./private_scope_mvp_design.md), which narrows the next remote-execution proof around `Local / Private / Public / Cloud`
 - a future routing note is captured in [future_host_capacity_intelligence.md](./future_host_capacity_intelligence.md) for host capability profiling, warm/cold inventory truth, and dynamic idle swapping
 - the private-scope design doc now explicitly captures scope governance so future `Public` support stays policy-gated and clampable back to `Private`
@@ -100,6 +105,7 @@ That matters because the main workstation stores the primary model under `agents
 ## Latest GUI truth
 
 - `Use` tab: model source selection shell, active route card, nested `Route / Local / Network / Cloud` sections, OpenClaw route truth
+- the next truth pass on `Use` should move this surface toward `Local / Private / Public / Cloud`
 - `Host` tab: hosting model selection, warm-state card, execution-path truth, host toggle, worker/runtime details
 - `Diagnostics` tab: smoke test summary card plus nested `Smoke / Activity / Errors`
 - `Diagnostics` tab: smoke test summary card plus nested `Smoke / Route / Activity / Errors`
@@ -112,11 +118,12 @@ The current hosted-backend path has been proven through Cloudflare Tunnel agains
 
 ## Next recommended starting point
 
-Start from the completed [private_mvp_roadmap.md](./private_mvp_roadmap.md) and the completed [route_trace_visibility_roadmap.md](./route_trace_visibility_roadmap.md) before returning to productization.
+Start from the completed [private_mvp_roadmap.md](./private_mvp_roadmap.md), the completed [route_trace_visibility_roadmap.md](./route_trace_visibility_roadmap.md), and then continue with [use_side_truth_roadmap.md](./use_side_truth_roadmap.md) before returning to productization.
 
 The most likely first useful slice is:
 
-- richer shared discovery and source truth in `Use`, especially around `Local / Private / Public / Cloud`
+- `use_side_truth_roadmap.md`
+- sharper shared discovery and source truth in `Use`, especially around `Local / Private / Public / Cloud`
 - auth/policy hardening and persistence now that the shared path itself is functionally proven
 - only return to packaging once the shared-network behavior feels truthful enough to lock in
 
@@ -190,6 +197,7 @@ Active implementation doc:
 
 - [private_mvp_roadmap.md](./private_mvp_roadmap.md)
 - [route_trace_visibility_roadmap.md](./route_trace_visibility_roadmap.md)
+- [use_side_truth_roadmap.md](./use_side_truth_roadmap.md)
 
 Current architecture discussion:
 

@@ -126,12 +126,14 @@ Current next functional proof:
 - [docs/private_scope_mvp_design.md](./docs/private_scope_mvp_design.md) narrows the source/scope model so the next remote-execution work does not harden a singular `network` pool
 - [docs/private_mvp_roadmap.md](./docs/private_mvp_roadmap.md) defines the first bounded private-scope remote-execution MVP proof before packaging work resumes
 - [docs/route_trace_visibility_roadmap.md](./docs/route_trace_visibility_roadmap.md) defines the next post-proof slice so routed execution becomes explainable before packaging resumes
+- [docs/use_side_truth_roadmap.md](./docs/use_side_truth_roadmap.md) defines the next `Use`-side truth pass so model source visibility is clear before packaging resumes
 
 Recent milestone:
 
 - an end-to-end request/response has now been proven across separate real networks, with desktop hosting from a home network and a laptop requester running over a cell hotspot
 - this moves Modulo beyond local-only proof into real distributed validation
 - current next work should focus on truth, visibility, and policy around the shared path rather than packaging
+- the newest tracked emphasis after route-trace visibility is the `Use` side: making `Local / Private / Public / Cloud` visibility honest and easy to trust
 
 ## Current platform surface
 

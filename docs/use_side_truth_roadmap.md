@@ -1,0 +1,135 @@
+# Use-Side Truth Roadmap
+
+This mini roadmap covers the next focused work after route-trace visibility is complete.
+
+It exists to make the `Use` side of Modulo truthful about what a person can actually use, where that request will go, and what is still only staged or conceptual.
+
+The goal is not to build a giant chooser or a dashboard-first model marketplace.
+The goal is to keep the tray-first product direction intact while making the second-layer `Use` surface honest and easy to trust.
+
+## Goal
+
+- make the `Use` tab truthful about `Local / Private / Public / Cloud`
+- keep model-source language simple and consumer-readable
+- separate visible model availability from allowed routing policy
+- keep top-level `Use` flow light while pushing deeper detail into nested sections
+
+## Why this matters
+
+- the shared path is now real across separate networks
+- the current `Use` surface shows the right shape, but some of its truth is still prototype-safe or mixed together
+- model source visibility will eventually drive both user trust and policy enforcement
+- this is the cleanest next step before productization resumes
+
+## Planned slices
+
+### Slice 1: Use-source contract tightening
+
+Goal:
+
+- define a sharper client-facing `Use` state shape around visible model sources and active routing truth
+
+Done when:
+
+- the client has a stable way to describe what is visible under `Local / Private / Public / Cloud`
+- the contract distinguishes:
+  - visible models
+  - selected model
+  - active route
+  - route policy constraints
+- the GUI no longer needs to infer source truth from mixed OpenClaw or host state
+
+Notes:
+
+- keep the contract narrow and user-facing
+- avoid locking in enterprise-heavy naming at the UI layer
+
+Status: pending
+
+Completion note:
+
+- summary:
+- proof added to repo:
+
+### Slice 2: Private/shared visibility fetch truth
+
+Goal:
+
+- make `Use` visibility reflect the active platform target more truthfully for local and shared/private sources
+
+Done when:
+
+- local installed models are clearly separated from remotely visible shared models
+- private/shared model visibility follows the active platform target instead of stale local assumptions
+- empty states explain whether nothing is visible because:
+  - no models are available
+  - no shared hosts are advertising
+  - the current source is not yet supported
+
+Notes:
+
+- prefer one truthful fetch path over duplicated local-only versus remote-only logic
+
+Status: pending
+
+Completion note:
+
+- summary:
+- proof added to repo:
+
+### Slice 3: Use tab truth pass
+
+Goal:
+
+- reshape the `Use` tab so model choice is front and center while route truth stays visible and low-noise
+
+Done when:
+
+- the primary `Use` card clearly shows:
+  - selected model
+  - selected source
+  - active route target
+  - provider/path truth
+- nested `Route / Local / Private / Public / Cloud` sections feel consistent with the rest of the shell
+- dead copy and staged/prototype-heavy phrasing are buried or removed from the default view
+
+Notes:
+
+- keep the top-level `Use` flow calm enough that it still points toward the eventual tray-first release
+
+Status: pending
+
+Completion note:
+
+- summary:
+- proof added to repo:
+
+### Slice 4: Policy and empty-state trust pass
+
+Goal:
+
+- make `Use` source visibility trustworthy when policy, scope, or incomplete support changes what is actually available
+
+Done when:
+
+- the `Use` tab explains why a source is unavailable without sounding broken
+- private/public/cloud language stays simple while preserving stricter backend meaning
+- the current state supports future policy hardening without rewriting the `Use` UI again
+
+Notes:
+
+- this slice is about trust wording and policy-aware truth, not deep authorization implementation
+
+Status: pending
+
+Completion note:
+
+- summary:
+- proof added to repo:
+
+## Completion note
+
+Add a short summary here when the roadmap is complete:
+
+- summary:
+- proof added to repo:

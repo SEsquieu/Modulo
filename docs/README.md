@@ -21,11 +21,13 @@ Current source of truth:
 - [private_scope_mvp_design.md](./private_scope_mvp_design.md): implementation-narrowing doc for treating the first bounded remote-execution proof as `Private` scope
 - [private_mvp_roadmap.md](./private_mvp_roadmap.md): mini roadmap for the first private-scope remote execution proof
 - [route_trace_visibility_roadmap.md](./route_trace_visibility_roadmap.md): mini roadmap for surfacing routed execution truth after the private proof is real
+- [use_side_truth_roadmap.md](./use_side_truth_roadmap.md): mini roadmap for making the `Use` side truthful about `Local / Private / Public / Cloud` visibility and routing
 
 Current emphasis:
 
 - the cross-network private execution proof is now real
-- productization is intentionally deferred while shared-path truth, visibility, and policy harden
+- route-trace visibility is now completed
+- productization is intentionally deferred while shared-path truth, `Use`-side visibility, and policy harden
 
 Recommended next docs to add:
 
