@@ -122,6 +122,7 @@ That matters because the main workstation stores the primary model under `agents
 - `Mount` now starts with consumer-shape selection (`OpenAI API / Ollama / Modulo Native`) before showing consumer-specific setup
 - OpenClaw now sits behind the `OpenAI API` shape inside `Mount`, while `Route` focuses on route health and mounted-edge status
 - `Route` now behaves like a compact readiness checklist: selected model, source, path, status, and one short reason
+- `Use` selection truth now follows the actual chosen source scope, so selecting a private model surfaces `Private` instead of falling back to stale local route metadata
 - `Use` now treats `Public` as policy-reserved, `Private` as explicitly empty when no hosts are advertising, and shared scopes as read-only when the active target is unreachable
 - the underlying session/platform fetch path now carries active-target and per-source visibility summaries, so `Use` truth is no longer inferred from mixed network/OpenClaw state
 - `Host` tab: hosting model selection, warm-state card, execution-path truth, host toggle, worker/runtime details

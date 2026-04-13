@@ -221,7 +221,7 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertEqual("Choose shape", state.use_mount_status_value)
         self.assertIn("choose a consumer shape", state.use_mount_status_summary.lower())
         self.assertEqual("Not selected", state.mount_consumer_label)
-        self.assertIn("Path: No mounted edge", state.use_route_details)
+        self.assertIn("Path: Not selected", state.use_route_details)
         self.assertIn("Status: Needs mount", state.use_route_details)
         self.assertEqual("SETUP NEEDED", state.openclaw_guidance_badge)
         self.assertIn("install openclaw first", state.openclaw_guidance_summary.lower())
@@ -298,7 +298,7 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertEqual("Ready", started.use_mount_status_value)
         self.assertEqual("OpenClaw", started.mount_consumer_label)
         self.assertIn("mounted edge", started.use_route_health_summary.lower())
-        self.assertIn("Path: OpenAI API via OpenClaw", started.use_route_details)
+        self.assertIn("Path: OpenAI API", started.use_route_details)
         self.assertIn("Status: Ready", started.use_route_details)
         self.assertEqual("CONFIGURED", started.openclaw_status_badge)
         self.assertEqual("READY", started.openclaw_guidance_badge)
@@ -390,7 +390,7 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertEqual("Needs apply", staged.use_route_health_value)
         self.assertEqual("openai_api", staged.mount_selected_shape_id)
         self.assertEqual("Staged", staged.use_mount_status_value)
-        self.assertIn("Path: OpenAI API mount", staged.use_route_details)
+        self.assertIn("Path: OpenAI API", staged.use_route_details)
         self.assertIn("Status: Needs apply", staged.use_route_details)
         self.assertEqual("READY TO APPLY", staged.openclaw_guidance_badge)
         self.assertIn("review the staged routing plan", staged.openclaw_guidance_summary.lower())
@@ -599,6 +599,38 @@ class GuiAppControllerTests(unittest.TestCase):
             self.assertTrue(any("gemma4:e2b" in line for line in state.buyer_network_models))
             self.assertIn("private:gemma4:e2b", state.use_available_model_ids)
             self.assertIn(host_harness.modulo_url, state.debug_summary)
+        finally:
+            buyer_controller.harness.shutdown()
+            host_harness.shutdown()
+
+    def test_select_use_model_updates_source_truth_for_private_model(self) -> None:
+        host_harness = LocalPrototypeHarness(
+            model_id="gemma4:e2b",
+            openclaw_discovery=InstalledGuiOpenClawDiscovery(),
+            ollama_discovery=FakeGuiOllamaDiscovery(),
+            ollama_loaded_models_discovery=FakeGuiLoadedModelsDiscovery(),
+            hosting_runtime_probe=FakeGuiHostingRuntimeProbe(),
+        )
+        buyer_controller = GuiAppController(
+            harness=LocalPrototypeHarness(
+                openclaw_discovery=InstalledGuiOpenClawDiscovery(),
+                ollama_discovery=FakeGuiOllamaDiscovery(),
+                ollama_loaded_models_discovery=FakeGuiLoadedModelsDiscovery(),
+                hosting_runtime_probe=FakeGuiHostingRuntimeProbe(),
+            )
+        )
+
+        try:
+            host_harness.client.set_hosting_model("gemma4:e2b")
+            host_harness.boot()
+            buyer_controller.set_debug_target_url(host_harness.modulo_url)
+
+            state = buyer_controller.select_use_model("private:gemma4:e2b")
+
+            self.assertEqual("gemma4:e2b", state.use_selected_model_label)
+            self.assertEqual("Private", state.use_selected_model_source)
+            self.assertIn("Source: Private", state.use_route_details)
+            self.assertIn("Model: gemma4:e2b", state.use_route_details)
         finally:
             buyer_controller.harness.shutdown()
             host_harness.shutdown()

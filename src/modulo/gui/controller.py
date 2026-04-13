@@ -248,9 +248,12 @@ class GuiAppController:
                 status=status,
                 available_model_ids=use_available_model_ids,
             )
-        use_selected_model_label = status.use.route.selected_model_label
-        use_selected_model_source = self._use_model_source_label(
-            status.use.route.selected_source or self._selected_use_model_id
+        (
+            use_selected_model_label,
+            use_selected_model_source,
+        ) = self._selected_use_presentation(
+            status=status,
+            selected_use_model_id=self._selected_use_model_id,
         )
         mount_shape_ids, mount_shape_labels = self._mount_shape_options()
         if self._selected_mount_shape_id not in mount_shape_ids:
@@ -878,6 +881,40 @@ class GuiAppController:
         return available_model_labels[index]
 
     @staticmethod
+    def _selected_use_presentation(
+        *,
+        status: ClientStatus,
+        selected_use_model_id: str,
+    ) -> tuple[str, str]:
+        if not selected_use_model_id:
+            return ("No model selected", "Unknown")
+        selected_scope_id = GuiAppController._scope_id_from_use_model_id(selected_use_model_id)
+        selected_model_key = GuiAppController._model_id_from_use_model_id(selected_use_model_id)
+        for scope in status.use.scopes:
+            if scope.scope_id != selected_scope_id:
+                continue
+            for model in scope.models:
+                if model.model_id == selected_model_key:
+                    return model.display_name, scope.display_label
+        return selected_model_key or "No model selected", GuiAppController._use_model_source_label(
+            selected_use_model_id
+        )
+
+    @staticmethod
+    def _scope_id_from_use_model_id(selected_use_model_id: str) -> str:
+        if ":" not in selected_use_model_id:
+            return selected_use_model_id
+        source, _ = selected_use_model_id.split(":", 1)
+        return "private" if source == "network" else source
+
+    @staticmethod
+    def _model_id_from_use_model_id(selected_use_model_id: str) -> str:
+        if ":" not in selected_use_model_id:
+            return ""
+        _, model_id = selected_use_model_id.split(":", 1)
+        return model_id
+
+    @staticmethod
     def _use_model_source_label(selected_use_model_id: str) -> str:
         if selected_use_model_id == "local":
             return "Local"
@@ -898,35 +935,36 @@ class GuiAppController:
         return "Unknown"
 
     def _use_route_details(self, status: ClientStatus) -> tuple[str, ...]:
-        route = status.use.route
+        selected_model_label, selected_source_label = self._selected_use_presentation(
+            status=status,
+            selected_use_model_id=self._selected_use_model_id,
+        )
         if status.openclaw.configured and self._selected_mount_shape_id == "openai_api":
-            path = "OpenAI API via OpenClaw"
-            reason = "Mounted edge is configured and ready."
+            path = "OpenAI API"
+            reason = "OpenClaw is configured for the selected OpenAI-compatible path."
         elif not self._selected_mount_shape_id:
-            path = "No mounted edge"
+            path = "Not selected"
             reason = "Choose a mount shape before requests can leave this client."
         elif self._selected_mount_shape_id == "openai_api" and status.openclaw.connection_plan.apply_ready:
-            path = "OpenAI API mount"
+            path = "OpenAI API"
             reason = "OpenClaw is staged but not applied yet."
         elif self._selected_mount_shape_id == "ollama":
-            path = "Ollama shape"
-            reason = "The shape is selected, but no consumer edge is configured yet."
+            path = "Ollama"
+            reason = "Choose or configure an Ollama-compatible consumer next."
         elif self._selected_mount_shape_id == "modulo_native":
             path = "Modulo Native"
-            reason = "The shape is selected, but no native consumer edge is configured yet."
+            reason = "Choose or configure a Modulo-native consumer next."
         else:
             path = "Unknown"
             reason = "Route state is not ready yet."
 
         details = [
-            f"Model: {route.selected_model_label or 'No model selected'}",
-            f"Source: {GuiAppController._use_model_source_label(route.selected_source)}",
+            f"Model: {selected_model_label or 'No model selected'}",
+            f"Source: {selected_source_label or 'Unknown'}",
             f"Path: {path}",
             f"Status: {self._use_route_health_value(status)}",
             f"Reason: {reason}",
         ]
-        if status.platform.connected and route.selected_scope in {"private", "public", "cloud"}:
-            details.append(f"Scope: {route.selected_scope.title()}")
         return tuple(line for line in details if line)
 
     @staticmethod
