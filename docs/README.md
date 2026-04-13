@@ -31,6 +31,7 @@ Current emphasis:
 - route-trace visibility is now completed
 - the `Use`-side truth roadmap is now completed
 - the Continue consumer roadmap is now the newest focused consumer-integration roadmap
+- the Continue consumer roadmap is now completed through Slice 2, so the next concrete step is real apply/rollback against the scoped Continue ownership contract
 - productization is intentionally deferred while shared-path truth, second-layer GUI refinement, and policy harden
 - the current UI should be treated as a second-layer surface while the product continues to aim toward a tray-first release
 - the current live GUI cleanup is focused on:

@@ -471,17 +471,23 @@ class GuiAppController:
         return status.use.summary
 
     def _use_route_health_value(self, status: ClientStatus) -> str:
-        if self._selected_mount_consumer_id == "continue_vscode" and status.platform.connected:
-            return "Ready"
+        if self._selected_mount_consumer_id == "continue_vscode":
+            if status.continue_consumer.configured:
+                return "Ready"
+            return "Not ready"
         if status.openclaw.configured and self._selected_mount_shape_id == "openai_api":
             return "Ready"
         return "Not ready"
 
     def _use_route_health_summary(self, status: ClientStatus) -> str:
+        if self._selected_mount_consumer_id == "continue_vscode" and status.continue_consumer.configured:
+            return (
+                "Continue is configured for the selected OpenAI-compatible Modulo mount."
+            )
         if self._selected_mount_consumer_id == "continue_vscode" and status.platform.connected:
             return (
-                "The selected shape and consumer are aligned. Continue can point at the "
-                "mounted OpenAI-compatible Modulo edge once that local mount is exposed."
+                "The Continue mount contract is staged. Review the owned entry and backup path "
+                "before the real apply flow writes any local Continue config."
             )
         if status.openclaw.configured and self._selected_mount_shape_id == "openai_api":
             return "The selected shape and consumer are configured, so this client is ready to hand requests off through that edge."
@@ -496,8 +502,11 @@ class GuiAppController:
         return "The shape and consumer are selected, but the edge still needs attention before it is fully ready."
 
     def _use_route_reason(self, status: ClientStatus) -> str:
-        if self._selected_mount_consumer_id == "continue_vscode" and status.platform.connected:
-            return "Ready to mount into Continue."
+        if self._selected_mount_consumer_id == "continue_vscode":
+            if status.continue_consumer.configured:
+                return "Ready to use through Continue."
+            if status.platform.connected:
+                return "Review the Continue mount contract."
         if status.openclaw.configured and self._selected_mount_shape_id == "openai_api":
             return "Ready to use through OpenClaw."
         if not self._selected_mount_shape_id:
@@ -516,7 +525,11 @@ class GuiAppController:
         if not self._selected_mount_consumer_id:
             return "Choose consumer"
         if self._selected_mount_consumer_id == "continue_vscode" and self._selected_mount_shape_id == "openai_api":
-            return "Ready" if status.platform.connected else "Shape selected"
+            if status.continue_consumer.configured:
+                return "Ready"
+            if status.continue_consumer.connection_plan.apply_ready:
+                return "Staged"
+            return "Shape selected"
         if self._selected_mount_consumer_id == "openclaw" and status.openclaw.configured:
             return "Ready"
         if self._selected_mount_consumer_id == "openclaw" and status.openclaw.connection_plan.apply_ready:
@@ -531,10 +544,12 @@ class GuiAppController:
         if not self._selected_mount_consumer_id:
             return "Choose a compatible consumer next. Modulo will stage the best setup it can, then wait for your confirmation before it changes anything at the edge."
         if self._selected_mount_consumer_id == "continue_vscode":
+            if status.continue_consumer.configured:
+                return "Continue (VSCode) is configured for the selected OpenAI API mount."
             if status.platform.connected:
                 return (
-                    "Continue (VSCode) is selected for the OpenAI API shape. The remaining "
-                    "work is exposing a local Modulo mount endpoint and writing the Continue config cleanly."
+                    "Continue (VSCode) is selected and the ownership contract is staged. "
+                    "Modulo has defined the managed entry and backup path, but the real apply flow is still pending."
                 )
             return (
                 "Continue (VSCode) is selected, but shared execution still needs a reachable "
@@ -600,15 +615,15 @@ class GuiAppController:
         if not self._selected_mount_consumer_id:
             return "Pick a compatible consumer next. Modulo will prepare the best setup it can, then wait for your confirmation before it changes anything at the edge."
         if self._selected_mount_consumer_id == "continue_vscode":
-            if status.platform.connected:
-                return (
-                    "Continue (VSCode) is selected. Modulo now has the right consumer binding "
-                    "for an OpenAI-compatible mount, and the next step is automating the local config handoff."
-                )
-            return (
-                "Continue (VSCode) is selected, but the shared platform target still needs to "
-                "be reachable before this mount should be trusted."
+            summary = (
+                "Continue (VSCode) is selected. "
+                + status.continue_consumer.connection_plan.summary
             )
+            if status.continue_consumer.connection_plan.backup_path:
+                summary += (
+                    f" Backup target: {status.continue_consumer.connection_plan.backup_path}."
+                )
+            return summary
         if self._selected_mount_consumer_id == "openclaw":
             if status.openclaw.configured:
                 return "OpenClaw is selected for this shape and the current edge already looks configured."
@@ -634,13 +649,16 @@ class GuiAppController:
                 "When you pick one, Modulo will stage the best setup it can and wait for confirmation before applying real edge changes.",
             )
         if self._selected_mount_consumer_id == "continue_vscode":
+            plan = status.continue_consumer.connection_plan
+            owned_fields = ", ".join(plan.owned_fields) if plan.owned_fields else "None"
             return (
                 "Step 3: Review the proposed edge setup.",
                 "Continue (VSCode) will use the OpenAI API shape.",
-                (
-                    "Next: expose a local OpenAI-compatible Modulo mount and let Modulo write a "
-                    "narrow Continue config entry without taking over the full file."
-                ),
+                f"Config path: {plan.config_path or 'Unavailable'}",
+                f"Backup path: {plan.backup_path or 'Unavailable'}",
+                f"Managed entry: {plan.managed_model_name} in {plan.managed_profile_name}",
+                f"Owned fields: {owned_fields}",
+                "Next: keep Continue file ownership narrow and reversible before the apply flow lands.",
             )
         if self._selected_mount_consumer_id == "openclaw":
             details = [

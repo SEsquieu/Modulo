@@ -71,7 +71,20 @@ Notes:
 - the safest shape is a Modulo-managed model entry or block, not whole-file ownership
 - this slice is contract-first, not yet full GUI polish
 
-Status: pending
+Status: completed
+
+Completion note:
+
+- summary:
+  - added a dedicated Continue discovery and config contract so Modulo now has a stable place to track config presence, managed-entry identity, and whether a Continue config already points at Modulo
+  - defined narrow file ownership for the future apply flow, including the managed Continue entry, owned fields, and backup target path before any real file writes landed
+  - tightened the `Mount` truth so Continue now reads as a staged contract with explicit config and backup details instead of looking falsely ready
+- proof added to repo:
+  - `src/modulo/client/continue_discovery.py`
+  - `src/modulo/client/app.py`
+  - `src/modulo/gui/controller.py`
+  - `tests/test_client_worker.py`
+  - `tests/test_gui_controller.py`
 
 ### Slice 3: Continue apply and rollback flow
 

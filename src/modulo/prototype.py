@@ -22,6 +22,7 @@ from modulo.client.app import (
     RouteTraceStatus,
     SmokeTestResult,
 )
+from modulo.client.continue_discovery import ContinueDiscovery
 from modulo.client.openclaw_discovery import OpenClawDiscovery
 from modulo.client.ollama_discovery import OllamaDiscovery
 from modulo.client.ollama_loaded_models import OllamaLoadedModelsDiscovery
@@ -367,6 +368,7 @@ class LocalPrototypeHarness:
     ollama_http_client: OllamaHTTPClient | None = None
     ollama_timeout_seconds: float = 120.0
     openclaw_discovery: OpenClawDiscovery | None = None
+    continue_discovery: ContinueDiscovery | None = None
     ollama_discovery: OllamaDiscovery | None = None
     ollama_loaded_models_discovery: OllamaLoadedModelsDiscovery | None = None
     hosting_runtime_probe: OllamaHostingRuntimeProbe | None = None
@@ -446,6 +448,7 @@ class LocalPrototypeHarness:
                 target_url=self.lan_platform_url or self.modulo_url,
             ),
             openclaw_discovery=self.openclaw_discovery or OpenClawDiscovery(modulo_url=self.modulo_url),
+            continue_discovery=self.continue_discovery or ContinueDiscovery(modulo_url=self.modulo_url),
             ollama_discovery=self.ollama_discovery or OllamaDiscovery(),
             ollama_loaded_models_discovery=self.ollama_loaded_models_discovery or OllamaLoadedModelsDiscovery(),
             hosting_runtime_probe=self.hosting_runtime_probe or OllamaHostingRuntimeProbe(),

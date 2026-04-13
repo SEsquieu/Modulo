@@ -5,12 +5,14 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from modulo.client.app import (
+    ContinueConfigurationStatus,
     HostingPrewarmResult,
     ModuloClientSupervisor,
     PlatformModelListing,
     PlatformSessionStatus,
     RouteTraceStatus,
 )
+from modulo.client.continue_discovery import ContinueDiscoveryStatus
 from modulo.client.hosting_readiness import HostingRuntimeProbeStatus
 from modulo.client.ollama_loaded_models import LoadedOllamaModel, OllamaLoadedModelsStatus
 from modulo.client.openclaw_discovery import OpenClawDiscoveryStatus
@@ -182,6 +184,32 @@ class FakeOpenClawDiscovery:
         )
 
 
+class FakeContinueDiscovery:
+    def discover(self) -> ContinueDiscoveryStatus:
+        return ContinueDiscoveryStatus(
+            config_present=False,
+            configured_for_modulo=False,
+            managed_entry_present=False,
+            state="missing_config",
+            summary="Continue config was not detected on this machine yet.",
+            details="Modulo did not find a local Continue config file.",
+            config_path="C:\\Users\\test\\.continue\\config.yaml",
+        )
+
+
+class ManagedContinueDiscovery:
+    def discover(self) -> ContinueDiscoveryStatus:
+        return ContinueDiscoveryStatus(
+            config_present=True,
+            configured_for_modulo=True,
+            managed_entry_present=True,
+            state="configured",
+            summary="Continue config appears to include a Modulo-managed entry.",
+            details="Config path: C:\\Users\\test\\.continue\\config.yaml",
+            config_path="C:\\Users\\test\\.continue\\config.yaml",
+        )
+
+
 class InstalledOpenClawDiscovery:
     def discover(self) -> OpenClawDiscoveryStatus:
         return OpenClawDiscoveryStatus(
@@ -286,6 +314,7 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
             session_bridge=FakeSessionBridge(),
             route_trace_provider=FakeRouteTraceProvider(),
             openclaw_discovery=FakeOpenClawDiscovery(),
+            continue_discovery=FakeContinueDiscovery(),
             ollama_discovery=FakeOllamaDiscovery(),
             ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
             hosting_runtime_probe=FakeHostingRuntimeProbe(),
@@ -498,6 +527,28 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertEqual("unavailable", status.use.scopes[3].state)
         self.assertFalse(status.use.scopes[1].route_allowed)
         self.assertIn("platform target is reachable", status.use.route.route_policy_restrictions[1].lower())
+
+    def test_continue_status_defines_narrow_config_ownership_before_apply(self) -> None:
+        status = self.client.get_status()
+
+        self.assertIsInstance(status.continue_consumer, ContinueConfigurationStatus)
+        self.assertFalse(status.continue_consumer.configured)
+        self.assertFalse(status.continue_consumer.config_present)
+        self.assertTrue(status.continue_consumer.connection_plan.available)
+        self.assertTrue(status.continue_consumer.connection_plan.apply_ready)
+        self.assertIn("backup", status.continue_consumer.connection_plan.details.lower())
+        self.assertIn("models[].apibase", ",".join(field.lower() for field in status.continue_consumer.owned_fields))
+        self.assertTrue(status.continue_consumer.backup_path.endswith(".modulo.backup"))
+
+    def test_continue_status_detects_existing_modulo_managed_entry(self) -> None:
+        self.client.continue_discovery = ManagedContinueDiscovery()
+
+        status = self.client.get_status()
+
+        self.assertTrue(status.continue_consumer.configured)
+        self.assertTrue(status.continue_consumer.managed_entry_present)
+        self.assertEqual("configured", status.continue_consumer.state)
+        self.assertEqual("Already configured", status.continue_consumer.connection_plan.apply_label)
 
     def test_hosting_setup_includes_ollama_discovery_state(self) -> None:
         status = self.client.get_status()

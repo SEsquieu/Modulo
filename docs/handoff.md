@@ -29,6 +29,7 @@ This file is the quickest way to regain context when switching workstations.
 - the full use-side truth roadmap is now completed
 - the next focused consumer roadmap is [continue_consumer_roadmap.md](./continue_consumer_roadmap.md)
 - `Slice 1: Continue consumer registry entry` is completed
+- `Slice 2: Continue config contract and file ownership` is completed
 - the current GUI refinement work after the completed `Use` roadmap is focused on making the second-layer `Use` flow feel calmer and more product-true without drifting toward dashboard behavior
 - the `Mount` consumer registry now includes `Continue (VSCode)` under the `OpenAI API` shape so a second external consumer can be staged without changing the shape-first binding model
 - the canonical product-shape guidance is now [platform_layering_spec.md](./platform_layering_spec.md)
@@ -87,6 +88,10 @@ The release direction remains tray-first, with deeper truth and control exposed 
   - compact header + primary action + summary card + nested detail tabs
   - terminal-styled theme with calmer shared card styling
   - static overview copy and a split left/right footer
+- the Continue consumer path now has an explicit contract layer:
+  - Continue config discovery is separate from OpenClaw discovery
+  - Modulo now defines a narrow managed-entry ownership contract for Continue
+  - backup path and owned fields are surfaced before any real Continue file writes exist
 - the long-term product abstraction is now explicitly:
   - `Use`
   - `Host`
@@ -136,6 +141,7 @@ That matters because the main workstation stores the primary model under `agents
   - explicitly confirm before applying real edge changes
 - `Mount` now filters a consumer dropdown from the selected shape, but it never auto-populates the consumer selection
 - `Mount` now exposes `Continue (VSCode)` as an `OpenAI API` consumer alongside the existing OpenClaw path
+- `Mount` now treats Continue as a staged contract instead of a fake-ready integration, with explicit config path, backup path, managed entry identity, and owned field list
 - the redundant `Mounted Edge` card is gone, so the tab only shows the current step, relevant guidance, and consumer-specific setup when it matters
 - the `Active Route` card now carries the high-level use summary directly: model, source, shape, mount, status, and one short reason
 - the `Active Route` card now treats `Status` as a simple `Ready / Not ready` signal and leaves the more specific next step to the shorter `Reason` line
@@ -163,6 +169,7 @@ The most likely first useful slice is:
 - a next roadmap chunk that keeps the tray-first product direction intact while refining what should surface at the `Use` layer versus `Mount` and `Scopes`
 - continue the second-layer GUI cleanup around `Use` and `Mount`, especially where the current shell still feels more like a proving surface than the eventual tray-first product
 - complete the next Continue consumer slices: config ownership, safe apply/rollback, and mount-surface truth
+- Continue Slice 3 is now the next concrete implementation step: real apply and rollback against the scoped Continue ownership contract
 - align that `Use` work with [platform_layering_spec.md](./platform_layering_spec.md) so the current GUI keeps serving as the second-layer proving surface instead of hardening into a dashboard
 - auth/policy hardening and persistence now that the shared path itself is functionally proven
 - only return to packaging once the shared-network behavior feels truthful enough to lock in

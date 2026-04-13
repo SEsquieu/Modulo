@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from pathlib import Path
 import time
 from typing import Callable, Protocol
 
 from modulo.common.catalog import SUPPORTED_MODELS
+from modulo.client.continue_discovery import ContinueDiscovery, ContinueDiscoveryStatus
 from modulo.client.openclaw_discovery import OpenClawDiscovery, OpenClawDiscoveryStatus
 from modulo.client.ollama_discovery import OllamaDiscovery, OllamaDiscoveryStatus
 from modulo.client.ollama_loaded_models import (
@@ -68,6 +70,42 @@ class OpenClawConfigurationStatus:
     current_primary_model: str = ""
     current_base_url: str = ""
     connection_plan: OpenClawConnectionPlan = OpenClawConnectionPlan()
+    error: str = ""
+
+
+@dataclass(frozen=True)
+class ContinueConnectionPlan:
+    available: bool = False
+    apply_ready: bool = False
+    state: str = "not_staged"
+    summary: str = "No Continue mount plan has been prepared yet."
+    details: str = "Choose Continue in Mount before Modulo prepares file ownership and backup details."
+    config_path: str = ""
+    backup_path: str = ""
+    managed_profile_name: str = "Modulo Continue Mount"
+    managed_model_name: str = "Modulo Managed Model"
+    owned_fields: tuple[str, ...] = ()
+    change_lines: tuple[str, ...] = ()
+    apply_label: str = "Apply Continue mount"
+
+
+@dataclass(frozen=True)
+class ContinueConfigurationStatus:
+    configured: bool = False
+    config_present: bool = False
+    managed_entry_present: bool = False
+    state: str = "not_detected"
+    summary: str = "Continue is not configured to use a Modulo-managed mount yet."
+    details: str = "Modulo has not prepared a Continue mount contract yet."
+    safety_note: str = (
+        "Contract-only slice: Modulo defines file ownership, backup intent, and managed entry identity before any local Continue files are changed."
+    )
+    config_path: str = ""
+    backup_path: str = ""
+    managed_profile_name: str = "Modulo Continue Mount"
+    managed_model_name: str = "Modulo Managed Model"
+    owned_fields: tuple[str, ...] = ()
+    connection_plan: ContinueConnectionPlan = ContinueConnectionPlan()
     error: str = ""
 
 
@@ -364,6 +402,7 @@ class ClientStatus:
     openclaw_configured: bool = False
     hosting_enabled: bool = False
     openclaw: OpenClawConfigurationStatus = OpenClawConfigurationStatus()
+    continue_consumer: ContinueConfigurationStatus = ContinueConfigurationStatus()
     platform: PlatformSessionStatus = PlatformSessionStatus()
     use: UseSideStatus = UseSideStatus()
     latest_route_trace: RouteTraceStatus = RouteTraceStatus()
@@ -420,6 +459,11 @@ class ClientOpenClawDiscovery(Protocol):
         """Detect local OpenClaw installation and config state."""
 
 
+class ClientContinueDiscovery(Protocol):
+    def discover(self) -> ContinueDiscoveryStatus:
+        """Detect local Continue config state."""
+
+
 class ClientOllamaLoadedModelsDiscovery(Protocol):
     def discover(self) -> OllamaLoadedModelsStatus:
         """Detect which Ollama models are currently loaded in local memory."""
@@ -438,6 +482,7 @@ class ModuloClientSupervisor:
     session_bridge: ClientSessionBridge | None = None
     route_trace_provider: ClientRouteTraceProvider | None = None
     openclaw_discovery: ClientOpenClawDiscovery | None = None
+    continue_discovery: ClientContinueDiscovery | None = None
     ollama_discovery: OllamaDiscovery | None = None
     ollama_loaded_models_discovery: ClientOllamaLoadedModelsDiscovery | None = None
     hosting_runtime_probe: ClientHostingRuntimeProbe = field(default_factory=OllamaHostingRuntimeProbe)
@@ -453,6 +498,8 @@ class ModuloClientSupervisor:
     _cached_ollama_loaded_models_at: float = 0.0
     _cached_openclaw_discovery: OpenClawDiscoveryStatus | None = None
     _cached_openclaw_discovery_at: float = 0.0
+    _cached_continue_discovery: ContinueDiscoveryStatus | None = None
+    _cached_continue_discovery_at: float = 0.0
     _cached_runtime_probe: HostingRuntimeProbeStatus | None = None
     _cached_runtime_probe_model_id: str = ""
     _cached_runtime_probe_at: float = 0.0
@@ -588,6 +635,7 @@ class ModuloClientSupervisor:
     def get_status(self) -> ClientStatus:
         worker_status = self.worker_bridge.get_status()
         openclaw_status = self.get_openclaw_status()
+        continue_status = self.get_continue_status()
         platform_status = self.get_platform_session_status()
         hosting_setup = self.get_hosting_setup_status()
         return ClientStatus(
@@ -595,6 +643,7 @@ class ModuloClientSupervisor:
             openclaw_configured=openclaw_status.configured,
             hosting_enabled=worker_status.desired_running,
             openclaw=openclaw_status,
+            continue_consumer=continue_status,
             platform=platform_status,
             use=self.get_use_side_status(
                 openclaw_status=openclaw_status,
@@ -683,6 +732,54 @@ class ModuloClientSupervisor:
         status = discovery.discover()
         self._cached_openclaw_discovery = status
         self._cached_openclaw_discovery_at = now
+        return status
+
+    def get_continue_status(self) -> ContinueConfigurationStatus:
+        discovery = self.get_continue_discovery_status()
+        connection_plan = self._build_continue_connection_plan(discovery)
+        if discovery.config_present:
+            return ContinueConfigurationStatus(
+                configured=discovery.configured_for_modulo and discovery.managed_entry_present,
+                config_present=discovery.config_present,
+                managed_entry_present=discovery.managed_entry_present,
+                state=discovery.state,
+                summary=discovery.summary,
+                details=discovery.details,
+                config_path=discovery.config_path,
+                backup_path=connection_plan.backup_path,
+                managed_profile_name=connection_plan.managed_profile_name,
+                managed_model_name=connection_plan.managed_model_name,
+                owned_fields=connection_plan.owned_fields,
+                connection_plan=connection_plan,
+                error=discovery.error,
+            )
+        return ContinueConfigurationStatus(
+            config_present=False,
+            state=discovery.state,
+            summary=discovery.summary,
+            details=discovery.details,
+            config_path=discovery.config_path,
+            backup_path=connection_plan.backup_path,
+            managed_profile_name=connection_plan.managed_profile_name,
+            managed_model_name=connection_plan.managed_model_name,
+            owned_fields=connection_plan.owned_fields,
+            connection_plan=connection_plan,
+            error=discovery.error,
+        )
+
+    def get_continue_discovery_status(self) -> ContinueDiscoveryStatus:
+        now = time.monotonic()
+        if (
+            self._cached_continue_discovery is not None
+            and now - self._cached_continue_discovery_at < self.readiness_cache_ttl_seconds
+        ):
+            return self._cached_continue_discovery
+        discovery = self.continue_discovery or ContinueDiscovery(
+            modulo_url=self.worker_bridge.config.modulo_url,
+        )
+        status = discovery.discover()
+        self._cached_continue_discovery = status
+        self._cached_continue_discovery_at = now
         return status
 
     def get_hosting_setup_status(self) -> HostingSetupStatus:
@@ -1214,6 +1311,8 @@ class ModuloClientSupervisor:
         self._cached_ollama_loaded_models_at = 0.0
         self._cached_openclaw_discovery = None
         self._cached_openclaw_discovery_at = 0.0
+        self._cached_continue_discovery = None
+        self._cached_continue_discovery_at = 0.0
         self._cached_runtime_probe = None
         self._cached_runtime_probe_model_id = ""
         self._cached_runtime_probe_at = 0.0
@@ -1483,6 +1582,70 @@ class ModuloClientSupervisor:
             summary="A buyer-routing connection plan is ready for review before apply.",
             details=details,
             change_lines=tuple(change_lines),
+        )
+
+    def _build_continue_connection_plan(
+        self,
+        discovery: ContinueDiscoveryStatus,
+    ) -> ContinueConnectionPlan:
+        config_path = discovery.config_path or str(Path.home() / ".continue" / "config.yaml")
+        config_file = Path(config_path)
+        backup_path = str(config_file.with_name(f"{config_file.name}.modulo.backup"))
+        owned_fields = (
+            "models[].name",
+            "models[].provider",
+            "models[].model",
+            "models[].apiBase",
+            "models[].roles",
+        )
+        change_lines = (
+            "Back up the existing Continue config before writing any Modulo-managed entry.",
+            "Create or update one Modulo-managed OpenAI-compatible model entry only.",
+            "Leave unrelated Continue config content outside the Modulo-managed entry untouched.",
+            "Use rollback to remove or restore only the Modulo-managed Continue mount state.",
+        )
+
+        if discovery.configured_for_modulo and discovery.managed_entry_present:
+            return ContinueConnectionPlan(
+                available=True,
+                apply_ready=False,
+                state="already_configured",
+                summary="Continue already appears to include the Modulo-managed mount entry.",
+                details=(
+                    "Modulo has enough ownership information to preserve the existing managed "
+                    "entry safely. No new config mutation should be required before the apply flow lands."
+                ),
+                config_path=config_path,
+                backup_path=backup_path,
+                managed_profile_name="Modulo Continue Mount",
+                managed_model_name="Modulo Managed Model",
+                owned_fields=owned_fields,
+                change_lines=change_lines,
+                apply_label="Already configured",
+            )
+
+        details = (
+            "Modulo owns one narrow Continue model entry plus the backup it creates before "
+            "writing. It does not take ownership of the user's entire Continue config file."
+        )
+        if not discovery.config_present:
+            details += (
+                " If the Continue config file is missing, the future apply flow may create it "
+                "in the standard Continue location before adding the managed entry."
+            )
+
+        return ContinueConnectionPlan(
+            available=True,
+            apply_ready=True,
+            state="ready_to_apply",
+            summary="A Continue mount contract is ready for review before any file writes exist.",
+            details=details,
+            config_path=config_path,
+            backup_path=backup_path,
+            managed_profile_name="Modulo Continue Mount",
+            managed_model_name="Modulo Managed Model",
+            owned_fields=owned_fields,
+            change_lines=change_lines,
         )
 
 
