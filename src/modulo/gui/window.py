@@ -132,6 +132,17 @@ class ModuloMainWindow(QMainWindow):
         )
         self.continuity_summary_label = QLabel()
         self.continuity_summary_label.setWordWrap(True)
+        self.route_trace_summary_label = QLabel()
+        self.route_trace_summary_label.setWordWrap(True)
+        self.route_trace_result_label = QLabel()
+        self.route_trace_details_box = QPlainTextEdit()
+        self.route_trace_details_box.setReadOnly(True)
+        self.route_trace_details_box.setMinimumHeight(120)
+        self.route_trace_details_box.setMaximumHeight(140)
+        self.route_trace_details_box.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
         self.activity_box = QPlainTextEdit()
         self.activity_box.setReadOnly(True)
         self.activity_box.setMinimumHeight(110)
@@ -351,6 +362,7 @@ class ModuloMainWindow(QMainWindow):
         diagnostics_layout.addWidget(self._build_host_card("Latest Check", self.diagnostics_card_value))
         self.diagnostics_detail_tabs = QTabWidget()
         self.diagnostics_detail_tabs.addTab(self._build_diagnostics_smoke_page(), "Smoke")
+        self.diagnostics_detail_tabs.addTab(self._build_diagnostics_route_page(), "Route")
         self.diagnostics_detail_tabs.addTab(self._build_diagnostics_activity_page(), "Activity")
         self.diagnostics_detail_tabs.addTab(self._build_diagnostics_errors_page(), "Errors")
         self.diagnostics_detail_tabs.setSizePolicy(
@@ -685,6 +697,18 @@ class ModuloMainWindow(QMainWindow):
         layout.addWidget(self.smoke_result_label)
         layout.addWidget(self.smoke_summary_label)
         layout.addWidget(self.smoke_details_box)
+        layout.addStretch(1)
+        page.setLayout(layout)
+        return page
+
+    def _build_diagnostics_route_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout()
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(6)
+        layout.addWidget(self.route_trace_result_label)
+        layout.addWidget(self.route_trace_summary_label)
+        layout.addWidget(self.route_trace_details_box)
         layout.addStretch(1)
         page.setLayout(layout)
         return page
@@ -1278,6 +1302,9 @@ class ModuloMainWindow(QMainWindow):
         self.smoke_summary_label.setText(state.smoke_test_summary)
         self.smoke_result_label.setText(f"Result: {state.smoke_test_result_label}")
         self.smoke_details_box.setPlainText(state.smoke_test_details)
+        self.route_trace_result_label.setText(f"Result: {state.route_trace_result_label}")
+        self.route_trace_summary_label.setText(state.route_trace_summary)
+        self.route_trace_details_box.setPlainText(state.route_trace_details)
         self.diagnostics_summary_label.setText(state.diagnostics_summary)
         self.diagnostics_details_box.setPlainText(state.diagnostics_details)
         self.continuity_summary_label.setText(state.continuity_summary)

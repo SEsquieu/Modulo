@@ -104,12 +104,18 @@ Notes:
 
 - this should feel like the existing `Smoke / Activity / Errors` pattern, not a new dashboard
 
-Status: in progress
+Status: completed
 
 Completion note:
 
 - summary:
+  - added a dedicated Route tab inside Diagnostics so latest routed execution is visible one layer down from the main shell
+  - surfaced route result, summary, and detailed trace facts without pushing route verbosity into top-level `Use` or `Host`
+  - kept the Diagnostics structure aligned with the existing nested-tab shell pattern instead of introducing a new dashboard surface
 - proof added to repo:
+  - Diagnostics Route view in `src/modulo/gui/window.py`
+  - route-trace controller state in `src/modulo/gui/controller.py`
+  - GUI controller coverage in `tests/test_gui_controller.py`
 
 ### Slice 4: Operator trust pass
 
@@ -128,7 +134,7 @@ Notes:
 - this slice is where we make the route-trace surface actually pleasant to use
 - avoid dumping raw internal objects into the GUI
 
-Status: not started
+Status: in progress
 
 Completion note:
 

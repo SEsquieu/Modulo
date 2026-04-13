@@ -18,7 +18,8 @@ This file is the quickest way to regain context when switching workstations.
 - the next post-proof implementation roadmap is [route_trace_visibility_roadmap.md](./route_trace_visibility_roadmap.md)
 - `Slice 1: Route-trace client contract` is completed
 - `Slice 2: Prototype and hosted trace fetch path` is completed
-- `Slice 3: Diagnostics route-trace view` is now active
+- `Slice 3: Diagnostics route-trace view` is completed
+- `Slice 4: Operator trust pass` is now active
 - the current architecture discussion is [private_scope_mvp_design.md](./private_scope_mvp_design.md), which narrows the next remote-execution proof around `Local / Private / Public / Cloud`
 - a future routing note is captured in [future_host_capacity_intelligence.md](./future_host_capacity_intelligence.md) for host capability profiling, warm/cold inventory truth, and dynamic idle swapping
 - the private-scope design doc now explicitly captures scope governance so future `Public` support stays policy-gated and clampable back to `Private`
@@ -100,6 +101,7 @@ That matters because the main workstation stores the primary model under `agents
 - `Use` tab: model source selection shell, active route card, nested `Route / Local / Network / Cloud` sections, OpenClaw route truth
 - `Host` tab: hosting model selection, warm-state card, execution-path truth, host toggle, worker/runtime details
 - `Diagnostics` tab: smoke test summary card plus nested `Smoke / Activity / Errors`
+- `Diagnostics` tab: smoke test summary card plus nested `Smoke / Route / Activity / Errors`
 - footer: left-aligned `Modulo / Hosting / Worker` key:value status with colored values, plus right-aligned transient notices
 
 The GUI now explicitly tells the truth about whether the current worker path and latest smoke test are using `REAL` or `PROTOTYPE` execution.

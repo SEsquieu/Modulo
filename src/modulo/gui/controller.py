@@ -102,6 +102,9 @@ class GuiShellState:
     smoke_test_result_label: str = "Not run yet"
     diagnostics_summary: str = ""
     diagnostics_details: str = ""
+    route_trace_result_label: str = "Not captured"
+    route_trace_summary: str = "No routed execution trace is available yet."
+    route_trace_details: str = ""
     continuity_summary: str = ""
     activity_lines: tuple[str, ...] = ()
     debug_status_badge: str = "DEBUG"
@@ -326,6 +329,9 @@ class GuiAppController:
             smoke_test_result_label=self._smoke_test_result_label(smoke_test),
             diagnostics_summary=self._diagnostics_summary(onboarding, smoke_test),
             diagnostics_details=self._diagnostics_details(onboarding, smoke_test),
+            route_trace_result_label=self._route_trace_result_label(status),
+            route_trace_summary=self._route_trace_summary(status),
+            route_trace_details=self._route_trace_details(status),
             continuity_summary=status.activity.continuity_summary,
             activity_lines=self._activity_lines(status),
             debug_status_badge=self._debug_status_badge(status),
@@ -478,6 +484,38 @@ class GuiAppController:
                 lines.append(f"Response: {smoke_test.response_text}")
             else:
                 lines.append(f"Smoke test error: {smoke_test.error or 'Unknown error'}")
+        return "\n".join(lines)
+
+    @staticmethod
+    def _route_trace_result_label(status: ClientStatus) -> str:
+        trace = status.latest_route_trace
+        if not trace.available:
+            return "Not captured"
+        if trace.final_status == "completed":
+            return "Completed"
+        if trace.final_status:
+            return trace.final_status.replace("_", " ").title()
+        return "Captured"
+
+    @staticmethod
+    def _route_trace_summary(status: ClientStatus) -> str:
+        trace = status.latest_route_trace
+        return trace.summary
+
+    @staticmethod
+    def _route_trace_details(status: ClientStatus) -> str:
+        trace = status.latest_route_trace
+        if not trace.available:
+            return trace.details
+        lines = [trace.details]
+        if trace.filtered_workers:
+            lines.append("")
+            lines.append("Filtered workers:")
+            for item in trace.filtered_workers:
+                detail = f" - {item.worker_id}: {item.reason_code}"
+                if item.detail:
+                    detail = f"{detail} ({item.detail})"
+                lines.append(detail)
         return "\n".join(lines)
 
     @staticmethod
