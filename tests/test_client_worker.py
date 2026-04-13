@@ -9,6 +9,7 @@ from modulo.client.app import (
     ModuloClientSupervisor,
     PlatformModelListing,
     PlatformSessionStatus,
+    RouteTraceStatus,
 )
 from modulo.client.hosting_readiness import HostingRuntimeProbeStatus
 from modulo.client.ollama_loaded_models import LoadedOllamaModel, OllamaLoadedModelsStatus
@@ -22,7 +23,10 @@ from modulo.common.contracts import (
     ChatRequest,
     ExecutionMode,
     JobStatus,
+    RouteScope,
+    RouteTraceRecord,
     WorkerBridgeConfig,
+    WorkerKind,
     WorkerRuntimeState,
 )
 from modulo.worker.runtime import InMemoryWorkerRuntime, WorkerBridgeRuntime
@@ -222,6 +226,26 @@ class FakeSessionBridge:
         )
 
 
+class FakeRouteTraceProvider:
+    def get_latest_route_trace(self) -> RouteTraceStatus:
+        record = RouteTraceRecord(
+            trace_id="trace-00001",
+            model_id="gemma4:e2b",
+            buyer_id="user-office",
+            selected_source="private",
+            resolved_scope=RouteScope.PRIVATE,
+            private_network_id="office-private",
+            selected_worker_id="worker-home-desktop",
+            selected_worker_kind=WorkerKind.NETWORK,
+            route_reason="Matched requested model on a healthy private worker.",
+            route_reason_code="healthy_exact_match",
+            retry_count=0,
+            attempt_number=1,
+            final_status="completed",
+        )
+        return RouteTraceStatus.from_record(record)
+
+
 class ClientWorkerIntegrationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.service = InMemoryModuloService(router=TrustRouter())
@@ -247,6 +271,7 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.client = ModuloClientSupervisor(
             worker_bridge=self.bridge,
             session_bridge=FakeSessionBridge(),
+            route_trace_provider=FakeRouteTraceProvider(),
             openclaw_discovery=FakeOpenClawDiscovery(),
             ollama_discovery=FakeOllamaDiscovery(),
             ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
@@ -403,6 +428,19 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertIn("credits", status.platform.credits_summary)
         self.assertIn("platform-managed", status.platform.buyer_config_summary)
         self.assertIsNotNone(status.worker)
+
+    def test_client_status_includes_latest_route_trace_summary(self) -> None:
+        status = self.client.get_status()
+
+        self.assertTrue(status.latest_route_trace.available)
+        self.assertEqual("trace-00001", status.latest_route_trace.trace_id)
+        self.assertEqual("private", status.latest_route_trace.source)
+        self.assertEqual("private", status.latest_route_trace.scope)
+        self.assertEqual("worker-home-desktop", status.latest_route_trace.selected_worker_id)
+        self.assertEqual("network", status.latest_route_trace.selected_worker_kind)
+        self.assertEqual("completed", status.latest_route_trace.final_status)
+        self.assertIn("Scope private", status.latest_route_trace.summary)
+        self.assertIn("Matched requested model", status.latest_route_trace.details)
 
     def test_hosting_setup_includes_ollama_discovery_state(self) -> None:
         status = self.client.get_status()

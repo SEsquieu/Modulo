@@ -18,6 +18,7 @@ from modulo.client.hosting_readiness import (
     OllamaHostingRuntimeProbe,
 )
 from modulo.common.contracts import (
+    RouteTraceRecord,
     WorkerBridgeConfig,
     WorkerStatusSnapshot,
     WorkerSupervisorCommand,
@@ -157,12 +158,98 @@ class PlatformSessionStatus:
 
 
 @dataclass(frozen=True)
+class RouteTraceFilteredWorker:
+    worker_id: str
+    reason_code: str
+    detail: str = ""
+
+
+@dataclass(frozen=True)
+class RouteTraceStatus:
+    available: bool = False
+    trace_id: str = ""
+    model_id: str = ""
+    source: str = ""
+    scope: str = ""
+    private_network_id: str = ""
+    selected_worker_id: str = ""
+    selected_worker_kind: str = ""
+    route_reason: str = ""
+    route_reason_code: str = ""
+    retry_count: int = 0
+    attempt_number: int = 0
+    final_status: str = ""
+    final_error: str = ""
+    continuity_used: bool = False
+    warm_path_used: bool = False
+    filtered_workers: tuple[RouteTraceFilteredWorker, ...] = ()
+    summary: str = "No routed execution trace is available yet."
+    details: str = (
+        "Run a routed request through the shared path to capture route-trace visibility."
+    )
+
+    @classmethod
+    def from_record(cls, record: RouteTraceRecord) -> "RouteTraceStatus":
+        selected_kind = record.selected_worker_kind.value if record.selected_worker_kind else ""
+        final_status = record.final_status or record.current_status
+        filtered_workers = tuple(
+            RouteTraceFilteredWorker(
+                worker_id=item.worker_id,
+                reason_code=item.reason_code,
+                detail=item.detail,
+            )
+            for item in record.filtered_worker_reasons
+        )
+        summary_bits = [
+            f"Source {record.selected_source or 'unknown'}",
+            f"Scope {record.resolved_scope.value}",
+        ]
+        if record.selected_worker_id:
+            summary_bits.append(f"Worker {record.selected_worker_id}")
+        if record.final_status:
+            summary_bits.append(f"Outcome {record.final_status}")
+        details = [
+            f"Model: {record.model_id or 'Unknown'}",
+            f"Source: {record.selected_source or 'Unknown'}",
+            f"Scope: {record.resolved_scope.value}",
+            f"Selected worker: {record.selected_worker_id or 'None'}",
+            f"Route reason: {record.route_reason or 'Unavailable'}",
+            f"Retries: {record.retry_count}",
+            f"Final status: {final_status or 'Unknown'}",
+        ]
+        if record.final_error:
+            details.append(f"Final error: {record.final_error}")
+        return cls(
+            available=True,
+            trace_id=record.trace_id,
+            model_id=record.model_id,
+            source=record.selected_source,
+            scope=record.resolved_scope.value,
+            private_network_id=record.private_network_id,
+            selected_worker_id=record.selected_worker_id,
+            selected_worker_kind=selected_kind,
+            route_reason=record.route_reason,
+            route_reason_code=record.route_reason_code,
+            retry_count=record.retry_count,
+            attempt_number=record.attempt_number,
+            final_status=final_status,
+            final_error=record.final_error,
+            continuity_used=record.continuity_used,
+            warm_path_used=record.warm_path_used,
+            filtered_workers=filtered_workers,
+            summary=" | ".join(summary_bits),
+            details="\n".join(details),
+        )
+
+
+@dataclass(frozen=True)
 class ClientStatus:
     connected_to_modulo: bool = False
     openclaw_configured: bool = False
     hosting_enabled: bool = False
     openclaw: OpenClawConfigurationStatus = OpenClawConfigurationStatus()
     platform: PlatformSessionStatus = PlatformSessionStatus()
+    latest_route_trace: RouteTraceStatus = RouteTraceStatus()
     hosting_setup: HostingSetupStatus = HostingSetupStatus()
     activity: ActivityVisibilityStatus = ActivityVisibilityStatus()
     worker: WorkerStatusSnapshot | None = None
@@ -206,6 +293,11 @@ class ClientSessionBridge(Protocol):
         """Fetch client-owned platform state independently from the worker runtime."""
 
 
+class ClientRouteTraceProvider(Protocol):
+    def get_latest_route_trace(self) -> RouteTraceStatus:
+        """Fetch the latest client-facing routed execution trace."""
+
+
 class ClientOpenClawDiscovery(Protocol):
     def discover(self) -> OpenClawDiscoveryStatus:
         """Detect local OpenClaw installation and config state."""
@@ -227,6 +319,7 @@ class ModuloClientSupervisor:
     connected_to_modulo: bool = True
     openclaw_configured: bool = False
     session_bridge: ClientSessionBridge | None = None
+    route_trace_provider: ClientRouteTraceProvider | None = None
     openclaw_discovery: ClientOpenClawDiscovery | None = None
     ollama_discovery: OllamaDiscovery | None = None
     ollama_loaded_models_discovery: ClientOllamaLoadedModelsDiscovery | None = None
@@ -384,6 +477,7 @@ class ModuloClientSupervisor:
             hosting_enabled=worker_status.desired_running,
             openclaw=openclaw_status,
             platform=self.get_platform_session_status(),
+            latest_route_trace=self.get_latest_route_trace_status(),
             hosting_setup=self.get_hosting_setup_status(),
             activity=self.get_activity_visibility(),
             worker=worker_status,
@@ -755,6 +849,11 @@ class ModuloClientSupervisor:
         if self.activity_provider is None:
             return ActivityVisibilityStatus()
         return self.activity_provider.get_activity_visibility()
+
+    def get_latest_route_trace_status(self) -> RouteTraceStatus:
+        if self.route_trace_provider is None:
+            return RouteTraceStatus()
+        return self.route_trace_provider.get_latest_route_trace()
 
     def _invalidate_readiness_cache(self) -> None:
         self._cached_ollama_discovery = None

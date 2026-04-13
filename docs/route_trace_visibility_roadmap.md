@@ -45,12 +45,18 @@ Notes:
 - this slice is about shape, not visual polish
 - keep the contract narrow enough for the second-layer GUI
 
-Status: not started
+Status: completed
 
 Completion note:
 
 - summary:
+  - added a dedicated client-facing route-trace state model plus filtered-worker detail shape
+  - threaded the latest route-trace summary into `ClientStatus` without coupling the GUI to raw cloud internals
+  - left the fetch seam provider-based so local prototype and hosted targets can share one later trace path
 - proof added to repo:
+  - `RouteTraceStatus` and related client-facing trace dataclasses in `src/modulo/client/app.py`
+  - `ClientStatus.latest_route_trace` and optional `ClientRouteTraceProvider` seam in `src/modulo/client/app.py`
+  - client integration coverage in `tests/test_client_worker.py`
 
 ### Slice 2: Prototype and hosted trace fetch path
 
@@ -68,7 +74,7 @@ Notes:
 
 - prefer one truthful fetch path over duplicated local-only and remote-only logic
 
-Status: not started
+Status: in progress
 
 Completion note:
 

@@ -16,6 +16,8 @@ This file is the quickest way to regain context when switching workstations.
 - `Slice 5: Cross-machine private execution proof` is completed and now proven across separate real networks
 - `Slice 6: Lightweight shared-platform advertising visibility` is completed
 - the next post-proof implementation roadmap is [route_trace_visibility_roadmap.md](./route_trace_visibility_roadmap.md)
+- `Slice 1: Route-trace client contract` is completed
+- `Slice 2: Prototype and hosted trace fetch path` is now active
 - the current architecture discussion is [private_scope_mvp_design.md](./private_scope_mvp_design.md), which narrows the next remote-execution proof around `Local / Private / Public / Cloud`
 - a future routing note is captured in [future_host_capacity_intelligence.md](./future_host_capacity_intelligence.md) for host capability profiling, warm/cold inventory truth, and dynamic idle swapping
 - the private-scope design doc now explicitly captures scope governance so future `Public` support stays policy-gated and clampable back to `Private`
