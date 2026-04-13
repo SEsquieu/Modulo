@@ -62,9 +62,9 @@ The repo is intentionally backend-first, but the PySide client shell is now far 
 Near-term sequence:
 
 1. keep the `cloud` and `worker` seams truthful and scope-ready
-2. prove private-scope remote execution through the real router and worker chain
+2. sharpen shared-path truth and visibility now that private-scope remote execution has been proven through the real router and worker chain
 3. preserve enough structured route-trace data for future private-network ops visibility
-4. package the current PySide shell cleanly on Windows only after the private remote-execution proof is real
+4. harden scope, policy, and session behavior before returning to Windows productization
 5. keep future private-network work architecture-led instead of bolted onto the public path later
 
 Scope guardrail:

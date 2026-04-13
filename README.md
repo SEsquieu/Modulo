@@ -126,6 +126,12 @@ Current next functional proof:
 - [docs/private_scope_mvp_design.md](./docs/private_scope_mvp_design.md) narrows the source/scope model so the next remote-execution work does not harden a singular `network` pool
 - [docs/private_mvp_roadmap.md](./docs/private_mvp_roadmap.md) defines the first bounded private-scope remote-execution MVP proof before packaging work resumes
 
+Recent milestone:
+
+- an end-to-end request/response has now been proven across separate real networks, with desktop hosting from a home network and a laptop requester running over a cell hotspot
+- this moves Modulo beyond local-only proof into real distributed validation
+- current next work should focus on truth, visibility, and policy around the shared path rather than packaging
+
 ## Current platform surface
 
 The current scaffold includes these worker-facing HTTP routes:
@@ -168,6 +174,7 @@ Recent functional proof highlights:
 
 - the GUI can target a hosted backend like `https://modulo.grinningfrog.com` from launch
 - the hosted path has been proven end to end through Cloudflare Tunnel for private-scope visibility and routed execution
+- the same private-scope request/response path has now been exercised across separate real networks
 - worker transport failures now surface HTTP status and edge/body detail instead of collapsing to `unknown error`
 - stopping hosting now explicitly unregisters the worker so stale advertised models drop out of platform visibility immediately
 

@@ -174,6 +174,7 @@ Summary:
 - added explicit primary-machine and worker-machine entrypoints so the private proof can run as a real control-plane server plus remote worker bridge pair
 - kept the worker registration, claim, execution, and route-trace path identical to the single-machine proof so cross-machine behavior stays comparable
 - proved the cross-machine-style flow on localhost with separate HTTP server and worker bridge processes-in-shape before handing it off for a real network test
+- the same routed request/response path has now also been proven live across separate real networks, with the host on a home network and the requester on a laptop over a cell hotspot
 
 Proof added to repo:
 
@@ -243,4 +244,5 @@ Add a short summary here when the roadmap is complete:
 - summary:
   - Modulo now proves a bounded private-scope execution path across machines, including a Cloudflare-hosted backend target, light buyer-side visibility for advertised network models, and immediate worker cleanup when a host goes offline.
 - proof added to repo:
-  - shared control-plane and worker entrypoints, route traces, cross-machine worker transport, lightweight shared-platform advertising visibility, hosted-backend GUI targeting, improved worker transport error surfacing, and explicit worker unregister on unhost
+- shared control-plane and worker entrypoints, route traces, cross-machine worker transport, lightweight shared-platform advertising visibility, hosted-backend GUI targeting, improved worker transport error surfacing, and explicit worker unregister on unhost
+- the same bounded private-scope routed path is now proven both in localhost process shape and in a real cross-network request/response

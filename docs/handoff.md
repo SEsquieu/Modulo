@@ -13,7 +13,7 @@ This file is the quickest way to regain context when switching workstations.
 - `Slice 2: Structured route-trace spine` is completed
 - `Slice 3: Network-addressable worker configuration` is completed
 - `Slice 4: Single-machine routed private proof` is completed
-- `Slice 5: Cross-machine private execution proof` is completed in repo shape and ready for live network validation
+- `Slice 5: Cross-machine private execution proof` is completed and now proven across separate real networks
 - `Slice 6: Lightweight shared-platform advertising visibility` is completed
 - the current architecture discussion is [private_scope_mvp_design.md](./private_scope_mvp_design.md), which narrows the next remote-execution proof around `Local / Private / Public / Cloud`
 - a future routing note is captured in [future_host_capacity_intelligence.md](./future_host_capacity_intelligence.md) for host capability profiling, warm/cold inventory truth, and dynamic idle swapping
@@ -56,6 +56,7 @@ This file is the quickest way to regain context when switching workstations.
 - the GUI can now launch with a hosted backend target preloaded, for example `https://modulo.grinningfrog.com`
 - worker transport errors now surface HTTP status and edge/body details instead of collapsing to `unknown error`
 - stopping hosting now explicitly unregisters the worker from the cloud registry so advertised models disappear immediately instead of lingering and timing out
+- a real end-to-end request/response has now been proven across separate real networks, with desktop hosting from a home network and a laptop requester running over a cell hotspot
 - the GUI shell has been tightened into a consistent pattern:
   - top-level tabs: `Use / Host / Diagnostics / Debug`
   - compact header + primary action + summary card + nested detail tabs
@@ -68,6 +69,8 @@ This file is the quickest way to regain context when switching workstations.
 - actual OpenClaw config mutation and rollback flow
 - broader trust-and-recovery polish beyond the main surfaced errors
 - Windows packaging, installer, and first-run polish
+
+Productization is intentionally deferred for now while the shared path, visibility, and policy story continue to harden.
 
 ## Latest OpenClaw truth
 
@@ -99,12 +102,13 @@ The current hosted-backend path has been proven through Cloudflare Tunnel agains
 
 ## Next recommended starting point
 
-Start with the live network validation run using the commands in [README.md](../README.md) and the completed [private_mvp_roadmap.md](./private_mvp_roadmap.md).
+Start from the completed [private_mvp_roadmap.md](./private_mvp_roadmap.md) and the now-proven shared path in [README.md](../README.md).
 
 The most likely first useful slice is:
 
-- decide whether the next slice should be richer shared discovery in `Use`, or operator-facing route-trace visibility on the host side
-- if continuing hosted-backend work, focus on auth/policy hardening and persistence because the shared path itself is now functionally proven
+- richer shared discovery and source truth in `Use`, especially around `Local / Private / Public / Cloud`
+- operator-facing route-trace visibility so shared execution is explainable when it succeeds or fails
+- auth/policy hardening and persistence now that the shared path itself is functionally proven
 - only return to packaging once the shared-network behavior feels truthful enough to lock in
 
 If resuming in architecture mode instead of productization mode, the current non-implementation discussion is:
@@ -180,6 +184,7 @@ Active implementation doc:
 Current architecture discussion:
 
 - [private_scope_mvp_design.md](./private_scope_mvp_design.md)
+- [private_networks_design.md](./private_networks_design.md)
 
 ## Working preferences
 
@@ -219,6 +224,7 @@ Recent meaningful commits:
 - `2cbc0f8` `Blend host toggle into terminal theme`
 - `a9e5563` `Refine info card styling for sleek terminal UI`
 - `14bd1b6` `Sync initial host model to local inventory`
+- `f6bf222` `Align docs with hosted backend proof`
 
 If resuming cold, start by reading:
 

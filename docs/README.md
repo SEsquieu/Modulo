@@ -21,6 +21,11 @@ Current source of truth:
 - [private_scope_mvp_design.md](./private_scope_mvp_design.md): implementation-narrowing doc for treating the first bounded remote-execution proof as `Private` scope
 - [private_mvp_roadmap.md](./private_mvp_roadmap.md): mini roadmap for the first private-scope remote execution proof
 
+Current emphasis:
+
+- the cross-network private execution proof is now real
+- productization is intentionally deferred while shared-path truth, visibility, and policy harden
+
 Recommended next docs to add:
 
 - `api.md`: Ollama-facing and worker-facing HTTP contracts
