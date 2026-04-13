@@ -127,6 +127,7 @@ Current next functional proof:
 - [docs/private_mvp_roadmap.md](./docs/private_mvp_roadmap.md) defines the first bounded private-scope remote-execution MVP proof before packaging work resumes
 - [docs/route_trace_visibility_roadmap.md](./docs/route_trace_visibility_roadmap.md) defines the next post-proof slice so routed execution becomes explainable before packaging resumes
 - [docs/use_side_truth_roadmap.md](./docs/use_side_truth_roadmap.md) defines the next `Use`-side truth pass so model source visibility is clear before packaging resumes
+- [docs/platform_layering_spec.md](./docs/platform_layering_spec.md) captures the canonical tray-first layering model so the current GUI does not drift into a dashboard-shaped product
 
 Recent milestone:
 
@@ -134,6 +135,7 @@ Recent milestone:
 - this moves Modulo beyond local-only proof into real distributed validation
 - current next work should focus on truth, visibility, and policy around the shared path rather than packaging
 - the newest tracked emphasis after route-trace visibility is the `Use` side: making `Local / Private / Public / Cloud` visibility honest and easy to trust
+- the guiding product rule is now explicit: the current GUI is the deeper proving surface, while the release product should stay shallow, tray-first, and Hamachi-simple
 
 ## Current platform surface
 

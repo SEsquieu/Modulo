@@ -7,11 +7,15 @@ It exists to make the `Use` side of Modulo truthful about what a person can actu
 The goal is not to build a giant chooser or a dashboard-first model marketplace.
 The goal is to keep the tray-first product direction intact while making the second-layer `Use` surface honest and easy to trust.
 
+This roadmap should be read alongside [platform_layering_spec.md](./platform_layering_spec.md).
+The `Use` side is part of the second-layer proving surface today, but it should evolve toward a tray-first model where scopes group models cleanly and deeper truth stays below the surface.
+
 ## Goal
 
 - make the `Use` tab truthful about `Local / Private / Public / Cloud`
 - keep model-source language simple and consumer-readable
 - separate visible model availability from allowed routing policy
+- treat scopes as known groupings that can later become active, muted, or deleted
 - keep top-level `Use` flow light while pushing deeper detail into nested sections
 
 ## Why this matters
@@ -19,6 +23,7 @@ The goal is to keep the tray-first product direction intact while making the sec
 - the shared path is now real across separate networks
 - the current `Use` surface shows the right shape, but some of its truth is still prototype-safe or mixed together
 - model source visibility will eventually drive both user trust and policy enforcement
+- the `Use` side should move toward grouped scopes with nested model lists, not a flat marketplace browser
 - this is the cleanest next step before productization resumes
 
 ## Planned slices
@@ -37,6 +42,7 @@ Done when:
   - selected model
   - active route
   - route policy constraints
+- the contract makes room for known-scope state without forcing scope management into the top-level UI yet
 - the GUI no longer needs to infer source truth from mixed OpenClaw or host state
 
 Notes:
@@ -61,6 +67,7 @@ Done when:
 
 - local installed models are clearly separated from remotely visible shared models
 - private/shared model visibility follows the active platform target instead of stale local assumptions
+- scoped visibility can be grouped under known sources instead of flattened into one network list
 - empty states explain whether nothing is visible because:
   - no models are available
   - no shared hosts are advertising
@@ -91,6 +98,7 @@ Done when:
   - active route target
   - provider/path truth
 - nested `Route / Local / Private / Public / Cloud` sections feel consistent with the rest of the shell
+- grouped scope presentation can later collapse naturally into tray popup behavior without a redesign
 - dead copy and staged/prototype-heavy phrasing are buried or removed from the default view
 
 Notes:
@@ -114,6 +122,7 @@ Done when:
 
 - the `Use` tab explains why a source is unavailable without sounding broken
 - private/public/cloud language stays simple while preserving stricter backend meaning
+- muted or restricted scopes have a clean future path without changing the model-source vocabulary again
 - the current state supports future policy hardening without rewriting the `Use` UI again
 
 Notes:

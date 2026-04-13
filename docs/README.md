@@ -18,6 +18,7 @@ Current source of truth:
 - [host_warm_state_roadmap.md](./host_warm_state_roadmap.md): mini roadmap for host-side warm-state visibility and prewarm lifecycle
 - [productization_checklist.md](./productization_checklist.md): compact gated checklist for packaging and trust polish
 - [private_networks_design.md](./private_networks_design.md): architectural note for access-controlled private Modulo networks inside an org boundary
+- [platform_layering_spec.md](./platform_layering_spec.md): canonical product-shape doc for tray-first layering, progressive disclosure, and what belongs in each UI/system layer
 - [private_scope_mvp_design.md](./private_scope_mvp_design.md): implementation-narrowing doc for treating the first bounded remote-execution proof as `Private` scope
 - [private_mvp_roadmap.md](./private_mvp_roadmap.md): mini roadmap for the first private-scope remote execution proof
 - [route_trace_visibility_roadmap.md](./route_trace_visibility_roadmap.md): mini roadmap for surfacing routed execution truth after the private proof is real
@@ -28,6 +29,7 @@ Current emphasis:
 - the cross-network private execution proof is now real
 - route-trace visibility is now completed
 - productization is intentionally deferred while shared-path truth, `Use`-side visibility, and policy harden
+- the current UI should be treated as a second-layer surface while the product continues to aim toward a tray-first release
 
 Recommended next docs to add:
 

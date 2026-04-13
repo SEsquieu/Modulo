@@ -16,6 +16,9 @@ This structure is intentional. It keeps the repository aligned with the eventual
 3. the client can enable or supervise the worker bridge locally
 4. the cloud accepts use-side requests and routes them to workers
 
+The canonical product-layering and disclosure model now lives in [platform_layering_spec.md](./platform_layering_spec.md).
+That doc should guide what belongs in the tray, popup, utility windows, advanced surfaces, and the debug truth layer as the platform evolves.
+
 ## Current implementation status
 
 Today the strongest part of the repo is the `cloud` package. It currently contains:
@@ -30,6 +33,9 @@ Today the strongest part of the repo is the `cloud` package. It currently contai
 The `worker` package currently contains the beginnings of the worker runtime boundary and configuration surface.
 
 The `client` package now contains the real supervision, readiness, session-bridge, OpenClaw discovery, and local host-truth surfaces that the desktop shell is built on.
+
+The current GUI should be treated as a second-layer proving surface, not the final primary product shell.
+That means we can keep building richer truth into it now, while still designing toward a tray-first release where `Use`, `Host`, `Scopes`, `Mount`, and `Health` stay simpler at the surface.
 
 ## Boundary rules
 
@@ -64,8 +70,9 @@ Near-term sequence:
 1. keep the `cloud` and `worker` seams truthful and scope-ready
 2. sharpen shared-path truth and visibility now that private-scope remote execution has been proven through the real router and worker chain
 3. preserve enough structured route-trace data for future private-network ops visibility
-4. harden scope, policy, and session behavior before returning to Windows productization
-5. keep future private-network work architecture-led instead of bolted onto the public path later
+4. harden `Use`-side source and scope truth around `Local / Private / Public / Cloud`
+5. harden scope, policy, and session behavior before returning to Windows productization
+6. keep future private-network work architecture-led instead of bolted onto the public path later
 
 Scope guardrail:
 
@@ -78,3 +85,7 @@ As routing evolves, prefer continuity-preserving behavior such as short-lived re
 Future routing note:
 
 - [future_host_capacity_intelligence.md](./future_host_capacity_intelligence.md) captures a later design for client-built host capability profiles, warm/cold inventory truth, and dynamic idle swapping between installed models.
+
+Current product-shape note:
+
+- [platform_layering_spec.md](./platform_layering_spec.md) captures the canonical tray-first layering model and the rule that infrastructure truth should surface only by depth and permission.

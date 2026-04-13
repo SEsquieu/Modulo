@@ -26,6 +26,7 @@ This file is the quickest way to regain context when switching workstations.
 - `Slice 2: Private/shared visibility fetch truth` is pending
 - `Slice 3: Use tab truth pass` is pending
 - `Slice 4: Policy and empty-state trust pass` is pending
+- the canonical product-shape guidance is now [platform_layering_spec.md](./platform_layering_spec.md)
 - the current architecture discussion is [private_scope_mvp_design.md](./private_scope_mvp_design.md), which narrows the next remote-execution proof around `Local / Private / Public / Cloud`
 - a future routing note is captured in [future_host_capacity_intelligence.md](./future_host_capacity_intelligence.md) for host capability profiling, warm/cold inventory truth, and dynamic idle swapping
 - the private-scope design doc now explicitly captures scope governance so future `Public` support stays policy-gated and clampable back to `Private`
@@ -37,6 +38,9 @@ This file is the quickest way to regain context when switching workstations.
 - `client` owns supervision, readiness checks, session-bridge state, local discovery, host warm maintenance, and use-facing setup truth
 - `gui` is a light PySide6 desktop shell split into `Use`, `Host`, and `Diagnostics`
 - `session bridge` remains client-owned and separate from the worker inference bridge
+
+The current GUI should be treated as the richer second-layer surface, not the final default product shell.
+The release direction remains tray-first, with deeper truth and control exposed only by permission.
 
 ## What is real today
 
@@ -75,6 +79,12 @@ This file is the quickest way to regain context when switching workstations.
   - compact header + primary action + summary card + nested detail tabs
   - terminal-styled theme with calmer shared card styling
   - static overview copy and a split left/right footer
+- the long-term product abstraction is now explicitly:
+  - `Use`
+  - `Host`
+  - `Mount`
+  - `Scopes`
+  - `Health`
 
 ## What is still prototype-safe
 
@@ -105,7 +115,7 @@ That matters because the main workstation stores the primary model under `agents
 ## Latest GUI truth
 
 - `Use` tab: model source selection shell, active route card, nested `Route / Local / Network / Cloud` sections, OpenClaw route truth
-- the next truth pass on `Use` should move this surface toward `Local / Private / Public / Cloud`
+- the next truth pass on `Use` should move this surface toward grouped `Local / Private / Public / Cloud` sources with nested model lists
 - `Host` tab: hosting model selection, warm-state card, execution-path truth, host toggle, worker/runtime details
 - `Diagnostics` tab: smoke test summary card plus nested `Smoke / Activity / Errors`
 - `Diagnostics` tab: smoke test summary card plus nested `Smoke / Route / Activity / Errors`
@@ -124,6 +134,7 @@ The most likely first useful slice is:
 
 - `use_side_truth_roadmap.md`
 - sharper shared discovery and source truth in `Use`, especially around `Local / Private / Public / Cloud`
+- align that `Use` work with [platform_layering_spec.md](./platform_layering_spec.md) so the current GUI keeps serving as the second-layer proving surface instead of hardening into a dashboard
 - auth/policy hardening and persistence now that the shared path itself is functionally proven
 - only return to packaging once the shared-network behavior feels truthful enough to lock in
 
@@ -203,6 +214,7 @@ Current architecture discussion:
 
 - [private_scope_mvp_design.md](./private_scope_mvp_design.md)
 - [private_networks_design.md](./private_networks_design.md)
+- [platform_layering_spec.md](./platform_layering_spec.md)
 
 ## Working preferences
 
