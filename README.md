@@ -140,6 +140,7 @@ Recent milestone:
 - current next work should focus on truth, visibility, and policy around the shared path rather than packaging
 - the newest tracked emphasis after route-trace visibility is the `Use` side: making `Local / Private / Public / Cloud` visibility honest and easy to trust
 - the newest untracked GUI refinement work is making the second-layer `Use` and `Mount` flow feel calmer and more tray-first without losing truth
+- the `Mount` consumer list now includes `Continue (VSCode)` under the `OpenAI API` shape so a second external consumer can be staged without disturbing the existing OpenClaw path
 - the guiding product rule is now explicit: the current GUI is the deeper proving surface, while the release product should stay shallow, tray-first, and Hamachi-simple
 
 ## Current platform surface

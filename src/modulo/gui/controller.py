@@ -471,11 +471,18 @@ class GuiAppController:
         return status.use.summary
 
     def _use_route_health_value(self, status: ClientStatus) -> str:
+        if self._selected_mount_consumer_id == "continue_vscode" and status.platform.connected:
+            return "Ready"
         if status.openclaw.configured and self._selected_mount_shape_id == "openai_api":
             return "Ready"
         return "Not ready"
 
     def _use_route_health_summary(self, status: ClientStatus) -> str:
+        if self._selected_mount_consumer_id == "continue_vscode" and status.platform.connected:
+            return (
+                "The selected shape and consumer are aligned. Continue can point at the "
+                "mounted OpenAI-compatible Modulo edge once that local mount is exposed."
+            )
         if status.openclaw.configured and self._selected_mount_shape_id == "openai_api":
             return "The selected shape and consumer are configured, so this client is ready to hand requests off through that edge."
         if not self._selected_mount_shape_id:
@@ -489,6 +496,8 @@ class GuiAppController:
         return "The shape and consumer are selected, but the edge still needs attention before it is fully ready."
 
     def _use_route_reason(self, status: ClientStatus) -> str:
+        if self._selected_mount_consumer_id == "continue_vscode" and status.platform.connected:
+            return "Ready to mount into Continue."
         if status.openclaw.configured and self._selected_mount_shape_id == "openai_api":
             return "Ready to use through OpenClaw."
         if not self._selected_mount_shape_id:
@@ -506,6 +515,8 @@ class GuiAppController:
             return "Choose shape"
         if not self._selected_mount_consumer_id:
             return "Choose consumer"
+        if self._selected_mount_consumer_id == "continue_vscode" and self._selected_mount_shape_id == "openai_api":
+            return "Ready" if status.platform.connected else "Shape selected"
         if self._selected_mount_consumer_id == "openclaw" and status.openclaw.configured:
             return "Ready"
         if self._selected_mount_consumer_id == "openclaw" and status.openclaw.connection_plan.apply_ready:
@@ -519,6 +530,16 @@ class GuiAppController:
             return "Choose a shape first. Modulo will keep the setup lightweight until you decide what kind of endpoint to expose."
         if not self._selected_mount_consumer_id:
             return "Choose a compatible consumer next. Modulo will stage the best setup it can, then wait for your confirmation before it changes anything at the edge."
+        if self._selected_mount_consumer_id == "continue_vscode":
+            if status.platform.connected:
+                return (
+                    "Continue (VSCode) is selected for the OpenAI API shape. The remaining "
+                    "work is exposing a local Modulo mount endpoint and writing the Continue config cleanly."
+                )
+            return (
+                "Continue (VSCode) is selected, but shared execution still needs a reachable "
+                "platform target before the mount is trustworthy."
+            )
         if self._selected_mount_consumer_id == "openclaw" and status.openclaw.configured:
             return "OpenClaw is configured for the selected shape."
         if self._selected_mount_consumer_id == "openclaw" and status.openclaw.connection_plan.apply_ready:
@@ -555,11 +576,18 @@ class GuiAppController:
         del status
         if not shape_id:
             return (("",), ("Choose consumer...",))
-        if shape_id in {"openai_api", "ollama"}:
+        if shape_id == "openai_api":
+            return (
+                ("", "openclaw", "continue_vscode"),
+                ("Choose consumer...", "OpenClaw", "Continue (VSCode)"),
+            )
+        if shape_id == "ollama":
             return (("", "openclaw"), ("Choose consumer...", "OpenClaw"))
         return (("",), ("Choose consumer...",))
 
     def _mount_consumer_label(self, status: ClientStatus) -> str:
+        if self._selected_mount_consumer_id == "continue_vscode":
+            return "Continue (VSCode)"
         if self._selected_mount_consumer_id == "openclaw":
             return "OpenClaw"
         if self._selected_mount_shape_id:
@@ -571,6 +599,16 @@ class GuiAppController:
             return "Select a shape first. Modulo will keep the next step light until you choose how the endpoint should look."
         if not self._selected_mount_consumer_id:
             return "Pick a compatible consumer next. Modulo will prepare the best setup it can, then wait for your confirmation before it changes anything at the edge."
+        if self._selected_mount_consumer_id == "continue_vscode":
+            if status.platform.connected:
+                return (
+                    "Continue (VSCode) is selected. Modulo now has the right consumer binding "
+                    "for an OpenAI-compatible mount, and the next step is automating the local config handoff."
+                )
+            return (
+                "Continue (VSCode) is selected, but the shared platform target still needs to "
+                "be reachable before this mount should be trusted."
+            )
         if self._selected_mount_consumer_id == "openclaw":
             if status.openclaw.configured:
                 return "OpenClaw is selected for this shape and the current edge already looks configured."
@@ -594,6 +632,15 @@ class GuiAppController:
                 "Step 2: Choose a consumer.",
                 "Modulo only shows compatible consumers for the selected shape.",
                 "When you pick one, Modulo will stage the best setup it can and wait for confirmation before applying real edge changes.",
+            )
+        if self._selected_mount_consumer_id == "continue_vscode":
+            return (
+                "Step 3: Review the proposed edge setup.",
+                "Continue (VSCode) will use the OpenAI API shape.",
+                (
+                    "Next: expose a local OpenAI-compatible Modulo mount and let Modulo write a "
+                    "narrow Continue config entry without taking over the full file."
+                ),
             )
         if self._selected_mount_consumer_id == "openclaw":
             details = [

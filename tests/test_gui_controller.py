@@ -427,6 +427,23 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertEqual("Shape selected", state.use_mount_status_value)
         self.assertIn("openclaw is selected", state.mount_consumer_summary.lower())
 
+    def test_openai_shape_exposes_continue_consumer(self) -> None:
+        state = self.controller.select_mount_shape("openai_api")
+
+        self.assertIn("continue_vscode", state.mount_available_consumer_ids)
+        self.assertIn("Continue (VSCode)", state.mount_available_consumer_labels)
+
+    def test_select_continue_consumer_updates_mount_surface(self) -> None:
+        self.controller.select_mount_shape("openai_api")
+        state = self.controller.select_mount_consumer("continue_vscode")
+
+        self.assertEqual("openai_api", state.mount_selected_shape_id)
+        self.assertEqual("continue_vscode", state.mount_selected_consumer_id)
+        self.assertEqual("Continue (VSCode)", state.mount_consumer_label)
+        self.assertEqual("Ready", state.use_mount_status_value)
+        self.assertIn("continue", state.mount_consumer_summary.lower())
+        self.assertIn("openai api shape", "\n".join(state.mount_detail_lines).lower())
+
     def test_parse_error_state_surfaces_attention_guidance(self) -> None:
         self.controller = GuiAppController(
             harness=LocalPrototypeHarness(

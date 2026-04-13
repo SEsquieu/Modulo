@@ -28,6 +28,7 @@ This file is the quickest way to regain context when switching workstations.
 - `Slice 4: Policy and empty-state trust pass` is completed
 - the full use-side truth roadmap is now completed
 - the current GUI refinement work after the completed `Use` roadmap is focused on making the second-layer `Use` flow feel calmer and more product-true without drifting toward dashboard behavior
+- the `Mount` consumer registry now includes `Continue (VSCode)` under the `OpenAI API` shape so a second external consumer can be staged without changing the shape-first binding model
 - the canonical product-shape guidance is now [platform_layering_spec.md](./platform_layering_spec.md)
 - the current architecture discussion is [private_scope_mvp_design.md](./private_scope_mvp_design.md), which narrows the next remote-execution proof around `Local / Private / Public / Cloud`
 - a future routing note is captured in [future_host_capacity_intelligence.md](./future_host_capacity_intelligence.md) for host capability profiling, warm/cold inventory truth, and dynamic idle swapping
@@ -132,6 +133,7 @@ That matters because the main workstation stores the primary model under `agents
   - let Modulo stage the best setup it can
   - explicitly confirm before applying real edge changes
 - `Mount` now filters a consumer dropdown from the selected shape, but it never auto-populates the consumer selection
+- `Mount` now exposes `Continue (VSCode)` as an `OpenAI API` consumer alongside the existing OpenClaw path
 - the redundant `Mounted Edge` card is gone, so the tab only shows the current step, relevant guidance, and consumer-specific setup when it matters
 - the `Active Route` card now carries the high-level use summary directly: model, source, shape, mount, status, and one short reason
 - the `Active Route` card now treats `Status` as a simple `Ready / Not ready` signal and leaves the more specific next step to the shorter `Reason` line
