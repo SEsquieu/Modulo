@@ -119,9 +119,14 @@ That matters because the main workstation stores the primary model under `agents
 ## Latest GUI truth
 
 - `Use` tab: model source selection shell, active route card, nested `Sources / Mount` sections
-- `Mount` now starts with consumer-shape selection (`OpenAI API / Ollama / Modulo Native`) before showing consumer-specific setup
-- `Mount` now filters a consumer dropdown from the selected shape, so setup only appears for compatible shape/consumer pairings
-- OpenClaw now sits behind the `OpenAI API` shape inside `Mount`, while `Route` focuses on route health and mounted-edge status
+- `Mount` now starts blank by default, with no auto-selected shape or consumer
+- `Mount` now behaves as a user-driven wizard:
+  - choose `Shape`
+  - choose a compatible `Consumer`
+  - let Modulo stage the best setup it can
+  - explicitly confirm before applying real edge changes
+- `Mount` now filters a consumer dropdown from the selected shape, but it never auto-populates the consumer selection
+- the redundant `Mounted Edge` card is gone, so the tab only shows the current step, relevant guidance, and consumer-specific setup when it matters
 - the `Active Route` card now carries the high-level use summary directly: model, source, shape, mount, status, and one short reason
 - `Use` selection truth now follows the actual chosen source scope, so selecting a private model surfaces `Private` instead of falling back to stale local route metadata
 - `Sources` now groups `Local / Private / Public / Cloud` in one place instead of splitting them into four separate sub-tabs

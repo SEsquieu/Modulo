@@ -228,8 +228,6 @@ class ModuloMainWindow(QMainWindow):
         self.mount_consumer_combo.setFont(combo_font)
         self.mount_consumer_combo.view().setFont(combo_font)
         self.mount_consumer_combo.currentIndexChanged.connect(self._apply_selected_mount_consumer)
-        self.mount_card_value = QLabel()
-        self.mount_card_value.setWordWrap(True)
         self.mount_consumer_summary_label = QLabel()
         self.mount_consumer_summary_label.setWordWrap(True)
         self.mount_details_label = QLabel()
@@ -676,7 +674,6 @@ class ModuloMainWindow(QMainWindow):
         mount_consumer_row.addWidget(self._build_section_label("Consumer"))
         mount_consumer_row.addWidget(self.mount_consumer_combo, 1)
         layout.addLayout(mount_consumer_row)
-        layout.addWidget(self._build_host_card("Mounted Edge", self.mount_card_value))
         layout.addWidget(self.mount_consumer_summary_label)
         layout.addWidget(self.mount_details_label)
         layout.addWidget(self.openclaw_status_label)
@@ -1275,16 +1272,6 @@ class ModuloMainWindow(QMainWindow):
             self.mount_consumer_combo.blockSignals(True)
             self.mount_consumer_combo.setCurrentIndex(selected_consumer_index)
             self.mount_consumer_combo.blockSignals(False)
-        self.mount_card_value.setText(
-            "\n".join(
-                (
-                    f"Shape: {state.mount_selected_shape_label}",
-                    f"Status: {state.use_mount_status_value}",
-                    f"Consumer: {state.mount_consumer_label}",
-                    f"Model: {state.use_selected_model_label or 'No model selected'}",
-                )
-            )
-        )
         self.mount_consumer_summary_label.setText(state.mount_consumer_summary)
         self.mount_details_label.setText("\n".join(state.mount_detail_lines))
         self.openclaw_status_label.setText(

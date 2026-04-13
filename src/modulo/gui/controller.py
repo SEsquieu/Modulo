@@ -161,15 +161,6 @@ class GuiAppController:
             self._debug_private_network_id = (
                 self.harness.client.worker_bridge.config.private_network_id or ""
             )
-        if not self._selected_mount_shape_id:
-            self._selected_mount_shape_id = self._default_mount_shape_id(
-                self.harness.client.get_status()
-            )
-        if not self._selected_mount_consumer_id:
-            self._selected_mount_consumer_id = self._default_mount_consumer_id(
-                self.harness.client.get_status(),
-                shape_id=self._selected_mount_shape_id,
-            )
         self._sync_debug_target_into_session_bridge()
 
     def refresh(self) -> GuiShellState:
@@ -197,10 +188,7 @@ class GuiAppController:
 
     def select_mount_shape(self, shape_id: str) -> GuiShellState:
         self._selected_mount_shape_id = shape_id
-        self._selected_mount_consumer_id = self._default_mount_consumer_id(
-            self.harness.client.get_status(),
-            shape_id=shape_id,
-        )
+        self._selected_mount_consumer_id = ""
         return self.refresh()
 
     def select_mount_consumer(self, consumer_id: str) -> GuiShellState:
@@ -274,17 +262,14 @@ class GuiAppController:
         )
         mount_shape_ids, mount_shape_labels = self._mount_shape_options()
         if self._selected_mount_shape_id not in mount_shape_ids:
-            self._selected_mount_shape_id = self._default_mount_shape_id(status)
+            self._selected_mount_shape_id = ""
         mount_selected_shape_label = self._mount_shape_label(self._selected_mount_shape_id)
         mount_consumer_ids, mount_consumer_labels = self._mount_consumer_options(
             status=status,
             shape_id=self._selected_mount_shape_id,
         )
         if self._selected_mount_consumer_id not in mount_consumer_ids:
-            self._selected_mount_consumer_id = self._default_mount_consumer_id(
-                status,
-                shape_id=self._selected_mount_shape_id,
-            )
+            self._selected_mount_consumer_id = ""
 
         return GuiShellState(
             connected_to_modulo=onboarding.connected_to_modulo,
@@ -470,6 +455,8 @@ class GuiAppController:
             return "Ready"
         if not self._selected_mount_shape_id:
             return "Needs mount"
+        if not self._selected_mount_consumer_id:
+            return "Choose consumer"
         if self._selected_mount_shape_id == "openai_api" and status.openclaw.connection_plan.apply_ready:
             return "Needs apply"
         if not status.platform.connected:
@@ -478,14 +465,16 @@ class GuiAppController:
 
     def _use_route_health_summary(self, status: ClientStatus) -> str:
         if status.openclaw.configured and self._selected_mount_shape_id == "openai_api":
-            return "A mounted edge is configured, so requests can leave this client through the selected route."
+            return "The selected shape and consumer are configured, so this client is ready to hand requests off through that edge."
         if not self._selected_mount_shape_id:
-            return "Choose a mount shape before Modulo can mark this route ready."
+            return "Step 1: choose a shape so Modulo knows what kind of endpoint to expose."
+        if not self._selected_mount_consumer_id:
+            return "Step 2: choose a compatible consumer. Modulo will stage the best setup it can, then wait for your confirmation before it applies real edge changes."
         if self._selected_mount_shape_id == "openai_api" and status.openclaw.connection_plan.apply_ready:
-            return "The OpenAI-compatible mount is staged, but it still needs to be applied."
+            return "The selected edge is staged, but Modulo is still waiting for your confirmation before it applies those changes."
         if not status.platform.connected:
             return "The selected route still needs a reachable platform target before shared execution can be trusted."
-        return "A shape is selected, but no consumer edge is configured yet."
+        return "The shape and consumer are selected, but the edge still needs attention before it is fully ready."
 
     def _use_mount_status_value(self, status: ClientStatus) -> str:
         if not self._selected_mount_shape_id:
@@ -502,15 +491,15 @@ class GuiAppController:
 
     def _use_mount_status_summary(self, status: ClientStatus) -> str:
         if not self._selected_mount_shape_id:
-            return "Choose a consumer shape before Modulo can say this mount is ready."
+            return "Choose a shape first. Modulo will keep the setup lightweight until you decide what kind of endpoint to expose."
         if not self._selected_mount_consumer_id:
-            return "Choose a consumer compatible with the selected shape."
+            return "Choose a compatible consumer next. Modulo will stage the best setup it can, then wait for your confirmation before it changes anything at the edge."
         if self._selected_mount_consumer_id == "openclaw" and status.openclaw.configured:
-            return "OpenClaw is the current mounted edge for this client."
+            return "OpenClaw is configured for the selected shape."
         if self._selected_mount_consumer_id == "openclaw" and status.openclaw.connection_plan.apply_ready:
-            return "OpenClaw is detected and the mount plan is ready to apply."
+            return "OpenClaw is selected and the edge plan is ready for your confirmation."
         if self._selected_mount_consumer_id == "openclaw" and status.openclaw.installed:
-            return "OpenClaw is installed locally, but Modulo is not mounted into it yet."
+            return "OpenClaw is selected. Modulo can prepare the edge wiring, but it will still ask before making the real changes."
         if self._selected_mount_shape_id == "ollama":
             return "Ollama shape is selected. Choose a compatible consumer to continue."
         if self._selected_mount_shape_id == "modulo_native":
@@ -533,12 +522,6 @@ class GuiAppController:
         }.get(shape_id, "Not selected")
 
     @staticmethod
-    def _default_mount_shape_id(status: ClientStatus) -> str:
-        if status.openclaw.configured or status.openclaw.connection_plan.apply_ready:
-            return "openai_api"
-        return ""
-
-    @staticmethod
     def _mount_consumer_options(
         status: ClientStatus,
         *,
@@ -551,14 +534,6 @@ class GuiAppController:
             return (("", "openclaw"), ("Choose consumer...", "OpenClaw"))
         return (("",), ("Choose consumer...",))
 
-    @staticmethod
-    def _default_mount_consumer_id(status: ClientStatus, *, shape_id: str) -> str:
-        if shape_id in {"openai_api", "ollama"} and (
-            status.openclaw.configured or status.openclaw.connection_plan.apply_ready
-        ):
-            return "openclaw"
-        return ""
-
     def _mount_consumer_label(self, status: ClientStatus) -> str:
         if self._selected_mount_consumer_id == "openclaw":
             return "OpenClaw"
@@ -568,13 +543,17 @@ class GuiAppController:
 
     def _mount_consumer_summary(self, status: ClientStatus) -> str:
         if not self._selected_mount_shape_id:
-            return "Select a consumer shape first, then Modulo can surface the right integration details."
+            return "Select a shape first. Modulo will keep the next step light until you choose how the endpoint should look."
         if not self._selected_mount_consumer_id:
-            return "Pick a compatible consumer and Modulo will narrow the setup to that pairing."
+            return "Pick a compatible consumer next. Modulo will prepare the best setup it can, then wait for your confirmation before it changes anything at the edge."
         if self._selected_mount_consumer_id == "openclaw":
             if status.openclaw.configured:
-                return "OpenClaw is the mounted consumer currently surfaced for this shape."
-            return "OpenClaw is the current consumer Modulo can help configure for this shape."
+                return "OpenClaw is selected for this shape and the current edge already looks configured."
+            if status.openclaw.connection_plan.apply_ready:
+                return "OpenClaw is selected. Modulo has prepared a staged plan and is waiting for your confirmation before it applies it."
+            if status.openclaw.installed:
+                return "OpenClaw is selected. Modulo can stage a best-effort setup, then ask before making the real edge changes."
+            return "OpenClaw is selected, but it is not installed yet."
         if self._selected_mount_shape_id == "ollama":
             return "This shape will eventually expose more Ollama-compatible consumers."
         return "This shape will eventually expose Modulo-native consumers without provider-specific wrapping."
@@ -582,16 +561,18 @@ class GuiAppController:
     def _mount_detail_lines(self, status: ClientStatus) -> tuple[str, ...]:
         if not self._selected_mount_shape_id:
             return (
-                "Shape selection comes first.",
-                "After you choose a shape, Modulo will narrow the consumer setup to what actually matters.",
+                "Step 1: Choose a shape.",
+                "Shape tells Modulo what kind of endpoint you want to expose.",
             )
         if not self._selected_mount_consumer_id:
             return (
-                "Consumer selection comes next.",
-                "Modulo will only show setup details for compatible shape and consumer pairings.",
+                "Step 2: Choose a consumer.",
+                "Modulo only shows compatible consumers for the selected shape.",
+                "When you pick one, Modulo will stage the best setup it can and wait for confirmation before applying real edge changes.",
             )
         if self._selected_mount_consumer_id == "openclaw":
             details = [
+                "Step 3: Review the proposed edge setup.",
                 f"OpenClaw: {status.openclaw.summary}",
                 f"Next: {self._openclaw_guidance_summary(status)}",
             ]
@@ -1002,18 +983,7 @@ class GuiAppController:
         )
         shape_label = self._mount_shape_label(self._selected_mount_shape_id)
         mount_label = self._mount_consumer_label(status)
-        if status.openclaw.configured and self._selected_mount_shape_id == "openai_api":
-            reason = "OpenClaw is configured for the selected OpenAI-compatible path."
-        elif not self._selected_mount_shape_id:
-            reason = "Choose a mount shape before requests can leave this client."
-        elif self._selected_mount_shape_id == "openai_api" and status.openclaw.connection_plan.apply_ready:
-            reason = "OpenClaw is staged but not applied yet."
-        elif self._selected_mount_shape_id == "ollama":
-            reason = "Choose or configure an Ollama-compatible consumer next."
-        elif self._selected_mount_shape_id == "modulo_native":
-            reason = "Choose or configure a Modulo-native consumer next."
-        else:
-            reason = "Route state is not ready yet."
+        reason = self._use_route_health_summary(status)
 
         details = [
             f"Model: {selected_model_label or 'No model selected'}",
