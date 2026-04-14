@@ -313,6 +313,10 @@ class ModuloMainWindow(QMainWindow):
         self.connect_button.clicked.connect(self._run_openclaw_action)
         self.apply_openclaw_button = QPushButton("Apply staged plan")
         self.apply_openclaw_button.clicked.connect(self._apply_openclaw_plan)
+        self.apply_continue_button = QPushButton("Apply Continue Mount")
+        self.apply_continue_button.clicked.connect(self._apply_continue_mount)
+        self.rollback_continue_button = QPushButton("Rollback Continue Mount")
+        self.rollback_continue_button.clicked.connect(self._rollback_continue_mount)
 
         self.host_toggle_button = QPushButton("Enable Hosting")
         self.host_toggle_button.clicked.connect(self._toggle_hosting_async)
@@ -702,6 +706,8 @@ class ModuloMainWindow(QMainWindow):
         route_actions = QHBoxLayout()
         route_actions.addWidget(self.connect_button, 0)
         route_actions.addWidget(self.apply_openclaw_button, 0)
+        route_actions.addWidget(self.apply_continue_button, 0)
+        route_actions.addWidget(self.rollback_continue_button, 0)
         route_actions.addStretch(1)
         layout.addLayout(route_actions)
         layout.addWidget(self.openclaw_details_box)
@@ -902,6 +908,22 @@ class ModuloMainWindow(QMainWindow):
             self.controller.apply_openclaw_connection,
             busy_message="Applying staged OpenClaw plan...",
             action_kind="openclaw",
+            action=True,
+        )
+
+    def _apply_continue_mount(self) -> None:
+        self._run_async_state_action(
+            self.controller.apply_continue_mount,
+            busy_message="Applying Continue mount...",
+            action_kind="mount_apply",
+            action=True,
+        )
+
+    def _rollback_continue_mount(self) -> None:
+        self._run_async_state_action(
+            self.controller.rollback_continue_mount,
+            busy_message="Rolling back Continue mount...",
+            action_kind="mount_apply",
             action=True,
         )
 
@@ -1236,6 +1258,10 @@ class ModuloMainWindow(QMainWindow):
         self.connect_button.setEnabled(state.connect_action_enabled and controls_enabled)
         self.apply_openclaw_button.setText(state.openclaw_plan_apply_label)
         self.apply_openclaw_button.setEnabled(state.openclaw_plan_apply_enabled and controls_enabled)
+        self.apply_continue_button.setText(state.mount_apply_label)
+        self.apply_continue_button.setEnabled(state.mount_apply_enabled and controls_enabled)
+        self.rollback_continue_button.setText(state.mount_rollback_label)
+        self.rollback_continue_button.setEnabled(state.mount_rollback_enabled and controls_enabled)
         self.use_model_button.setEnabled(bool(state.use_available_model_ids) and controls_enabled)
         if not self.use_model_button.isEnabled():
             self._use_model_picker_popup.hide()
@@ -1383,6 +1409,7 @@ class ModuloMainWindow(QMainWindow):
         self.use_public_models_label.setText("\n".join(state.use_public_model_lines))
         self.use_cloud_models_label.setText("\n".join(state.buyer_cloud_models))
         openclaw_visible = state.mount_selected_consumer_id == "openclaw"
+        continue_visible = state.mount_selected_consumer_id == "continue_vscode"
         for widget in (
             self.openclaw_status_label,
             self.openclaw_summary_label,
@@ -1394,6 +1421,11 @@ class ModuloMainWindow(QMainWindow):
             self.openclaw_plan_box,
         ):
             widget.setVisible(openclaw_visible)
+        for widget in (
+            self.apply_continue_button,
+            self.rollback_continue_button,
+        ):
+            widget.setVisible(continue_visible)
 
         combo_model_ids = tuple(
             self.hosting_model_combo.itemData(index)

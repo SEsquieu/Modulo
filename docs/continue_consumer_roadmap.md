@@ -104,12 +104,26 @@ Notes:
 
 - this slice should favor safety and reversibility over clever config mutation
 
-Status: pending
+Status: completed
 
 Dependency note:
 
 - the client-local state roadmap is now completed through storage and telemetry reservation
 - Continue apply and rollback should use those Modulo-owned paths directly instead of inventing per-consumer storage
+
+Completion note:
+
+- summary:
+  - added a real Continue apply/rollback seam that writes one narrow Modulo-managed entry instead of taking ownership of the full consumer config
+  - aligned Continue discovery with the active mount target URL so hosted and local mount targets read back as configured truthfully
+  - wired the `Mount` flow to expose explicit apply and rollback actions for `Continue (VSCode)` once shape and consumer selection are complete
+- proof added to repo:
+  - `src/modulo/client/continue_mount.py`
+  - `src/modulo/client/app.py`
+  - `src/modulo/gui/controller.py`
+  - `src/modulo/gui/window.py`
+  - `tests/test_client_worker.py`
+  - `tests/test_gui_controller.py`
 
 ### Slice 4: Mount UX truth pass for Continue
 
@@ -131,7 +145,7 @@ Notes:
 
 - this slice should stay product-shaped, not dashboard-shaped
 
-Status: pending
+Status: active
 
 ## Completion note
 

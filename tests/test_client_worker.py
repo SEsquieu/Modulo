@@ -1,10 +1,12 @@
 import unittest
 from pathlib import Path
 import sys
+import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from modulo.client.app import (
+    ClientLocalStatePaths,
     ContinueConfigurationStatus,
     HostingPrewarmResult,
     ModuloClientSupervisor,
@@ -12,6 +14,7 @@ from modulo.client.app import (
     PlatformSessionStatus,
     RouteTraceStatus,
 )
+from modulo.client.continue_discovery import ContinueDiscovery
 from modulo.client.local_state import ClientLocalStateResolver
 from modulo.client.continue_discovery import ContinueDiscoveryStatus
 from modulo.client.hosting_readiness import HostingRuntimeProbeStatus
@@ -288,6 +291,23 @@ class FakeRouteTraceProvider:
         return RouteTraceStatus.from_record(record)
 
 
+class FlatLocalStateResolver:
+    def __init__(self, root_path: Path) -> None:
+        self.root_path = root_path
+
+    def resolve(self) -> ClientLocalStatePaths:
+        return ClientLocalStatePaths(
+            root_path=str(self.root_path),
+            backups_path=str(self.root_path),
+            mounts_path=str(self.root_path),
+            telemetry_path=str(self.root_path),
+            telemetry_events_path=str(self.root_path / "events.jsonl"),
+            telemetry_mount_events_path=str(self.root_path / "mounts.jsonl"),
+            telemetry_recovery_events_path=str(self.root_path / "recovery.jsonl"),
+            manifest_path=str(self.root_path / "state.json"),
+        )
+
+
 class ClientWorkerIntegrationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.service = InMemoryModuloService(router=TrustRouter())
@@ -560,6 +580,112 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertTrue(status.continue_consumer.managed_entry_present)
         self.assertEqual("configured", status.continue_consumer.state)
         self.assertEqual("Already configured", status.continue_consumer.connection_plan.apply_label)
+
+    def test_apply_continue_mount_writes_managed_entry_backup_and_metadata(self) -> None:
+        tests_root = Path(__file__).resolve().parent
+        with tempfile.NamedTemporaryFile(
+            prefix="modulo_continue_",
+            suffix=".yaml",
+            dir=str(tests_root),
+            delete=False,
+        ) as handle:
+            config_path = Path(handle.name)
+        try:
+            original_content = (
+                "name: Local Config\n"
+                "version: 1.0.0\n"
+                "schema: v1\n"
+                "models:\n"
+                "  - name: Local Llama\n"
+                "    provider: ollama\n"
+                "    model: llama3.1:8b\n"
+                "    roles:\n"
+                "      - chat\n"
+            )
+            config_path.write_text(original_content, encoding="utf-8")
+            self.client.continue_discovery = ContinueDiscovery(
+                modulo_url=self.client.get_platform_session_status().active_target_url,
+                config_path=config_path,
+            )
+            self.client.local_state_resolver = FlatLocalStateResolver(tests_root)
+            self.client._invalidate_readiness_cache()
+
+            status = self.client.apply_continue_mount(
+                model_id="network/llama3.1:8b",
+                model_name="Network Llama 3.1 8B",
+            )
+
+            self.assertTrue(status.continue_consumer.configured)
+            self.assertTrue(config_path.exists())
+            updated = config_path.read_text(encoding="utf-8")
+            self.assertIn("# modulo-managed-continue:start", updated)
+            self.assertIn("provider: openai", updated)
+            self.assertIn("model: network/llama3.1:8b", updated)
+            self.assertIn("apiBase: https://modulo.grinningfrog.com", updated)
+
+            backup_path = Path(status.continue_consumer.backup_path)
+            metadata_path = Path(status.continue_consumer.rollback_metadata_path)
+            self.assertTrue(backup_path.exists())
+            self.assertTrue(metadata_path.exists())
+            self.assertEqual(original_content, backup_path.read_text(encoding="utf-8"))
+            self.assertIn("\"had_existing_config\": true", metadata_path.read_text(encoding="utf-8"))
+        finally:
+            for path in (
+                config_path,
+                tests_root / "continue_vscode" / f"{config_path.name}.modulo.backup",
+                tests_root / "continue_vscode.json",
+            ):
+                path.unlink(missing_ok=True)
+
+    def test_rollback_continue_mount_restores_original_config_and_clears_metadata(self) -> None:
+        tests_root = Path(__file__).resolve().parent
+        with tempfile.NamedTemporaryFile(
+            prefix="modulo_continue_",
+            suffix=".yaml",
+            dir=str(tests_root),
+            delete=False,
+        ) as handle:
+            config_path = Path(handle.name)
+        try:
+            original_content = (
+                "name: Local Config\n"
+                "version: 1.0.0\n"
+                "schema: v1\n"
+                "models:\n"
+                "  - name: Local Llama\n"
+                "    provider: ollama\n"
+                "    model: llama3.1:8b\n"
+                "    roles:\n"
+                "      - chat\n"
+            )
+            config_path.write_text(original_content, encoding="utf-8")
+            self.client.continue_discovery = ContinueDiscovery(
+                modulo_url=self.client.get_platform_session_status().active_target_url,
+                config_path=config_path,
+            )
+            self.client.local_state_resolver = FlatLocalStateResolver(tests_root)
+            self.client._invalidate_readiness_cache()
+
+            applied = self.client.apply_continue_mount(
+                model_id="network/llama3.1:8b",
+                model_name="Network Llama 3.1 8B",
+            )
+            backup_path = Path(applied.continue_consumer.backup_path)
+            metadata_path = Path(applied.continue_consumer.rollback_metadata_path)
+
+            rolled_back = self.client.rollback_continue_mount()
+
+            self.assertFalse(rolled_back.continue_consumer.configured)
+            self.assertEqual(original_content, config_path.read_text(encoding="utf-8"))
+            self.assertFalse(backup_path.exists())
+            self.assertFalse(metadata_path.exists())
+        finally:
+            for path in (
+                config_path,
+                tests_root / "continue_vscode" / f"{config_path.name}.modulo.backup",
+                tests_root / "continue_vscode.json",
+            ):
+                path.unlink(missing_ok=True)
 
     def test_hosting_setup_includes_ollama_discovery_state(self) -> None:
         status = self.client.get_status()

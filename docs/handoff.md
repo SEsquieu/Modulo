@@ -35,16 +35,17 @@ This file is the quickest way to regain context when switching workstations.
 - `Slice 4: Consumer roadmap dependency alignment` is completed
 - `Slice 1: Continue consumer registry entry` is completed
 - `Slice 2: Continue config contract and file ownership` is completed
+- `Slice 3: Continue apply and rollback flow` is completed
 - the Modulo-owned client-local storage seam now exists for:
   - reserved root paths
   - backup target planning
   - rollback metadata planning
-- real consumer writes and rollback execution still have not landed
 - the client-local state roadmap is now complete and should be treated as the finished persistence foundation for future consumer automation
-- the current Continue consumer work is still contract-first:
+- the current Continue consumer work now has a real write path:
   - consumer binding exists in `Mount`
   - ownership and backup boundaries are defined
-  - real apply and rollback are still the next slice
+  - Continue apply and rollback now write through Modulo-owned client state
+  - the remaining Continue work is mount-surface truth and polish
 - the current GUI refinement work after the completed `Use` roadmap is focused on making the second-layer `Use` flow feel calmer and more product-true without drifting toward dashboard behavior
 - the `Mount` consumer registry now includes `Continue (VSCode)` under the `OpenAI API` shape so a second external consumer can be staged without changing the shape-first binding model
 - the canonical product-shape guidance is now [platform_layering_spec.md](./platform_layering_spec.md)
@@ -114,7 +115,7 @@ The release direction remains tray-first, with deeper truth and control exposed 
   - recovery events
 - current Continue backup targets now resolve into Modulo-owned client state under `backups/continue_vscode`
 - current Continue rollback metadata now has a reserved Modulo-owned record path under `mounts/continue_vscode.json`
-- these are still planning paths only; the apply/rollback slice has not started writing real files yet
+- Continue can now write and remove a narrow managed config entry while preserving backup and rollback metadata in Modulo-owned client state
 - the long-term product abstraction is now explicitly:
   - `Use`
   - `Host`
@@ -165,6 +166,8 @@ That matters because the main workstation stores the primary model under `agents
 - `Mount` now filters a consumer dropdown from the selected shape, but it never auto-populates the consumer selection
 - `Mount` now exposes `Continue (VSCode)` as an `OpenAI API` consumer alongside the existing OpenClaw path
 - `Mount` now treats Continue as a staged contract instead of a fake-ready integration, with explicit config path, backup path, managed entry identity, and owned field list
+- `Mount` now exposes explicit Continue apply/rollback actions once the consumer is selected, so the write step stays user-confirmed instead of implicit
+- Continue mount writes now resolve against the active Modulo target URL, so a hosted backend mount reads back as configured instead of falling back to local loopback truth
 - the redundant `Mounted Edge` card is gone, so the tab only shows the current step, relevant guidance, and consumer-specific setup when it matters
 - the `Active Route` card now carries the high-level use summary directly: model, source, shape, mount, status, and one short reason
 - the `Active Route` card now treats `Status` as a simple `Ready / Not ready` signal and leaves the more specific next step to the shorter `Reason` line
@@ -200,7 +203,7 @@ The most likely first useful slice is:
 - continue the second-layer GUI cleanup around `Use` and `Mount`, especially where the current shell still feels more like a proving surface than the eventual tray-first product
 - complete the next Continue consumer slices: config ownership, safe apply/rollback, and mount-surface truth
 - Client local state is now fully aligned and complete, so Continue Slice 3 can proceed on the current storage seam
-- Continue Slice 3 should only land after the client-local state seam exists for backups and rollback metadata
+- Continue Slice 4 is now the next consumer-specific slice: tighten mount truth, recovery messaging, and user-facing setup clarity
 - align that `Use` work with [platform_layering_spec.md](./platform_layering_spec.md) so the current GUI keeps serving as the second-layer proving surface instead of hardening into a dashboard
 - auth/policy hardening and persistence now that the shared path itself is functionally proven
 - only return to packaging once the shared-network behavior feels truthful enough to lock in

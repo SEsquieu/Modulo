@@ -8,6 +8,7 @@ from typing import Callable, Protocol
 
 from modulo.common.catalog import SUPPORTED_MODELS
 from modulo.client.continue_discovery import ContinueDiscovery, ContinueDiscoveryStatus
+from modulo.client.continue_mount import ContinueMountManager
 from modulo.client.local_state import ClientLocalStatePaths, ClientLocalStateResolver
 from modulo.client.openclaw_discovery import OpenClawDiscovery, OpenClawDiscoveryStatus
 from modulo.client.ollama_discovery import OllamaDiscovery, OllamaDiscoveryStatus
@@ -607,6 +608,38 @@ class ModuloClientSupervisor:
             self.openclaw_configured = True
         return self.get_status()
 
+    def apply_continue_mount(self, *, model_id: str, model_name: str) -> ClientStatus:
+        plan = self.get_continue_status().connection_plan
+        if not plan.apply_ready:
+            return self.get_status()
+        manager = ContinueMountManager(
+            config_path=Path(plan.config_path),
+            backup_path=Path(plan.backup_path),
+            rollback_metadata_path=Path(plan.rollback_metadata_path),
+            api_base=self._continue_mount_api_base(),
+        )
+        result = manager.apply(model_id=model_id, model_name=model_name)
+        if result.ok:
+            self._invalidate_readiness_cache()
+        return self.get_status()
+
+    def rollback_continue_mount(self) -> ClientStatus:
+        continue_status = self.get_continue_status()
+        plan = continue_status.connection_plan
+        rollback_path = plan.rollback_metadata_path or continue_status.rollback_metadata_path
+        if not rollback_path:
+            return self.get_status()
+        manager = ContinueMountManager(
+            config_path=Path(plan.config_path or continue_status.config_path),
+            backup_path=Path(plan.backup_path or continue_status.backup_path),
+            rollback_metadata_path=Path(rollback_path),
+            api_base=self._continue_mount_api_base(),
+        )
+        result = manager.rollback()
+        if result.ok:
+            self._invalidate_readiness_cache()
+        return self.get_status()
+
     def configure_openclaw(self) -> ClientStatus:
         return self.stage_openclaw_connection()
 
@@ -823,7 +856,7 @@ class ModuloClientSupervisor:
         ):
             return self._cached_continue_discovery
         discovery = self.continue_discovery or ContinueDiscovery(
-            modulo_url=self.worker_bridge.config.modulo_url,
+            modulo_url=self._continue_mount_api_base(),
         )
         status = discovery.discover()
         self._cached_continue_discovery = status
@@ -1354,6 +1387,10 @@ class ModuloClientSupervisor:
 
     def get_client_local_state_status(self) -> ClientLocalStateStatus:
         return ClientLocalStateStatus.from_paths(self.local_state_resolver.resolve())
+
+    def _continue_mount_api_base(self) -> str:
+        platform_status = self.get_platform_session_status()
+        return platform_status.active_target_url or self.worker_bridge.config.modulo_url
 
     def _invalidate_readiness_cache(self) -> None:
         self._cached_ollama_discovery = None

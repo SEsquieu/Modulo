@@ -70,6 +70,10 @@ class GuiShellState:
     mount_consumer_label: str = "Not selected"
     mount_consumer_summary: str = ""
     mount_detail_lines: tuple[str, ...] = ()
+    mount_apply_enabled: bool = False
+    mount_apply_label: str = "Apply Mount"
+    mount_rollback_enabled: bool = False
+    mount_rollback_label: str = "Rollback Mount"
     use_route_details: tuple[str, ...] = ()
     use_local_model_lines: tuple[str, ...] = ()
     use_private_model_lines: tuple[str, ...] = ()
@@ -214,6 +218,27 @@ class GuiAppController:
         self._selected_mount_consumer_id = consumer_id
         return self.refresh()
 
+    def apply_continue_mount(self) -> GuiShellState:
+        status = self.harness.client.get_status()
+        selected_label, _ = self._selected_use_presentation(
+            status=status,
+            selected_use_model_id=self._selected_use_model_id,
+        )
+        actual_model_id = (
+            self._model_id_from_use_model_id(self._selected_use_model_id)
+            or status.use.route.selected_model_id
+        )
+        actual_label = selected_label if selected_label != "No model selected" else "Modulo Managed Model"
+        self.harness.client.apply_continue_mount(
+            model_id=actual_model_id,
+            model_name=actual_label,
+        )
+        return self.refresh()
+
+    def rollback_continue_mount(self) -> GuiShellState:
+        self.harness.client.rollback_continue_mount()
+        return self.refresh()
+
     def start_hosting(self) -> GuiShellState:
         self.harness.client.start_hosting()
         return self.refresh()
@@ -350,6 +375,10 @@ class GuiAppController:
             mount_consumer_label=self._mount_consumer_label(status),
             mount_consumer_summary=self._mount_consumer_summary(status),
             mount_detail_lines=self._mount_detail_lines(status),
+            mount_apply_enabled=self._mount_apply_enabled(status),
+            mount_apply_label=self._mount_apply_label(status),
+            mount_rollback_enabled=self._mount_rollback_enabled(status),
+            mount_rollback_label=self._mount_rollback_label(status),
             use_route_details=self._use_route_details(status),
             use_local_model_lines=self._use_local_model_lines(status),
             use_private_model_lines=self._use_scope_model_lines(status, scope_id="private"),
@@ -640,6 +669,27 @@ class GuiAppController:
             return "This shape will eventually expose more Ollama-compatible consumers."
         return "This shape will eventually expose Modulo-native consumers without provider-specific wrapping."
 
+    def _mount_apply_enabled(self, status: ClientStatus) -> bool:
+        if self._selected_mount_consumer_id == "continue_vscode":
+            return status.continue_consumer.connection_plan.apply_ready
+        return False
+
+    def _mount_apply_label(self, status: ClientStatus) -> str:
+        if self._selected_mount_consumer_id == "continue_vscode":
+            return status.continue_consumer.connection_plan.apply_label
+        return "Apply Mount"
+
+    def _mount_rollback_enabled(self, status: ClientStatus) -> bool:
+        if self._selected_mount_consumer_id == "continue_vscode":
+            return status.continue_consumer.configured
+        return False
+
+    @staticmethod
+    def _mount_rollback_label(status: ClientStatus) -> str:
+        if status.continue_consumer.configured:
+            return "Rollback Mount"
+        return "Rollback Mount"
+
     def _mount_detail_lines(self, status: ClientStatus) -> tuple[str, ...]:
         if not self._selected_mount_shape_id:
             return (
@@ -663,7 +713,7 @@ class GuiAppController:
                 f"Rollback metadata: {plan.rollback_metadata_path or 'Unavailable'}",
                 f"Managed entry: {plan.managed_model_name} in {plan.managed_profile_name}",
                 f"Owned fields: {owned_fields}",
-                "Next: keep Continue file ownership narrow and reversible before the apply flow lands.",
+                "Next: apply the managed Continue mount when you are ready, or roll it back later through Modulo.",
             )
         if self._selected_mount_consumer_id == "openclaw":
             details = [

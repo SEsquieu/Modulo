@@ -1,11 +1,13 @@
 import unittest
 from pathlib import Path
 import sys
+import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from modulo.gui.controller import GuiAppController
-from modulo.client.app import HostingPrewarmResult, RouteTraceFilteredWorker, RouteTraceStatus
+from modulo.client.app import ClientLocalStatePaths, HostingPrewarmResult, RouteTraceFilteredWorker, RouteTraceStatus
+from modulo.client.continue_discovery import ContinueDiscovery
 from modulo.client.continue_discovery import ContinueDiscoveryStatus
 from modulo.client.ollama_discovery import OllamaDiscoveryStatus
 from modulo.client.ollama_loaded_models import LoadedOllamaModel, OllamaLoadedModelsStatus
@@ -196,6 +198,23 @@ class FakeFailedRouteTraceProvider:
                     detail="Worker current load meets or exceeds max concurrency.",
                 ),
             ),
+        )
+
+
+class FlatLocalStateResolver:
+    def __init__(self, root_path: Path) -> None:
+        self.root_path = root_path
+
+    def resolve(self) -> ClientLocalStatePaths:
+        return ClientLocalStatePaths(
+            root_path=str(self.root_path),
+            backups_path=str(self.root_path),
+            mounts_path=str(self.root_path),
+            telemetry_path=str(self.root_path),
+            telemetry_events_path=str(self.root_path / "events.jsonl"),
+            telemetry_mount_events_path=str(self.root_path / "mounts.jsonl"),
+            telemetry_recovery_events_path=str(self.root_path / "recovery.jsonl"),
+            manifest_path=str(self.root_path / "state.json"),
         )
 
 
@@ -463,6 +482,48 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertIn("openai api shape", "\n".join(state.mount_detail_lines).lower())
         self.assertIn(".modulo.backup", "\n".join(state.mount_detail_lines).lower())
         self.assertIn("rollback metadata", "\n".join(state.mount_detail_lines).lower())
+
+    def test_apply_and_rollback_continue_mount_update_gui_state(self) -> None:
+        tests_root = Path(__file__).resolve().parent
+        with tempfile.NamedTemporaryFile(
+            prefix="modulo_continue_",
+            suffix=".yaml",
+            dir=str(tests_root),
+            delete=False,
+        ) as handle:
+            config_path = Path(handle.name)
+        try:
+            config_path.write_text(
+                "name: Local Config\nversion: 1.0.0\nschema: v1\nmodels:\n",
+                encoding="utf-8",
+            )
+            self.controller.harness.client.continue_discovery = ContinueDiscovery(
+                modulo_url=self.controller.harness.client.get_platform_session_status().active_target_url,
+                config_path=config_path,
+            )
+            self.controller.harness.client.local_state_resolver = FlatLocalStateResolver(tests_root)
+            self.controller.harness.client._invalidate_readiness_cache()
+
+            self.controller.select_mount_shape("openai_api")
+            staged = self.controller.select_mount_consumer("continue_vscode")
+            self.assertTrue(staged.mount_apply_enabled)
+            self.assertFalse(staged.mount_rollback_enabled)
+
+            applied = self.controller.apply_continue_mount()
+            self.assertEqual("Ready", applied.use_mount_status_value)
+            self.assertTrue(applied.mount_rollback_enabled)
+            self.assertIn("configured for the selected openai api mount", applied.use_mount_status_summary.lower())
+
+            rolled_back = self.controller.rollback_continue_mount()
+            self.assertEqual("Staged", rolled_back.use_mount_status_value)
+            self.assertFalse(rolled_back.mount_rollback_enabled)
+        finally:
+            for path in (
+                config_path,
+                tests_root / "continue_vscode" / f"{config_path.name}.modulo.backup",
+                tests_root / "continue_vscode.json",
+            ):
+                path.unlink(missing_ok=True)
 
     def test_parse_error_state_surfaces_attention_guidance(self) -> None:
         self.controller = GuiAppController(
