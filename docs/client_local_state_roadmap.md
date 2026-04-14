@@ -93,7 +93,19 @@ Notes:
 
 - prefer simple files and explicit metadata over clever indirection
 
-Status: pending
+Status: completed
+
+Completion note:
+
+- summary:
+  - moved Continue backup planning into Modulo-owned client state instead of leaving it beside third-party config
+  - added an explicit rollback metadata path under the reserved `mounts` area so future apply and rollback work have a stable record location
+  - surfaced the new storage truth through both client status and mount guidance without introducing real file writes yet
+- proof added to repo:
+  - `src/modulo/client/app.py`
+  - `src/modulo/gui/controller.py`
+  - `tests/test_client_worker.py`
+  - `tests/test_gui_controller.py`
 
 ### Slice 3: Lightweight local telemetry seam
 

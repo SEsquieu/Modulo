@@ -12,6 +12,7 @@ from modulo.client.app import (
     PlatformSessionStatus,
     RouteTraceStatus,
 )
+from modulo.client.local_state import ClientLocalStateResolver
 from modulo.client.continue_discovery import ContinueDiscoveryStatus
 from modulo.client.hosting_readiness import HostingRuntimeProbeStatus
 from modulo.client.ollama_loaded_models import LoadedOllamaModel, OllamaLoadedModelsStatus
@@ -315,6 +316,9 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
             route_trace_provider=FakeRouteTraceProvider(),
             openclaw_discovery=FakeOpenClawDiscovery(),
             continue_discovery=FakeContinueDiscovery(),
+            local_state_resolver=ClientLocalStateResolver(
+                root_path=Path("C:/Users/test/.modulo")
+            ),
             ollama_discovery=FakeOllamaDiscovery(),
             ollama_loaded_models_discovery=FakeLoadedModelsDiscovery(),
             hosting_runtime_probe=FakeHostingRuntimeProbe(),
@@ -538,7 +542,14 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
         self.assertTrue(status.continue_consumer.connection_plan.apply_ready)
         self.assertIn("backup", status.continue_consumer.connection_plan.details.lower())
         self.assertIn("models[].apibase", ",".join(field.lower() for field in status.continue_consumer.owned_fields))
-        self.assertTrue(status.continue_consumer.backup_path.endswith(".modulo.backup"))
+        self.assertEqual(
+            "C:\\Users\\test\\.modulo\\backups\\continue_vscode\\config.yaml.modulo.backup",
+            status.continue_consumer.backup_path,
+        )
+        self.assertEqual(
+            "C:\\Users\\test\\.modulo\\mounts\\continue_vscode.json",
+            status.continue_consumer.rollback_metadata_path,
+        )
 
     def test_continue_status_detects_existing_modulo_managed_entry(self) -> None:
         self.client.continue_discovery = ManagedContinueDiscovery()

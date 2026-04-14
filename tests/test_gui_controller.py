@@ -462,6 +462,7 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertIn("continue", state.mount_consumer_summary.lower())
         self.assertIn("openai api shape", "\n".join(state.mount_detail_lines).lower())
         self.assertIn(".modulo.backup", "\n".join(state.mount_detail_lines).lower())
+        self.assertIn("rollback metadata", "\n".join(state.mount_detail_lines).lower())
 
     def test_parse_error_state_surfaces_attention_guidance(self) -> None:
         self.controller = GuiAppController(

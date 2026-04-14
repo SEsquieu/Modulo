@@ -623,6 +623,10 @@ class GuiAppController:
                 summary += (
                     f" Backup target: {status.continue_consumer.connection_plan.backup_path}."
                 )
+            if status.continue_consumer.connection_plan.rollback_metadata_path:
+                summary += (
+                    " Rollback metadata stays in Modulo-owned local state."
+                )
             return summary
         if self._selected_mount_consumer_id == "openclaw":
             if status.openclaw.configured:
@@ -656,6 +660,7 @@ class GuiAppController:
                 "Continue (VSCode) will use the OpenAI API shape.",
                 f"Config path: {plan.config_path or 'Unavailable'}",
                 f"Backup path: {plan.backup_path or 'Unavailable'}",
+                f"Rollback metadata: {plan.rollback_metadata_path or 'Unavailable'}",
                 f"Managed entry: {plan.managed_model_name} in {plan.managed_profile_name}",
                 f"Owned fields: {owned_fields}",
                 "Next: keep Continue file ownership narrow and reversible before the apply flow lands.",

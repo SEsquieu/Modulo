@@ -108,8 +108,8 @@ Status: pending
 
 Dependency note:
 
-- this slice should not land before the client-local state seam exists
-- backup files, rollback metadata, and managed-entry records should resolve through Modulo-owned client state instead of ad hoc local file placement
+- client-local state Slice 2 now defines the backup and rollback metadata seam
+- Continue apply and rollback should build on those Modulo-owned paths instead of inventing per-consumer storage
 
 ### Slice 4: Mount UX truth pass for Continue
 

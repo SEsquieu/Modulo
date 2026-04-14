@@ -83,6 +83,7 @@ class ContinueConnectionPlan:
     details: str = "Choose Continue in Mount before Modulo prepares file ownership and backup details."
     config_path: str = ""
     backup_path: str = ""
+    rollback_metadata_path: str = ""
     managed_profile_name: str = "Modulo Continue Mount"
     managed_model_name: str = "Modulo Managed Model"
     owned_fields: tuple[str, ...] = ()
@@ -103,6 +104,7 @@ class ContinueConfigurationStatus:
     )
     config_path: str = ""
     backup_path: str = ""
+    rollback_metadata_path: str = ""
     managed_profile_name: str = "Modulo Continue Mount"
     managed_model_name: str = "Modulo Managed Model"
     owned_fields: tuple[str, ...] = ()
@@ -782,6 +784,7 @@ class ModuloClientSupervisor:
                 details=discovery.details,
                 config_path=discovery.config_path,
                 backup_path=connection_plan.backup_path,
+                rollback_metadata_path=connection_plan.rollback_metadata_path,
                 managed_profile_name=connection_plan.managed_profile_name,
                 managed_model_name=connection_plan.managed_model_name,
                 owned_fields=connection_plan.owned_fields,
@@ -795,6 +798,7 @@ class ModuloClientSupervisor:
             details=discovery.details,
             config_path=discovery.config_path,
             backup_path=connection_plan.backup_path,
+            rollback_metadata_path=connection_plan.rollback_metadata_path,
             managed_profile_name=connection_plan.managed_profile_name,
             managed_model_name=connection_plan.managed_model_name,
             owned_fields=connection_plan.owned_fields,
@@ -1628,7 +1632,11 @@ class ModuloClientSupervisor:
     ) -> ContinueConnectionPlan:
         config_path = discovery.config_path or str(Path.home() / ".continue" / "config.yaml")
         config_file = Path(config_path)
-        backup_path = str(config_file.with_name(f"{config_file.name}.modulo.backup"))
+        local_state = self.local_state_resolver.resolve()
+        backup_root = Path(local_state.backups_path) / "continue_vscode"
+        metadata_root = Path(local_state.mounts_path)
+        backup_path = str(backup_root / f"{config_file.name}.modulo.backup")
+        rollback_metadata_path = str(metadata_root / "continue_vscode.json")
         owned_fields = (
             "models[].name",
             "models[].provider",
@@ -1638,6 +1646,7 @@ class ModuloClientSupervisor:
         )
         change_lines = (
             "Back up the existing Continue config before writing any Modulo-managed entry.",
+            "Store rollback metadata in Modulo-owned client state before mutating any Continue config.",
             "Create or update one Modulo-managed OpenAI-compatible model entry only.",
             "Leave unrelated Continue config content outside the Modulo-managed entry untouched.",
             "Use rollback to remove or restore only the Modulo-managed Continue mount state.",
@@ -1655,6 +1664,7 @@ class ModuloClientSupervisor:
                 ),
                 config_path=config_path,
                 backup_path=backup_path,
+                rollback_metadata_path=rollback_metadata_path,
                 managed_profile_name="Modulo Continue Mount",
                 managed_model_name="Modulo Managed Model",
                 owned_fields=owned_fields,
@@ -1664,7 +1674,8 @@ class ModuloClientSupervisor:
 
         details = (
             "Modulo owns one narrow Continue model entry plus the backup it creates before "
-            "writing. It does not take ownership of the user's entire Continue config file."
+            "writing. Rollback metadata will live in Modulo-owned client state instead of "
+            "inside the Continue directory. It does not take ownership of the user's entire Continue config file."
         )
         if not discovery.config_present:
             details += (
@@ -1680,6 +1691,7 @@ class ModuloClientSupervisor:
             details=details,
             config_path=config_path,
             backup_path=backup_path,
+            rollback_metadata_path=rollback_metadata_path,
             managed_profile_name="Modulo Continue Mount",
             managed_model_name="Modulo Managed Model",
             owned_fields=owned_fields,
