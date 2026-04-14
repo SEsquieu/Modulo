@@ -365,7 +365,7 @@ class ModuloHTTPApp:
         completion_id = f"chatcmpl-{int(time.time() * 1000)}"
         created_at = int(time.time())
         if stream_requested:
-            chunk_payload = {
+            role_payload = {
                 "id": completion_id,
                 "object": "chat.completion.chunk",
                 "created": created_at,
@@ -375,12 +375,28 @@ class ModuloHTTPApp:
                         "index": 0,
                         "delta": {
                             "role": "assistant",
+                        },
+                        "finish_reason": None,
+                    }
+                ],
+            }
+
+            content_payload = {
+                "id": completion_id,
+                "object": "chat.completion.chunk",
+                "created": created_at,
+                "model": model_id,
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {
                             "content": content,
                         },
                         "finish_reason": None,
                     }
                 ],
             }
+
             final_payload = {
                 "id": completion_id,
                 "object": "chat.completion.chunk",
@@ -398,7 +414,8 @@ class ModuloHTTPApp:
                 status=HTTPStatus.OK,
                 content_type="text/event-stream",
                 events=(
-                    json.dumps(chunk_payload),
+                    json.dumps(role_payload),
+                    json.dumps(content_payload),
                     json.dumps(final_payload),
                     "[DONE]",
                 ),
@@ -653,6 +670,8 @@ class _ModuloRequestHandler(BaseHTTPRequestHandler):
                 chunk = f"data: {event}\n\n".encode("utf-8")
                 self.wfile.write(chunk)
                 self.wfile.flush()
+
+            self.close_connection = True
             return
 
         status, payload = response
