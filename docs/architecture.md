@@ -27,6 +27,7 @@ Today the strongest part of the repo is the `cloud` package. It currently contai
 - in-memory worker registry
 - in-memory job lifecycle
 - Ollama-shaped HTTP ingress for `GET /api/tags` and `POST /api/chat`
+- OpenAI-compatible ingress for mounted consumers through `GET /v1/models` and `POST /v1/chat/completions`
 - worker protocol endpoints for register, heartbeat, claim, result, and fail
 - a demo server for local end-to-end testing
 
@@ -41,6 +42,7 @@ In practical terms, the current GUI is now being refined around:
 - a calmer `Use` surface with an active route card plus deeper `Sources` and `Mount` sections
 - a shape-first, consumer-second `Mount` flow that stages real edge changes only after explicit confirmation
 - a scope-aware model picker that groups selectable models under `Local / Private / Public / Cloud` and friendly scope names
+- a real external-consumer proof path where Continue mounts through the OpenAI-compatible edge instead of only receiving staged config
 
 ## Boundary rules
 

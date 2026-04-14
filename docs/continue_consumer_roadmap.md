@@ -162,11 +162,15 @@ Completion note:
 - summary:
   - Modulo can now bind, apply, and roll back a Continue consumer through the `OpenAI API` shape without taking over the user's full Continue config
   - the `Mount` surface now presents Continue as a calmer, user-facing setup flow instead of a contract review
+  - the control-plane edge now exposes an OpenAI-compatible shim for Continue, including model listing, chat-completions compatibility, and buffered streaming transport across the consumer gap
+  - Continue has now been manually proven as a real end-to-end mounted consumer path against a hosted/private model, not only as a staged config target
 - proof added to repo:
   - `src/modulo/client/continue_discovery.py`
   - `src/modulo/client/continue_mount.py`
   - `src/modulo/client/app.py`
+  - `src/modulo/cloud/http.py`
   - `src/modulo/gui/controller.py`
   - `src/modulo/gui/window.py`
   - `tests/test_client_worker.py`
+  - `tests/test_http_app.py`
   - `tests/test_gui_controller.py`

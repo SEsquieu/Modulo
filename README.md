@@ -120,11 +120,13 @@ The GUI currently includes:
   - a `Sources` section for `Local / Private / Public / Cloud`
   - a `Mount` section that now behaves like a shape-first, consumer-second wizard
   - an anchored nested model picker grouped by source and scope
+  - `Continue (VSCode)` as a real mounted consumer under the `OpenAI API` shape
 - a `Host` tab with local-only model selection, warm-state card, host toggle, and worker/runtime detail tabs
 - a `Diagnostics` tab with smoke-test summary, route-trace, activity, and error views
 - explicit execution-path truth in host and diagnostics views so `REAL` and `PROTOTYPE` runs are clearly labeled
 - async host actions and smoke tests so long Ollama calls do not freeze the UI
 - a split footer with left-side shell status and right-side transient notices
+- an OpenAI-compatible consumer edge for mounted clients, including `GET /v1/models` and `POST /v1/chat/completions`
 
 Current next functional proof:
 
@@ -144,7 +146,7 @@ Recent milestone:
 - the newest tracked emphasis after route-trace visibility is the `Use` side: making `Local / Private / Public / Cloud` visibility honest and easy to trust
 - the newest untracked GUI refinement work is making the second-layer `Use` and `Mount` flow feel calmer and more tray-first without losing truth
 - the `Mount` consumer list now includes `Continue (VSCode)` under the `OpenAI API` shape so a second external consumer can be staged without disturbing the existing OpenClaw path
-- the Continue path now also has an explicit config and file-ownership contract, so backup targets and managed-entry boundaries are defined before real Continue file writes land
+- the Continue path now also has an explicit config and file-ownership contract, real apply/rollback flow, and an OpenAI-compatible shim with buffered streaming compatibility so Continue can complete real prompts through Modulo
 - the guiding product rule is now explicit: the current GUI is the deeper proving surface, while the release product should stay shallow, tray-first, and Hamachi-simple
 
 ## Current platform surface
@@ -167,6 +169,8 @@ The current HTTP ingress also exposes:
 - `GET /api/tags`
 - `GET /api/platform/status`
 - `POST /api/chat`
+- `GET /v1/models`
+- `POST /v1/chat/completions`
 
 ## Current status
 

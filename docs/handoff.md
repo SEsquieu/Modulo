@@ -37,6 +37,7 @@ This file is the quickest way to regain context when switching workstations.
 - `Slice 2: Continue config contract and file ownership` is completed
 - `Slice 3: Continue apply and rollback flow` is completed
 - `Slice 4: Mount UX truth pass for Continue` is completed
+- the Continue consumer roadmap is now functionally proven through a real mounted Continue flow
 - the Modulo-owned client-local storage seam now exists for:
   - reserved root paths
   - backup target planning
@@ -47,6 +48,8 @@ This file is the quickest way to regain context when switching workstations.
   - ownership and backup boundaries are defined
   - Continue apply and rollback now write through Modulo-owned client state
   - the mount surface now uses calmer user-facing readiness states for Continue
+  - the cloud edge now exposes an OpenAI-compatible shim for Continue
+  - buffered streaming now crosses the consumer gap so Continue can consume a real streamed response path
 - the current GUI refinement work after the completed `Use` roadmap is focused on making the second-layer `Use` flow feel calmer and more product-true without drifting toward dashboard behavior
 - the `Mount` consumer registry now includes `Continue (VSCode)` under the `OpenAI API` shape so a second external consumer can be staged without changing the shape-first binding model
 - the canonical product-shape guidance is now [platform_layering_spec.md](./platform_layering_spec.md)
@@ -109,6 +112,11 @@ The release direction remains tray-first, with deeper truth and control exposed 
   - Continue config discovery is separate from OpenClaw discovery
   - Modulo now defines a narrow managed-entry ownership contract for Continue
   - backup path and owned fields are surfaced before any real Continue file writes exist
+- the Continue consumer path now also has a real edge-serving layer:
+  - `GET /v1/models`
+  - `POST /v1/chat/completions`
+  - consumer-compatibility aliases where needed
+  - buffered streaming support for Continue's expected flow
 - the client now carries a reserved local-state contract with a Modulo-owned root plus `backups`, `mounts`, `telemetry`, and manifest paths
 - the client-local state contract now also reserves telemetry breadcrumb files for:
   - general local events
@@ -117,6 +125,7 @@ The release direction remains tray-first, with deeper truth and control exposed 
 - current Continue backup targets now resolve into Modulo-owned client state under `backups/continue_vscode`
 - current Continue rollback metadata now has a reserved Modulo-owned record path under `mounts/continue_vscode.json`
 - Continue can now write and remove a narrow managed config entry while preserving backup and rollback metadata in Modulo-owned client state
+- Continue can now complete a real mounted prompt path through the Modulo OpenAI-compatible shim instead of stopping at config staging
 - the long-term product abstraction is now explicitly:
   - `Use`
   - `Host`
@@ -173,6 +182,7 @@ That matters because the main workstation stores the primary model under `agents
   - `Ready to apply`
   - `Ready`
   - `Needs attention`
+- Continue now depends on the OpenAI-compatible shim path behind the selected Modulo target, including buffered streaming transport across the consumer gap
 - the Continue checklist now stays focused on:
   - target
   - config path
@@ -215,6 +225,7 @@ The most likely first useful slice is:
 - continue the second-layer GUI cleanup around `Use` and `Mount`, especially where the current shell still feels more like a proving surface than the eventual tray-first product
 - Client local state is now fully aligned and complete, so Continue Slice 3 can proceed on the current storage seam
 - the Continue consumer roadmap is now complete, so the next good move is choosing whether to generalize the calmer mount-state model across other consumers
+- the Continue path is now proven enough that the next consumer-side work should probably generalize the abstraction instead of adding more Continue-specific shaping
 - align that `Use` work with [platform_layering_spec.md](./platform_layering_spec.md) so the current GUI keeps serving as the second-layer proving surface instead of hardening into a dashboard
 - auth/policy hardening and persistence now that the shared path itself is functionally proven
 - only return to packaging once the shared-network behavior feels truthful enough to lock in
@@ -355,6 +366,11 @@ Recent meaningful commits:
 - `ab4eb87` `Add Continue consumer to mount registry`
 - `413f6d6` `Add Continue consumer roadmap`
 - `008b38d` `Add Continue config ownership contract`
+- `6cc5f0a` `Add Continue apply and rollback flow`
+- `86f5ebc` `Polish Continue mount UX truth`
+- `e3b8345` `Add OpenAI-compatible Continue shim`
+- `7fc9646` `Tolerate Continue stream flag and sync target discovery`
+- `96b2845` `Fix Continue OpenAI mount path handling`
 
 If resuming cold, start by reading:
 

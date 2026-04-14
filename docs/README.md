@@ -31,9 +31,9 @@ Current emphasis:
 - the cross-network private execution proof is now real
 - route-trace visibility is now completed
 - the `Use`-side truth roadmap is now completed
-- the Continue consumer roadmap is now the newest focused consumer-integration roadmap
+- the Continue consumer roadmap is now completed and validated as a real mounted-consumer path
 - the client-local state roadmap is now the prerequisite storage roadmap for any real consumer-side apply/rollback work
-- the Continue consumer roadmap is now completed through Slice 2, so the next concrete step is real apply/rollback against the scoped Continue ownership contract
+- the Continue path now includes a real OpenAI-compatible shim and buffered streaming bridge, so Continue can execute through Modulo instead of stopping at staged config
 - productization is intentionally deferred while shared-path truth, second-layer GUI refinement, and policy harden
 - the current UI should be treated as a second-layer surface while the product continues to aim toward a tray-first release
 - the current live GUI cleanup is focused on:
