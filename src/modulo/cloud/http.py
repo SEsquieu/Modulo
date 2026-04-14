@@ -37,15 +37,24 @@ class ModuloHTTPApp:
     chat_wait_timeout_seconds: float = 10.0
     chat_wait_poll_seconds: float = 0.05
 
-    def handle(self, method: str, path: str, body: bytes | None = None) -> tuple[int, dict[str, Any]]:
+    def handle(
+        self,
+        method: str,
+        path: str,
+        body: bytes | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> tuple[int, dict[str, Any]]:
         if method == "GET" and path == "/api/tags":
             return HTTPStatus.OK, self._handle_tags()
 
         if method == "GET" and path == "/api/platform/status":
-            return HTTPStatus.OK, self._handle_platform_status()
+            return HTTPStatus.OK, self._handle_platform_status(headers=headers)
 
         if method == "GET" and path == "/api/platform/trace/latest":
             return HTTPStatus.OK, self._handle_latest_route_trace()
+
+        if method == "GET" and path == "/v1/models":
+            return HTTPStatus.OK, self._handle_openai_models()
 
         if method == "POST" and path == "/api/chat":
             try:
@@ -53,6 +62,13 @@ class ModuloHTTPApp:
             except json.JSONDecodeError:
                 return HTTPStatus.BAD_REQUEST, {"error": "Invalid JSON payload"}
             return self._handle_chat(payload)
+
+        if method == "POST" and path == "/v1/chat/completions":
+            try:
+                payload = json.loads((body or b"{}").decode("utf-8"))
+            except json.JSONDecodeError:
+                return HTTPStatus.BAD_REQUEST, {"error": {"message": "Invalid JSON payload", "type": "invalid_request_error"}}
+            return self._handle_openai_chat_completions(payload)
 
         if method == "POST" and path == "/worker/register":
             payload = self._decode_json(body)
@@ -125,7 +141,7 @@ class ModuloHTTPApp:
             "models": list(models_by_id.values())
         }
 
-    def _handle_platform_status(self) -> dict[str, Any]:
+    def _handle_platform_status(self, *, headers: dict[str, str] | None = None) -> dict[str, Any]:
         workers = self.service.registry.list_workers()
         healthy_network_workers = [
             worker for worker in workers if worker.healthy and worker.kind.value == "network"
@@ -178,7 +194,7 @@ class ModuloHTTPApp:
             "connected": True,
             "summary": "Platform session bridge is connected to the shared control plane.",
             "details": details,
-            "active_target_url": "",
+            "active_target_url": self._base_url_from_headers(headers),
             "account_summary": "Prototype account context is local-only and not authenticated yet.",
             "network_models": list(network_models.values()),
             "private_models": private_models,
@@ -202,6 +218,26 @@ class ModuloHTTPApp:
             return RouteTraceStatus().to_payload()
         latest = max(traces, key=lambda item: (item.updated_at_tick, item.created_at_tick))
         return RouteTraceStatus.from_record(latest).to_payload()
+
+    def _handle_openai_models(self) -> dict[str, Any]:
+        status_payload = self._handle_platform_status()
+        ids: set[str] = set()
+        data: list[dict[str, Any]] = []
+
+        for model in status_payload["private_models"] + status_payload["cloud_models"]:
+            model_id = str(model.get("model_id", ""))
+            if not model_id or model_id in ids:
+                continue
+            ids.add(model_id)
+            data.append(
+                {
+                    "id": model_id,
+                    "object": "model",
+                    "created": 0,
+                    "owned_by": "modulo",
+                }
+            )
+        return {"object": "list", "data": data}
 
     def _handle_chat(self, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
         model_id = payload.get("model")
@@ -277,6 +313,75 @@ class ModuloHTTPApp:
                 "content": completed.response_text,
             },
             "done": True,
+        }
+
+    def _handle_openai_chat_completions(
+        self,
+        payload: dict[str, Any],
+    ) -> tuple[int, dict[str, Any]]:
+        model_id = payload.get("model")
+        messages = payload.get("messages", [])
+        if not isinstance(model_id, str) or not model_id:
+            return HTTPStatus.BAD_REQUEST, {
+                "error": {
+                    "message": "Missing required field: model",
+                    "type": "invalid_request_error",
+                }
+            }
+        if not isinstance(messages, list):
+            return HTTPStatus.BAD_REQUEST, {
+                "error": {
+                    "message": "Invalid field: messages",
+                    "type": "invalid_request_error",
+                }
+            }
+        if bool(payload.get("stream", False)):
+            return HTTPStatus.BAD_REQUEST, {
+                "error": {
+                    "message": "Streaming is not supported by this OpenAI-compatible prototype shim yet.",
+                    "type": "invalid_request_error",
+                }
+            }
+
+        status, response = self._handle_chat(
+            {
+                "model": model_id,
+                "messages": messages,
+                "stream": False,
+            }
+        )
+        if status != HTTPStatus.OK:
+            error_message = response.get("error", "Unknown error") if isinstance(response, dict) else "Unknown error"
+            mapped_status = HTTPStatus.NOT_FOUND if status == HTTPStatus.BAD_GATEWAY else status
+            return mapped_status, {
+                "error": {
+                    "message": str(error_message),
+                    "type": "invalid_request_error",
+                }
+            }
+
+        assistant = response.get("message", {}) if isinstance(response, dict) else {}
+        content = str(assistant.get("content", ""))
+        return HTTPStatus.OK, {
+            "id": f"chatcmpl-{int(time.time() * 1000)}",
+            "object": "chat.completion",
+            "created": int(time.time()),
+            "model": model_id,
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": content,
+                    },
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+            },
         }
 
     def _wait_for_job(self, job_id: str):
@@ -468,6 +573,16 @@ class ModuloHTTPApp:
         job_id = path[len(prefix) : -len(suffix)]
         return job_id or None
 
+    @staticmethod
+    def _base_url_from_headers(headers: dict[str, str] | None) -> str:
+        if not headers:
+            return ""
+        host = headers.get("Host", "").strip()
+        if not host:
+            return ""
+        scheme = headers.get("X-Forwarded-Proto", "http").strip() or "http"
+        return f"{scheme}://{host}"
+
 
 class _ModuloRequestHandler(BaseHTTPRequestHandler):
     app: ModuloHTTPApp
@@ -484,7 +599,8 @@ class _ModuloRequestHandler(BaseHTTPRequestHandler):
     def _dispatch(self, method: str) -> None:
         content_length = int(self.headers.get("Content-Length", "0"))
         body = self.rfile.read(content_length) if content_length else None
-        status, payload = self.app.handle(method, self.path, body)
+        request_headers = {key: value for key, value in self.headers.items()}
+        status, payload = self.app.handle(method, self.path, body, request_headers)
         response_bytes = json.dumps(payload).encode("utf-8")
 
         self.send_response(status)

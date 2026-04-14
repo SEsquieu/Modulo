@@ -108,6 +108,60 @@ class ModuloHTTPAppTests(unittest.TestCase):
         self.assertEqual("private", payload["scope"])
         self.assertEqual("completed", payload["final_status"])
 
+    def test_get_openai_models_returns_private_and_cloud_models(self) -> None:
+        status, payload = self.app.handle("GET", "/v1/models")
+
+        self.assertEqual(200, status)
+        self.assertEqual("list", payload["object"])
+        model_ids = {item["id"] for item in payload["data"]}
+        self.assertIn("llama3.1:8b", model_ids)
+        self.assertGreaterEqual(len(model_ids), 1)
+
+    def test_post_openai_chat_completions_returns_openai_shaped_response(self) -> None:
+        status, payload = self.app.handle(
+            "POST",
+            "/v1/chat/completions",
+            json.dumps(
+                {
+                    "model": "llama3.1:8b",
+                    "messages": [{"role": "user", "content": "hi"}],
+                    "stream": False,
+                }
+            ).encode("utf-8"),
+        )
+
+        self.assertEqual(200, status)
+        self.assertEqual("chat.completion", payload["object"])
+        self.assertEqual("llama3.1:8b", payload["model"])
+        self.assertEqual("assistant", payload["choices"][0]["message"]["role"])
+        self.assertEqual("hello from modulo", payload["choices"][0]["message"]["content"])
+
+    def test_post_openai_chat_completions_rejects_streaming_for_now(self) -> None:
+        status, payload = self.app.handle(
+            "POST",
+            "/v1/chat/completions",
+            json.dumps(
+                {
+                    "model": "llama3.1:8b",
+                    "messages": [{"role": "user", "content": "hi"}],
+                    "stream": True,
+                }
+            ).encode("utf-8"),
+        )
+
+        self.assertEqual(400, status)
+        self.assertIn("Streaming is not supported", payload["error"]["message"])
+
+    def test_platform_status_uses_request_host_for_active_target_url(self) -> None:
+        status, payload = self.app.handle(
+            "GET",
+            "/api/platform/status",
+            headers={"Host": "127.0.0.1:8000"},
+        )
+
+        self.assertEqual(200, status)
+        self.assertEqual("http://127.0.0.1:8000", payload["active_target_url"])
+
     def test_post_chat_returns_ollama_shaped_response(self) -> None:
         status, payload = self.app.handle(
             "POST",

@@ -208,7 +208,7 @@ class LocalPrototypeSessionBridge(ClientSessionBridge):
             connected=bool(payload.get("connected", True)),
             summary=str(payload.get("summary", "Platform session bridge is connected to the shared control plane.")),
             details=str(payload.get("details", "")),
-            active_target_url=str(payload.get("active_target_url", target_url)),
+            active_target_url=str(payload.get("active_target_url") or target_url),
             account_summary=str(payload.get("account_summary", "Remote platform account context is unavailable.")),
             network_models=self._platform_models_from_payload(payload.get("network_models"), source="network"),
             private_models=self._platform_models_from_payload(payload.get("private_models"), source="private"),
