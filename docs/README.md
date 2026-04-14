@@ -24,6 +24,7 @@ Current source of truth:
 - [route_trace_visibility_roadmap.md](./route_trace_visibility_roadmap.md): mini roadmap for surfacing routed execution truth after the private proof is real
 - [use_side_truth_roadmap.md](./use_side_truth_roadmap.md): mini roadmap for making the `Use` side truthful about `Local / Private / Public / Cloud` visibility and routing
 - [continue_consumer_roadmap.md](./continue_consumer_roadmap.md): mini roadmap for making `Continue (VSCode)` the first non-OpenClaw mounted consumer through the `OpenAI API` shape
+- [client_local_state_roadmap.md](./client_local_state_roadmap.md): prerequisite mini roadmap for Modulo-owned client storage for backups, rollback metadata, and lightweight local telemetry
 
 Current emphasis:
 
@@ -31,6 +32,7 @@ Current emphasis:
 - route-trace visibility is now completed
 - the `Use`-side truth roadmap is now completed
 - the Continue consumer roadmap is now the newest focused consumer-integration roadmap
+- the client-local state roadmap is now the prerequisite storage roadmap for any real consumer-side apply/rollback work
 - the Continue consumer roadmap is now completed through Slice 2, so the next concrete step is real apply/rollback against the scoped Continue ownership contract
 - productization is intentionally deferred while shared-path truth, second-layer GUI refinement, and policy harden
 - the current UI should be treated as a second-layer surface while the product continues to aim toward a tray-first release

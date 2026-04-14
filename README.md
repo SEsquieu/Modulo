@@ -133,6 +133,7 @@ Current next functional proof:
 - [docs/route_trace_visibility_roadmap.md](./docs/route_trace_visibility_roadmap.md) defines the next post-proof slice so routed execution becomes explainable before packaging resumes
 - [docs/use_side_truth_roadmap.md](./docs/use_side_truth_roadmap.md) defines the next `Use`-side truth pass so model source visibility is clear before packaging resumes
 - [docs/continue_consumer_roadmap.md](./docs/continue_consumer_roadmap.md) now tracks the first non-OpenClaw external consumer path through `Mount -> OpenAI API -> Continue (VSCode)`
+- [docs/client_local_state_roadmap.md](./docs/client_local_state_roadmap.md) now tracks the prerequisite Modulo-owned client storage seam for backups, rollback metadata, and lightweight local telemetry before consumer apply/rollback work lands
 - [docs/platform_layering_spec.md](./docs/platform_layering_spec.md) captures the canonical tray-first layering model so the current GUI does not drift into a dashboard-shaped product
 
 Recent milestone:

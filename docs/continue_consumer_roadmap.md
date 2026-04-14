@@ -8,6 +8,7 @@ The goal is not to turn Modulo into a Continue-specific product.
 The goal is to prove that Modulo can automate a real external consumer through the `OpenAI API` shape without breaking the generic `Shape -> Consumer -> staged edge changes` model.
 
 This roadmap should be read alongside [platform_layering_spec.md](./platform_layering_spec.md).
+Real apply and rollback work should now also be treated as dependent on [client_local_state_roadmap.md](./client_local_state_roadmap.md).
 
 ## Goal
 
@@ -104,6 +105,11 @@ Notes:
 - this slice should favor safety and reversibility over clever config mutation
 
 Status: pending
+
+Dependency note:
+
+- this slice should not land before the client-local state seam exists
+- backup files, rollback metadata, and managed-entry records should resolve through Modulo-owned client state instead of ad hoc local file placement
 
 ### Slice 4: Mount UX truth pass for Continue
 
