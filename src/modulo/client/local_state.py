@@ -10,6 +10,9 @@ class ClientLocalStatePaths:
     backups_path: str
     mounts_path: str
     telemetry_path: str
+    telemetry_events_path: str
+    telemetry_mount_events_path: str
+    telemetry_recovery_events_path: str
     manifest_path: str
 
 
@@ -30,6 +33,9 @@ class ClientLocalStateResolver:
             backups_path=str(root / "backups"),
             mounts_path=str(root / "mounts"),
             telemetry_path=str(root / "telemetry"),
+            telemetry_events_path=str(root / "telemetry" / "events.jsonl"),
+            telemetry_mount_events_path=str(root / "telemetry" / "mounts.jsonl"),
+            telemetry_recovery_events_path=str(root / "telemetry" / "recovery.jsonl"),
             manifest_path=str(root / "state.json"),
         )
 

@@ -125,7 +125,18 @@ Notes:
 - do not overbuild analytics here
 - this slice is about stable storage, not dashboards
 
-Status: pending
+Status: completed
+
+Completion note:
+
+- summary:
+  - reserved explicit local telemetry files under Modulo-owned client state for general events, mount events, and recovery events
+  - kept telemetry scoped to local breadcrumbs and recovery instead of expanding into a reporting system
+  - exposed those telemetry paths through the shared client-local-state contract so future apply flows can record small events without inventing new storage locations
+- proof added to repo:
+  - `src/modulo/client/local_state.py`
+  - `src/modulo/client/app.py`
+  - `tests/test_client_local_state.py`
 
 ### Slice 4: Consumer roadmap dependency alignment
 

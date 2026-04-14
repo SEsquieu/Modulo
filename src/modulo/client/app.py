@@ -118,6 +118,9 @@ class ClientLocalStateStatus:
     backups_path: str = ""
     mounts_path: str = ""
     telemetry_path: str = ""
+    telemetry_events_path: str = ""
+    telemetry_mount_events_path: str = ""
+    telemetry_recovery_events_path: str = ""
     manifest_path: str = ""
     summary: str = "Modulo client-local state has not been prepared yet."
     details: str = ""
@@ -129,14 +132,20 @@ class ClientLocalStateStatus:
             backups_path=paths.backups_path,
             mounts_path=paths.mounts_path,
             telemetry_path=paths.telemetry_path,
+            telemetry_events_path=paths.telemetry_events_path,
+            telemetry_mount_events_path=paths.telemetry_mount_events_path,
+            telemetry_recovery_events_path=paths.telemetry_recovery_events_path,
             manifest_path=paths.manifest_path,
-            summary="Modulo client-local state paths are reserved for backups, mounts, and telemetry.",
+            summary="Modulo client-local state paths are reserved for backups, mounts, and lightweight telemetry.",
             details="\n".join(
                 (
                     f"Root: {paths.root_path}",
                     f"Backups: {paths.backups_path}",
                     f"Mounts: {paths.mounts_path}",
                     f"Telemetry: {paths.telemetry_path}",
+                    f"Telemetry events: {paths.telemetry_events_path}",
+                    f"Mount events: {paths.telemetry_mount_events_path}",
+                    f"Recovery events: {paths.telemetry_recovery_events_path}",
                     f"Manifest: {paths.manifest_path}",
                 )
             ),
