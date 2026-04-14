@@ -5,7 +5,7 @@ import time
 from dataclasses import dataclass
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any
+from typing import Any, Iterable
 
 from modulo.common.catalog import SUPPORTED_MODELS
 from modulo.client.app import RouteTraceStatus
@@ -29,6 +29,13 @@ from modulo.worker.errors import WorkerExecutionError
 from modulo.worker.runtime import InMemoryWorkerRuntime
 
 
+@dataclass(frozen=True)
+class StreamHTTPResponse:
+    status: int
+    content_type: str
+    events: tuple[str, ...]
+
+
 @dataclass
 class ModuloHTTPApp:
     service: InMemoryModuloService
@@ -43,7 +50,7 @@ class ModuloHTTPApp:
         path: str,
         body: bytes | None = None,
         headers: dict[str, str] | None = None,
-    ) -> tuple[int, dict[str, Any]]:
+    ) -> tuple[int, dict[str, Any]] | StreamHTTPResponse:
         if method == "GET" and path == "/api/tags":
             return HTTPStatus.OK, self._handle_tags()
 
@@ -318,9 +325,10 @@ class ModuloHTTPApp:
     def _handle_openai_chat_completions(
         self,
         payload: dict[str, Any],
-    ) -> tuple[int, dict[str, Any]]:
+    ) -> tuple[int, dict[str, Any]] | StreamHTTPResponse:
         model_id = payload.get("model")
         messages = payload.get("messages", [])
+        stream_requested = bool(payload.get("stream", False))
         if not isinstance(model_id, str) or not model_id:
             return HTTPStatus.BAD_REQUEST, {
                 "error": {
@@ -354,10 +362,52 @@ class ModuloHTTPApp:
 
         assistant = response.get("message", {}) if isinstance(response, dict) else {}
         content = str(assistant.get("content", ""))
+        completion_id = f"chatcmpl-{int(time.time() * 1000)}"
+        created_at = int(time.time())
+        if stream_requested:
+            chunk_payload = {
+                "id": completion_id,
+                "object": "chat.completion.chunk",
+                "created": created_at,
+                "model": model_id,
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {
+                            "role": "assistant",
+                            "content": content,
+                        },
+                        "finish_reason": None,
+                    }
+                ],
+            }
+            final_payload = {
+                "id": completion_id,
+                "object": "chat.completion.chunk",
+                "created": created_at,
+                "model": model_id,
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {},
+                        "finish_reason": "stop",
+                    }
+                ],
+            }
+            return StreamHTTPResponse(
+                status=HTTPStatus.OK,
+                content_type="text/event-stream",
+                events=(
+                    json.dumps(chunk_payload),
+                    json.dumps(final_payload),
+                    "[DONE]",
+                ),
+            )
+
         return HTTPStatus.OK, {
-            "id": f"chatcmpl-{int(time.time() * 1000)}",
+            "id": completion_id,
             "object": "chat.completion",
-            "created": int(time.time()),
+            "created": created_at,
             "model": model_id,
             "choices": [
                 {
@@ -592,7 +642,20 @@ class _ModuloRequestHandler(BaseHTTPRequestHandler):
         content_length = int(self.headers.get("Content-Length", "0"))
         body = self.rfile.read(content_length) if content_length else None
         request_headers = {key: value for key, value in self.headers.items()}
-        status, payload = self.app.handle(method, self.path, body, request_headers)
+        response = self.app.handle(method, self.path, body, request_headers)
+        if isinstance(response, StreamHTTPResponse):
+            self.send_response(response.status)
+            self.send_header("Content-Type", response.content_type)
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "keep-alive")
+            self.end_headers()
+            for event in response.events:
+                chunk = f"data: {event}\n\n".encode("utf-8")
+                self.wfile.write(chunk)
+                self.wfile.flush()
+            return
+
+        status, payload = response
         response_bytes = json.dumps(payload).encode("utf-8")
 
         self.send_response(status)
