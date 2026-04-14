@@ -29,9 +29,10 @@ This file is the quickest way to regain context when switching workstations.
 - the full use-side truth roadmap is now completed
 - the next focused consumer roadmap is [continue_consumer_roadmap.md](./continue_consumer_roadmap.md)
 - the next prerequisite storage roadmap is [client_local_state_roadmap.md](./client_local_state_roadmap.md)
+- `Slice 1: Client state root contract` is completed
 - `Slice 1: Continue consumer registry entry` is completed
 - `Slice 2: Continue config contract and file ownership` is completed
-- no durable Modulo-owned client-local storage seam exists yet, so consumer apply/rollback work should be treated as blocked on the client-local state roadmap
+- the Modulo-owned client-local storage seam now exists at the contract level, but backup metadata and real consumer writes still have not landed
 - the current Continue consumer work is still contract-first:
   - consumer binding exists in `Mount`
   - ownership and backup boundaries are defined
@@ -98,8 +99,8 @@ The release direction remains tray-first, with deeper truth and control exposed 
   - Continue config discovery is separate from OpenClaw discovery
   - Modulo now defines a narrow managed-entry ownership contract for Continue
   - backup path and owned fields are surfaced before any real Continue file writes exist
-- the durable client-local storage layer for those backups and future rollback metadata does not exist yet
-- current Continue backup targets are still contract-level placeholders, not a real Modulo-owned persistent state system
+- the client now carries a reserved local-state contract with a Modulo-owned root plus `backups`, `mounts`, `telemetry`, and manifest paths
+- current Continue backup targets are still contract-level placeholders until the backup metadata seam repoints them into that Modulo-owned state
 - the long-term product abstraction is now explicitly:
   - `Use`
   - `Host`
@@ -184,7 +185,7 @@ The most likely first useful slice is:
 - a next roadmap chunk that keeps the tray-first product direction intact while refining what should surface at the `Use` layer versus `Mount` and `Scopes`
 - continue the second-layer GUI cleanup around `Use` and `Mount`, especially where the current shell still feels more like a proving surface than the eventual tray-first product
 - complete the next Continue consumer slices: config ownership, safe apply/rollback, and mount-surface truth
-- Client local state is now the next concrete prerequisite step before Continue Slice 3
+- Client local state Slice 1 is now complete, so the next concrete prerequisite step before Continue Slice 3 is backup and rollback metadata seam work
 - Continue Slice 3 should only land after the client-local state seam exists for backups and rollback metadata
 - align that `Use` work with [platform_layering_spec.md](./platform_layering_spec.md) so the current GUI keeps serving as the second-layer proving surface instead of hardening into a dashboard
 - auth/policy hardening and persistence now that the shared path itself is functionally proven

@@ -8,6 +8,7 @@ from typing import Callable, Protocol
 
 from modulo.common.catalog import SUPPORTED_MODELS
 from modulo.client.continue_discovery import ContinueDiscovery, ContinueDiscoveryStatus
+from modulo.client.local_state import ClientLocalStatePaths, ClientLocalStateResolver
 from modulo.client.openclaw_discovery import OpenClawDiscovery, OpenClawDiscoveryStatus
 from modulo.client.ollama_discovery import OllamaDiscovery, OllamaDiscoveryStatus
 from modulo.client.ollama_loaded_models import (
@@ -107,6 +108,37 @@ class ContinueConfigurationStatus:
     owned_fields: tuple[str, ...] = ()
     connection_plan: ContinueConnectionPlan = ContinueConnectionPlan()
     error: str = ""
+
+
+@dataclass(frozen=True)
+class ClientLocalStateStatus:
+    root_path: str = ""
+    backups_path: str = ""
+    mounts_path: str = ""
+    telemetry_path: str = ""
+    manifest_path: str = ""
+    summary: str = "Modulo client-local state has not been prepared yet."
+    details: str = ""
+
+    @classmethod
+    def from_paths(cls, paths: ClientLocalStatePaths) -> "ClientLocalStateStatus":
+        return cls(
+            root_path=paths.root_path,
+            backups_path=paths.backups_path,
+            mounts_path=paths.mounts_path,
+            telemetry_path=paths.telemetry_path,
+            manifest_path=paths.manifest_path,
+            summary="Modulo client-local state paths are reserved for backups, mounts, and telemetry.",
+            details="\n".join(
+                (
+                    f"Root: {paths.root_path}",
+                    f"Backups: {paths.backups_path}",
+                    f"Mounts: {paths.mounts_path}",
+                    f"Telemetry: {paths.telemetry_path}",
+                    f"Manifest: {paths.manifest_path}",
+                )
+            ),
+        )
 
 
 @dataclass(frozen=True)
@@ -403,6 +435,7 @@ class ClientStatus:
     hosting_enabled: bool = False
     openclaw: OpenClawConfigurationStatus = OpenClawConfigurationStatus()
     continue_consumer: ContinueConfigurationStatus = ContinueConfigurationStatus()
+    client_local_state: ClientLocalStateStatus = ClientLocalStateStatus()
     platform: PlatformSessionStatus = PlatformSessionStatus()
     use: UseSideStatus = UseSideStatus()
     latest_route_trace: RouteTraceStatus = RouteTraceStatus()
@@ -483,6 +516,7 @@ class ModuloClientSupervisor:
     route_trace_provider: ClientRouteTraceProvider | None = None
     openclaw_discovery: ClientOpenClawDiscovery | None = None
     continue_discovery: ClientContinueDiscovery | None = None
+    local_state_resolver: ClientLocalStateResolver = field(default_factory=ClientLocalStateResolver)
     ollama_discovery: OllamaDiscovery | None = None
     ollama_loaded_models_discovery: ClientOllamaLoadedModelsDiscovery | None = None
     hosting_runtime_probe: ClientHostingRuntimeProbe = field(default_factory=OllamaHostingRuntimeProbe)
@@ -644,6 +678,7 @@ class ModuloClientSupervisor:
             hosting_enabled=worker_status.desired_running,
             openclaw=openclaw_status,
             continue_consumer=continue_status,
+            client_local_state=self.get_client_local_state_status(),
             platform=platform_status,
             use=self.get_use_side_status(
                 openclaw_status=openclaw_status,
@@ -1303,6 +1338,9 @@ class ModuloClientSupervisor:
         if self.route_trace_provider is None:
             return RouteTraceStatus()
         return self.route_trace_provider.get_latest_route_trace()
+
+    def get_client_local_state_status(self) -> ClientLocalStateStatus:
+        return ClientLocalStateStatus.from_paths(self.local_state_resolver.resolve())
 
     def _invalidate_readiness_cache(self) -> None:
         self._cached_ollama_discovery = None

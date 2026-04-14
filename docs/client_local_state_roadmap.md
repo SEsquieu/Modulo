@@ -63,7 +63,18 @@ Notes:
 - keep platform-specific path logic narrow
 - this slice is contract-first, not yet full write flow
 
-Status: pending
+Status: completed
+
+Completion note:
+
+- summary:
+  - added a dedicated client-local state resolver that reserves one Modulo-owned root plus `backups`, `mounts`, `telemetry`, and manifest paths without writing anything yet
+  - exposed that contract through shared client status so future consumer automation can depend on one stable local-state seam
+  - kept the slice contract-first and workstation-agnostic with path-resolution coverage
+- proof added to repo:
+  - `src/modulo/client/local_state.py`
+  - `src/modulo/client/app.py`
+  - `tests/test_client_local_state.py`
 
 ### Slice 2: Backup and rollback metadata seam
 
