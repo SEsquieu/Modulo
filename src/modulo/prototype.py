@@ -605,6 +605,21 @@ class LocalPrototypeHarness:
         route_trace_provider = self.client.route_trace_provider
         if route_trace_provider is not None and hasattr(route_trace_provider, "set_target_url"):
             route_trace_provider.set_target_url(normalized_target)
+        openclaw_discovery = self.client.openclaw_discovery
+        if isinstance(openclaw_discovery, OpenClawDiscovery):
+            self.client.openclaw_discovery = OpenClawDiscovery(
+                modulo_url=normalized_target,
+                config_path=openclaw_discovery.config_path,
+                detect_command=openclaw_discovery.detect_command,
+            )
+        continue_discovery = self.client.continue_discovery
+        if isinstance(continue_discovery, ContinueDiscovery):
+            self.client.continue_discovery = ContinueDiscovery(
+                modulo_url=normalized_target,
+                config_path=continue_discovery.config_path,
+                managed_marker=continue_discovery.managed_marker,
+            )
+        self.client._invalidate_readiness_cache()
 
         worker_target_url = self._worker_target_url_for(normalized_target)
         current_config = self.client.worker_bridge.config

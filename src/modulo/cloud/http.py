@@ -335,14 +335,6 @@ class ModuloHTTPApp:
                     "type": "invalid_request_error",
                 }
             }
-        if bool(payload.get("stream", False)):
-            return HTTPStatus.BAD_REQUEST, {
-                "error": {
-                    "message": "Streaming is not supported by this OpenAI-compatible prototype shim yet.",
-                    "type": "invalid_request_error",
-                }
-            }
-
         status, response = self._handle_chat(
             {
                 "model": model_id,

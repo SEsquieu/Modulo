@@ -136,7 +136,7 @@ class ModuloHTTPAppTests(unittest.TestCase):
         self.assertEqual("assistant", payload["choices"][0]["message"]["role"])
         self.assertEqual("hello from modulo", payload["choices"][0]["message"]["content"])
 
-    def test_post_openai_chat_completions_rejects_streaming_for_now(self) -> None:
+    def test_post_openai_chat_completions_accepts_stream_flag_for_compatibility(self) -> None:
         status, payload = self.app.handle(
             "POST",
             "/v1/chat/completions",
@@ -149,8 +149,8 @@ class ModuloHTTPAppTests(unittest.TestCase):
             ).encode("utf-8"),
         )
 
-        self.assertEqual(400, status)
-        self.assertIn("Streaming is not supported", payload["error"]["message"])
+        self.assertEqual(200, status)
+        self.assertEqual("chat.completion", payload["object"])
 
     def test_platform_status_uses_request_host_for_active_target_url(self) -> None:
         status, payload = self.app.handle(
