@@ -30,6 +30,10 @@ This file is the quickest way to regain context when switching workstations.
 - the next focused consumer roadmap is [continue_consumer_roadmap.md](./continue_consumer_roadmap.md)
 - `Slice 1: Continue consumer registry entry` is completed
 - `Slice 2: Continue config contract and file ownership` is completed
+- the current Continue consumer work is still contract-first:
+  - consumer binding exists in `Mount`
+  - ownership and backup boundaries are defined
+  - real apply and rollback are still the next slice
 - the current GUI refinement work after the completed `Use` roadmap is focused on making the second-layer `Use` flow feel calmer and more product-true without drifting toward dashboard behavior
 - the `Mount` consumer registry now includes `Continue (VSCode)` under the `OpenAI API` shape so a second external consumer can be staged without changing the shape-first binding model
 - the canonical product-shape guidance is now [platform_layering_spec.md](./platform_layering_spec.md)
@@ -157,6 +161,13 @@ That matters because the main workstation stores the primary model under `agents
 The GUI now explicitly tells the truth about whether the current worker path and latest smoke test are using `REAL` or `PROTOTYPE` execution.
 The host selector only shows local installable models, and the startup path now syncs the actual hosted model to that visible local inventory instead of carrying a hidden default behind the dropdown.
 The current hosted-backend path has been proven through Cloudflare Tunnel against `modulo.grinningfrog.com`, including buyer-side visibility and routed execution.
+
+## Local workspace note
+
+- the repo root currently contains several ACL-locked temporary directories such as `tmp*`
+- `git status` may warn about permission-denied access when it scans them
+- treat those folders as local workstation debris, not as project state that needs aggressive cleanup before commits
+- do not attempt broad recursive deletion around them without first checking the exact resolved paths
 
 ## Next recommended starting point
 
@@ -306,6 +317,9 @@ Recent meaningful commits:
 - `369b781` `Replace nested model menu with anchored picker`
 - `840b9b4` `Preserve use picker tree expansion state`
 - `3d5d5b2` `Keep selected use branch from reopening`
+- `ab4eb87` `Add Continue consumer to mount registry`
+- `413f6d6` `Add Continue consumer roadmap`
+- `008b38d` `Add Continue config ownership contract`
 
 If resuming cold, start by reading:
 
