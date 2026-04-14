@@ -154,15 +154,31 @@ Notes:
 
 - this slice is mostly alignment and dependency cleanup
 
-Status: pending
+Status: completed
+
+Completion note:
+
+- summary:
+  - aligned the Continue consumer roadmap, handoff, and current project context so consumer automation now explicitly depends on the finished client-local state seam
+  - clarified that storage now covers root paths, backup planning, rollback metadata planning, and lightweight telemetry reservation before real consumer writes begin
+  - removed ambiguity about whether consumer-side apply and rollback still needed their own persistence foundation
+- proof added to repo:
+  - `docs/client_local_state_roadmap.md`
+  - `docs/continue_consumer_roadmap.md`
+  - `docs/handoff.md`
 
 ## Completion note
 
-Add a short summary here when the roadmap is complete:
-
 - summary:
-  - Modulo now has one boring, durable client-local state directory for backups, rollback metadata, and lightweight local telemetry
+  - Modulo now has one boring, durable client-local state seam for backups, rollback metadata, and lightweight local telemetry
   - consumer apply/rollback work now depends on that storage seam instead of inventing per-consumer persistence ad hoc
+  - the Continue roadmap is now cleanly unblocked to start real apply and rollback work on top of the finished storage foundation
 - proof added to repo:
-  - `src/modulo/client/...`
-  - `tests/...`
+  - `src/modulo/client/local_state.py`
+  - `src/modulo/client/app.py`
+  - `src/modulo/gui/controller.py`
+  - `tests/test_client_local_state.py`
+  - `tests/test_client_worker.py`
+  - `tests/test_gui_controller.py`
+  - `docs/continue_consumer_roadmap.md`
+  - `docs/handoff.md`
