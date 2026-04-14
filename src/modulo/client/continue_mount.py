@@ -139,8 +139,11 @@ class ContinueMountManager:
 
     def _managed_block(self, *, model_id: str, model_name: str) -> str:
         openai_api_base = self.api_base
-        if not openai_api_base.endswith("/v1"):
-            openai_api_base = f"{openai_api_base}/v1"
+        if not openai_api_base.endswith("/v1/"):
+            if openai_api_base.endswith("/v1"):
+                openai_api_base = f"{openai_api_base}/"
+            else:
+                openai_api_base = f"{openai_api_base}/v1/"
         return (
             f"{MANAGED_BLOCK_START}\n"
             f"  - name: {model_name}\n"

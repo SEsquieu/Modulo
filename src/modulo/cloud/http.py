@@ -53,7 +53,7 @@ class ModuloHTTPApp:
         if method == "GET" and path == "/api/platform/trace/latest":
             return HTTPStatus.OK, self._handle_latest_route_trace()
 
-        if method == "GET" and path == "/v1/models":
+        if method == "GET" and path in {"/v1/models", "/models"}:
             return HTTPStatus.OK, self._handle_openai_models()
 
         if method == "POST" and path == "/api/chat":
@@ -63,7 +63,7 @@ class ModuloHTTPApp:
                 return HTTPStatus.BAD_REQUEST, {"error": "Invalid JSON payload"}
             return self._handle_chat(payload)
 
-        if method == "POST" and path == "/v1/chat/completions":
+        if method == "POST" and path in {"/v1/chat/completions", "/chat/completions"}:
             try:
                 payload = json.loads((body or b"{}").decode("utf-8"))
             except json.JSONDecodeError:

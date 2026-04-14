@@ -621,7 +621,7 @@ class ClientWorkerIntegrationTests(unittest.TestCase):
             self.assertIn("# modulo-managed-continue:start", updated)
             self.assertIn("provider: openai", updated)
             self.assertIn("model: network/llama3.1:8b", updated)
-            self.assertIn("apiBase: https://modulo.grinningfrog.com/v1", updated)
+            self.assertIn("apiBase: https://modulo.grinningfrog.com/v1/", updated)
 
             backup_path = Path(status.continue_consumer.backup_path)
             metadata_path = Path(status.continue_consumer.rollback_metadata_path)

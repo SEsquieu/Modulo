@@ -661,7 +661,10 @@ class GuiAppController:
 
     def _mount_apply_enabled(self, status: ClientStatus) -> bool:
         if self._selected_mount_consumer_id == "continue_vscode":
-            return status.continue_consumer.connection_plan.apply_ready
+            return (
+                not status.continue_consumer.configured
+                and status.continue_consumer.connection_plan.available
+            )
         return False
 
     def _mount_apply_label(self, status: ClientStatus) -> str:

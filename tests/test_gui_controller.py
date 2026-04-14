@@ -518,6 +518,7 @@ class GuiAppControllerTests(unittest.TestCase):
 
             rolled_back = self.controller.rollback_continue_mount()
             self.assertEqual("Ready to apply", rolled_back.use_mount_status_value)
+            self.assertTrue(rolled_back.mount_apply_enabled)
             self.assertFalse(rolled_back.mount_rollback_enabled)
         finally:
             for path in (

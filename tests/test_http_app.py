@@ -117,6 +117,13 @@ class ModuloHTTPAppTests(unittest.TestCase):
         self.assertIn("llama3.1:8b", model_ids)
         self.assertGreaterEqual(len(model_ids), 1)
 
+    def test_get_openai_models_accepts_root_alias(self) -> None:
+        status, payload = self.app.handle("GET", "/models")
+
+        self.assertEqual(200, status)
+        self.assertEqual("list", payload["object"])
+        self.assertTrue(payload["data"])
+
     def test_post_openai_chat_completions_returns_openai_shaped_response(self) -> None:
         status, payload = self.app.handle(
             "POST",
@@ -135,6 +142,22 @@ class ModuloHTTPAppTests(unittest.TestCase):
         self.assertEqual("llama3.1:8b", payload["model"])
         self.assertEqual("assistant", payload["choices"][0]["message"]["role"])
         self.assertEqual("hello from modulo", payload["choices"][0]["message"]["content"])
+
+    def test_post_openai_chat_completions_accepts_root_alias(self) -> None:
+        status, payload = self.app.handle(
+            "POST",
+            "/chat/completions",
+            json.dumps(
+                {
+                    "model": "llama3.1:8b",
+                    "messages": [{"role": "user", "content": "hi"}],
+                    "stream": False,
+                }
+            ).encode("utf-8"),
+        )
+
+        self.assertEqual(200, status)
+        self.assertEqual("chat.completion", payload["object"])
 
     def test_post_openai_chat_completions_accepts_stream_flag_for_compatibility(self) -> None:
         status, payload = self.app.handle(

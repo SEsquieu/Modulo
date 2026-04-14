@@ -28,6 +28,23 @@ class ContinueDiscovery:
         self.config_path = config_path or (Path.home() / ".continue" / "config.yaml")
         self.managed_marker = managed_marker
 
+    def _candidate_modulo_urls(self) -> tuple[str, ...]:
+        base = self.modulo_url.rstrip("/")
+        if not base:
+            return ()
+        candidates = [base]
+        if base.endswith("/v1"):
+            candidates.append(base.removesuffix("/v1"))
+        else:
+            candidates.append(f"{base}/v1")
+        candidates.append(f"{base}/v1/")
+        seen: list[str] = []
+        for candidate in candidates:
+            normalized = candidate.rstrip("/")
+            if normalized and normalized not in seen:
+                seen.append(normalized)
+        return tuple(seen)
+
     def discover(self) -> ContinueDiscoveryStatus:
         if not self.config_path.exists():
             return ContinueDiscoveryStatus(
@@ -55,7 +72,9 @@ class ContinueDiscovery:
 
         normalized_content = content.rstrip()
         managed_entry_present = self.managed_marker in normalized_content
-        configured_for_modulo = self.modulo_url in normalized_content
+        configured_for_modulo = any(
+            candidate in normalized_content for candidate in self._candidate_modulo_urls()
+        )
         state = (
             "configured"
             if configured_for_modulo and managed_entry_present
