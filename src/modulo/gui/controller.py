@@ -556,9 +556,11 @@ class GuiAppController:
         if self._selected_mount_consumer_id == "continue_vscode" and self._selected_mount_shape_id == "openai_api":
             if status.continue_consumer.configured:
                 return "Ready"
+            if not status.platform.connected:
+                return "Needs attention"
             if status.continue_consumer.connection_plan.apply_ready:
-                return "Staged"
-            return "Shape selected"
+                return "Ready to apply"
+            return "Needs attention"
         if self._selected_mount_consumer_id == "openclaw" and status.openclaw.configured:
             return "Ready"
         if self._selected_mount_consumer_id == "openclaw" and status.openclaw.connection_plan.apply_ready:
@@ -574,16 +576,12 @@ class GuiAppController:
             return "Choose a compatible consumer next. Modulo will stage the best setup it can, then wait for your confirmation before it changes anything at the edge."
         if self._selected_mount_consumer_id == "continue_vscode":
             if status.continue_consumer.configured:
-                return "Continue (VSCode) is configured for the selected OpenAI API mount."
+                return "Continue is configured for this Modulo edge."
+            if not status.platform.connected:
+                return "Continue is selected, but the current Modulo target needs attention before this mount can be trusted."
             if status.platform.connected:
-                return (
-                    "Continue (VSCode) is selected and the ownership contract is staged. "
-                    "Modulo has defined the managed entry and backup path, but the real apply flow is still pending."
-                )
-            return (
-                "Continue (VSCode) is selected, but shared execution still needs a reachable "
-                "platform target before the mount is trustworthy."
-            )
+                return "Continue is ready to apply. Modulo will back up the existing config and add one managed entry."
+            return "Continue needs attention before this mount can be applied."
         if self._selected_mount_consumer_id == "openclaw" and status.openclaw.configured:
             return "OpenClaw is configured for the selected shape."
         if self._selected_mount_consumer_id == "openclaw" and status.openclaw.connection_plan.apply_ready:
@@ -644,19 +642,11 @@ class GuiAppController:
         if not self._selected_mount_consumer_id:
             return "Pick a compatible consumer next. Modulo will prepare the best setup it can, then wait for your confirmation before it changes anything at the edge."
         if self._selected_mount_consumer_id == "continue_vscode":
-            summary = (
-                "Continue (VSCode) is selected. "
-                + status.continue_consumer.connection_plan.summary
-            )
-            if status.continue_consumer.connection_plan.backup_path:
-                summary += (
-                    f" Backup target: {status.continue_consumer.connection_plan.backup_path}."
-                )
-            if status.continue_consumer.connection_plan.rollback_metadata_path:
-                summary += (
-                    " Rollback metadata stays in Modulo-owned local state."
-                )
-            return summary
+            if status.continue_consumer.configured:
+                return "Continue is configured. Modulo can remove the managed entry and restore the backup if you roll it back."
+            if not status.platform.connected:
+                return "Continue is selected, but the current Modulo target needs attention before apply."
+            return "Continue is ready to apply. Modulo will write one managed entry and keep backup and rollback data in Modulo-owned state."
         if self._selected_mount_consumer_id == "openclaw":
             if status.openclaw.configured:
                 return "OpenClaw is selected for this shape and the current edge already looks configured."
@@ -676,7 +666,7 @@ class GuiAppController:
 
     def _mount_apply_label(self, status: ClientStatus) -> str:
         if self._selected_mount_consumer_id == "continue_vscode":
-            return status.continue_consumer.connection_plan.apply_label
+            return "Apply to Continue"
         return "Apply Mount"
 
     def _mount_rollback_enabled(self, status: ClientStatus) -> bool:
@@ -687,7 +677,7 @@ class GuiAppController:
     @staticmethod
     def _mount_rollback_label(status: ClientStatus) -> str:
         if status.continue_consumer.configured:
-            return "Rollback Mount"
+            return "Remove Continue Mount"
         return "Rollback Mount"
 
     def _mount_detail_lines(self, status: ClientStatus) -> tuple[str, ...]:
@@ -705,15 +695,29 @@ class GuiAppController:
         if self._selected_mount_consumer_id == "continue_vscode":
             plan = status.continue_consumer.connection_plan
             owned_fields = ", ".join(plan.owned_fields) if plan.owned_fields else "None"
+            target = status.platform.active_target_url or "Unavailable"
+            if status.continue_consumer.configured:
+                state_line = "State: Configured"
+                next_line = "Next: Keep using Continue, or remove the managed mount to restore the prior config."
+            elif not status.platform.connected:
+                state_line = "State: Needs attention"
+                next_line = "Next: Reconnect the current Modulo target before applying this mount."
+            else:
+                state_line = "State: Ready to apply"
+                next_line = "Next: Apply the managed Continue mount when you are ready."
             return (
-                "Step 3: Review the proposed edge setup.",
-                "Continue (VSCode) will use the OpenAI API shape.",
+                "Step 3: Review the Continue mount.",
+                state_line,
+                "Shape: OpenAI API",
+                "Consumer: Continue (VSCode)",
+                f"Target: {target}",
                 f"Config path: {plan.config_path or 'Unavailable'}",
                 f"Backup path: {plan.backup_path or 'Unavailable'}",
                 f"Rollback metadata: {plan.rollback_metadata_path or 'Unavailable'}",
                 f"Managed entry: {plan.managed_model_name} in {plan.managed_profile_name}",
                 f"Owned fields: {owned_fields}",
-                "Next: apply the managed Continue mount when you are ready, or roll it back later through Modulo.",
+                "Change scope: one managed model entry only.",
+                next_line,
             )
         if self._selected_mount_consumer_id == "openclaw":
             details = [

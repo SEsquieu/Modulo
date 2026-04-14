@@ -477,9 +477,9 @@ class GuiAppControllerTests(unittest.TestCase):
         self.assertEqual("openai_api", state.mount_selected_shape_id)
         self.assertEqual("continue_vscode", state.mount_selected_consumer_id)
         self.assertEqual("Continue (VSCode)", state.mount_consumer_label)
-        self.assertEqual("Staged", state.use_mount_status_value)
-        self.assertIn("continue", state.mount_consumer_summary.lower())
-        self.assertIn("openai api shape", "\n".join(state.mount_detail_lines).lower())
+        self.assertEqual("Ready to apply", state.use_mount_status_value)
+        self.assertIn("ready to apply", state.mount_consumer_summary.lower())
+        self.assertIn("shape: openai api", "\n".join(state.mount_detail_lines).lower())
         self.assertIn(".modulo.backup", "\n".join(state.mount_detail_lines).lower())
         self.assertIn("rollback metadata", "\n".join(state.mount_detail_lines).lower())
 
@@ -508,14 +508,16 @@ class GuiAppControllerTests(unittest.TestCase):
             staged = self.controller.select_mount_consumer("continue_vscode")
             self.assertTrue(staged.mount_apply_enabled)
             self.assertFalse(staged.mount_rollback_enabled)
+            self.assertEqual("Apply to Continue", staged.mount_apply_label)
 
             applied = self.controller.apply_continue_mount()
             self.assertEqual("Ready", applied.use_mount_status_value)
             self.assertTrue(applied.mount_rollback_enabled)
-            self.assertIn("configured for the selected openai api mount", applied.use_mount_status_summary.lower())
+            self.assertEqual("Remove Continue Mount", applied.mount_rollback_label)
+            self.assertIn("configured for this modulo edge", applied.use_mount_status_summary.lower())
 
             rolled_back = self.controller.rollback_continue_mount()
-            self.assertEqual("Staged", rolled_back.use_mount_status_value)
+            self.assertEqual("Ready to apply", rolled_back.use_mount_status_value)
             self.assertFalse(rolled_back.mount_rollback_enabled)
         finally:
             for path in (

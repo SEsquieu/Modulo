@@ -145,15 +145,28 @@ Notes:
 
 - this slice should stay product-shaped, not dashboard-shaped
 
-Status: active
+Status: completed
+
+Completion note:
+
+- summary:
+  - tightened the Continue mount surface so it now reads in clearer user-facing states like `Ready to apply`, `Ready`, and `Needs attention` instead of contract-heavy staging language
+  - simplified the Continue summary and checklist so the important truth stays visible: target, config path, backup path, rollback path, managed entry scope, and the next step
+  - clarified the Continue action labels so applying and removing the managed mount feel explicit and reversible
+- proof added to repo:
+  - `src/modulo/gui/controller.py`
+  - `tests/test_gui_controller.py`
 
 ## Completion note
 
-Add a short summary here when the roadmap is complete:
-
 - summary:
   - Modulo can now bind, apply, and roll back a Continue consumer through the `OpenAI API` shape without taking over the user's full Continue config
+  - the `Mount` surface now presents Continue as a calmer, user-facing setup flow instead of a contract review
 - proof added to repo:
-  - `src/modulo/client/...`
-  - `src/modulo/gui/...`
-  - `tests/...`
+  - `src/modulo/client/continue_discovery.py`
+  - `src/modulo/client/continue_mount.py`
+  - `src/modulo/client/app.py`
+  - `src/modulo/gui/controller.py`
+  - `src/modulo/gui/window.py`
+  - `tests/test_client_worker.py`
+  - `tests/test_gui_controller.py`

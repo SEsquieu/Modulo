@@ -36,6 +36,7 @@ This file is the quickest way to regain context when switching workstations.
 - `Slice 1: Continue consumer registry entry` is completed
 - `Slice 2: Continue config contract and file ownership` is completed
 - `Slice 3: Continue apply and rollback flow` is completed
+- `Slice 4: Mount UX truth pass for Continue` is completed
 - the Modulo-owned client-local storage seam now exists for:
   - reserved root paths
   - backup target planning
@@ -45,7 +46,7 @@ This file is the quickest way to regain context when switching workstations.
   - consumer binding exists in `Mount`
   - ownership and backup boundaries are defined
   - Continue apply and rollback now write through Modulo-owned client state
-  - the remaining Continue work is mount-surface truth and polish
+  - the mount surface now uses calmer user-facing readiness states for Continue
 - the current GUI refinement work after the completed `Use` roadmap is focused on making the second-layer `Use` flow feel calmer and more product-true without drifting toward dashboard behavior
 - the `Mount` consumer registry now includes `Continue (VSCode)` under the `OpenAI API` shape so a second external consumer can be staged without changing the shape-first binding model
 - the canonical product-shape guidance is now [platform_layering_spec.md](./platform_layering_spec.md)
@@ -168,6 +169,17 @@ That matters because the main workstation stores the primary model under `agents
 - `Mount` now treats Continue as a staged contract instead of a fake-ready integration, with explicit config path, backup path, managed entry identity, and owned field list
 - `Mount` now exposes explicit Continue apply/rollback actions once the consumer is selected, so the write step stays user-confirmed instead of implicit
 - Continue mount writes now resolve against the active Modulo target URL, so a hosted backend mount reads back as configured instead of falling back to local loopback truth
+- Continue mount states now read more cleanly in the GUI:
+  - `Ready to apply`
+  - `Ready`
+  - `Needs attention`
+- the Continue checklist now stays focused on:
+  - target
+  - config path
+  - backup path
+  - rollback metadata
+  - managed entry scope
+  - next step
 - the redundant `Mounted Edge` card is gone, so the tab only shows the current step, relevant guidance, and consumer-specific setup when it matters
 - the `Active Route` card now carries the high-level use summary directly: model, source, shape, mount, status, and one short reason
 - the `Active Route` card now treats `Status` as a simple `Ready / Not ready` signal and leaves the more specific next step to the shorter `Reason` line
@@ -201,9 +213,8 @@ The most likely first useful slice is:
 
 - a next roadmap chunk that keeps the tray-first product direction intact while refining what should surface at the `Use` layer versus `Mount` and `Scopes`
 - continue the second-layer GUI cleanup around `Use` and `Mount`, especially where the current shell still feels more like a proving surface than the eventual tray-first product
-- complete the next Continue consumer slices: config ownership, safe apply/rollback, and mount-surface truth
 - Client local state is now fully aligned and complete, so Continue Slice 3 can proceed on the current storage seam
-- Continue Slice 4 is now the next consumer-specific slice: tighten mount truth, recovery messaging, and user-facing setup clarity
+- the Continue consumer roadmap is now complete, so the next good move is choosing whether to generalize the calmer mount-state model across other consumers
 - align that `Use` work with [platform_layering_spec.md](./platform_layering_spec.md) so the current GUI keeps serving as the second-layer proving surface instead of hardening into a dashboard
 - auth/policy hardening and persistence now that the shared path itself is functionally proven
 - only return to packaging once the shared-network behavior feels truthful enough to lock in
