@@ -172,6 +172,31 @@ The current HTTP ingress also exposes:
 - `GET /v1/models`
 - `POST /v1/chat/completions`
 
+### Native `/api/chat` streaming contract
+
+When `POST /api/chat` is called with `"stream": false`, Modulo returns the existing buffered Ollama-shaped JSON response.
+
+When `POST /api/chat` is called with `"stream": true`, Modulo returns `application/x-ndjson` and streams one JSON object per line. The native stream contract is:
+
+- `type`: one of `start`, `token`, `end`, or `error`
+- `job_id`: the Modulo job id for the execution
+- `trace_id`: the routed execution trace id
+- `model`: the resolved model id
+- `sequence`: zero-based event sequence number within the stream
+- `done`: whether the stream has finished
+- `done_reason`: `stop`, `error`, or `null`
+- `message`: assistant message fragment for `start`, `token`, and `end` events
+- `error`: present on `error` events
+
+Example native streamed response:
+
+```json
+{"type":"start","job_id":"job-00001","trace_id":"trace-00001","model":"gemma4:e2b","sequence":0,"done":false,"done_reason":null,"message":{"role":"assistant","content":""}}
+{"type":"token","job_id":"job-00001","trace_id":"trace-00001","model":"gemma4:e2b","sequence":1,"done":false,"done_reason":null,"message":{"role":"assistant","content":"Quantum "}}
+{"type":"token","job_id":"job-00001","trace_id":"trace-00001","model":"gemma4:e2b","sequence":2,"done":false,"done_reason":null,"message":{"role":"assistant","content":"mechanics "}}
+{"type":"end","job_id":"job-00001","trace_id":"trace-00001","model":"gemma4:e2b","sequence":3,"done":true,"done_reason":"stop","message":{"role":"assistant","content":""}}
+```
+
 ## Current status
 
 This repo currently proves a tight Phase 0/1 backend slice:

@@ -5,13 +5,15 @@ import time
 from dataclasses import dataclass
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any, Iterable
+from typing import Any, Iterable, Iterator
 
 from modulo.common.catalog import SUPPORTED_MODELS
 from modulo.client.app import RouteTraceStatus
 from modulo.common.contracts import (
     ChatMessage,
     ChatRequest,
+    ChatStreamEvent,
+    ChatStreamEventType,
     ExecutionMode,
     JobFailure,
     JobStatus,
@@ -33,7 +35,15 @@ from modulo.worker.runtime import InMemoryWorkerRuntime
 class StreamHTTPResponse:
     status: int
     content_type: str
-    events: tuple[str, ...]
+    chunks: Iterable[bytes]
+
+
+@dataclass(frozen=True)
+class ChatEventStream:
+    job_id: str
+    trace_id: str
+    model_id: str
+    events: Iterable[ChatStreamEvent]
 
 
 @dataclass
@@ -106,6 +116,12 @@ class ModuloHTTPApp:
             if isinstance(payload, tuple):
                 return payload
             return self._handle_worker_result(path, payload)
+
+        if method == "POST" and path.endswith("/events"):
+            payload = self._decode_json(body)
+            if isinstance(payload, tuple):
+                return payload
+            return self._handle_worker_event(path, payload)
 
         if method == "POST" and path.endswith("/fail"):
             payload = self._decode_json(body)
@@ -246,7 +262,53 @@ class ModuloHTTPApp:
             )
         return {"object": "list", "data": data}
 
-    def _handle_chat(self, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+    def _handle_chat(
+        self,
+        payload: dict[str, Any],
+    ) -> tuple[int, dict[str, Any]] | StreamHTTPResponse:
+        parsed_request = self._parse_chat_request(payload)
+        if isinstance(parsed_request, tuple):
+            return parsed_request
+        request = parsed_request
+
+        if request.stream:
+            return self._handle_streaming_chat(request)
+
+        try:
+            job = self.service.submit_chat(request)
+            if self.inline_chat_execution:
+                claim = self.service.claim_job(job.assigned_worker_id)
+                if claim is None:
+                    raise JobQueueError(f"No claimable job for {job.assigned_worker_id}")
+
+                response_text = self.runtime.execute(claim.worker_id, claim.request)
+                completed = self.service.complete_job(
+                    JobResult(
+                        job_id=claim.job_id,
+                        worker_id=claim.worker_id,
+                        response_text=response_text,
+                    )
+                )
+            else:
+                completed = self._wait_for_job(job.job_id)
+        except (RoutingError, WorkerExecutionError, JobQueueError) as exc:
+            return HTTPStatus.BAD_GATEWAY, {"error": str(exc)}
+        except json.JSONDecodeError:
+            return HTTPStatus.BAD_REQUEST, {"error": "Invalid JSON payload"}
+
+        return HTTPStatus.OK, {
+            "model": completed.request.model_id,
+            "message": {
+                "role": "assistant",
+                "content": completed.response_text,
+            },
+            "done": True,
+        }
+
+    def _parse_chat_request(
+        self,
+        payload: dict[str, Any],
+    ) -> ChatRequest | tuple[int, dict[str, Any]]:
         model_id = payload.get("model")
         buyer_id = payload.get("buyer_id", "")
         scope_name = payload.get("scope")
@@ -280,7 +342,7 @@ class ModuloHTTPApp:
                 return HTTPStatus.BAD_REQUEST, {"error": "Invalid field: messages"}
             messages.append(ChatMessage(role=role, content=content))
 
-        request = ChatRequest(
+        return ChatRequest(
             model_id=model_id,
             execution_mode=ExecutionMode.NETWORK,
             buyer_id=buyer_id,
@@ -291,36 +353,113 @@ class ModuloHTTPApp:
             private_network_id=private_network_id,
         )
 
+    def _handle_streaming_chat(self, request: ChatRequest) -> tuple[int, dict[str, Any]] | StreamHTTPResponse:
+        stream = self._start_chat_event_stream(request)
+        if isinstance(stream, tuple):
+            return stream
+        return StreamHTTPResponse(
+            status=HTTPStatus.OK,
+            content_type="application/x-ndjson",
+            chunks=self._iter_native_stream_chunks(stream),
+        )
+
+    def _start_chat_event_stream(
+        self,
+        request: ChatRequest,
+    ) -> ChatEventStream | tuple[int, dict[str, Any]]:
         try:
             job = self.service.submit_chat(request)
-            if self.inline_chat_execution:
-                claim = self.service.claim_job(job.assigned_worker_id)
-                if claim is None:
-                    raise JobQueueError(f"No claimable job for {job.assigned_worker_id}")
-
-                response_text = self.runtime.execute(claim.worker_id, claim.request)
-                completed = self.service.complete_job(
-                    JobResult(
-                        job_id=claim.job_id,
-                        worker_id=claim.worker_id,
-                        response_text=response_text,
-                    )
-                )
-            else:
-                completed = self._wait_for_job(job.job_id)
-        except (RoutingError, WorkerExecutionError, JobQueueError) as exc:
+        except (RoutingError, JobQueueError) as exc:
             return HTTPStatus.BAD_GATEWAY, {"error": str(exc)}
-        except json.JSONDecodeError:
-            return HTTPStatus.BAD_REQUEST, {"error": "Invalid JSON payload"}
 
-        return HTTPStatus.OK, {
-            "model": completed.request.model_id,
-            "message": {
-                "role": "assistant",
-                "content": completed.response_text,
-            },
-            "done": True,
+        if self.inline_chat_execution:
+            claim = self.service.claim_job(job.assigned_worker_id)
+            if claim is None:
+                return HTTPStatus.BAD_GATEWAY, {"error": f"No claimable job for {job.assigned_worker_id}"}
+            return ChatEventStream(
+                job_id=job.job_id,
+                trace_id=job.trace_id,
+                model_id=job.request.model_id,
+                events=self._iter_inline_chat_events(claim.job_id, claim.worker_id, claim.request),
+            )
+
+        return ChatEventStream(
+            job_id=job.job_id,
+            trace_id=job.trace_id,
+            model_id=job.request.model_id,
+            events=self._iter_queued_chat_events(job.job_id),
+        )
+
+    def _iter_inline_chat_events(
+        self,
+        job_id: str,
+        worker_id: str,
+        request: ChatRequest,
+    ) -> Iterator[ChatStreamEvent]:
+        response_parts: list[str] = []
+        try:
+            for event in self.runtime.execute_stream(worker_id, request):
+                if event.content:
+                    response_parts.append(event.content)
+                yield event
+            self.service.complete_job(
+                JobResult(
+                    job_id=job_id,
+                    worker_id=worker_id,
+                    response_text="".join(response_parts),
+                )
+            )
+        except WorkerExecutionError as exc:
+            self.service.fail_job(
+                JobFailure(
+                    job_id=job_id,
+                    worker_id=worker_id,
+                    error_code="EXEC_ERROR",
+                    message=str(exc),
+                )
+            )
+            yield ChatStreamEvent(
+                event_type=ChatStreamEventType.ERROR,
+                model_id=request.model_id,
+                error=str(exc),
+            )
+
+    def _iter_queued_chat_events(self, job_id: str) -> Iterator[ChatStreamEvent]:
+        yield from self.service.iter_stream_events(job_id)
+
+    def _iter_native_stream_chunks(self, stream: ChatEventStream) -> Iterator[bytes]:
+        for sequence, event in enumerate(stream.events):
+            yield self._encode_native_stream_chunk(stream=stream, event=event, sequence=sequence)
+
+    @staticmethod
+    def _encode_native_stream_chunk(
+        *,
+        stream: ChatEventStream,
+        event: ChatStreamEvent,
+        sequence: int,
+    ) -> bytes:
+        payload: dict[str, Any] = {
+            "type": event.event_type.value,
+            "job_id": stream.job_id,
+            "trace_id": stream.trace_id,
+            "model": event.model_id or stream.model_id,
+            "sequence": sequence,
+            "done": False,
+            "done_reason": None,
         }
+        if event.event_type is ChatStreamEventType.TOKEN:
+            payload["message"] = {"role": "assistant", "content": event.content}
+        elif event.event_type is ChatStreamEventType.END:
+            payload["message"] = {"role": "assistant", "content": ""}
+            payload["done"] = True
+            payload["done_reason"] = "stop"
+        elif event.event_type is ChatStreamEventType.START:
+            payload["message"] = {"role": "assistant", "content": ""}
+        else:
+            payload["error"] = event.error or "stream failed"
+            payload["done"] = True
+            payload["done_reason"] = "error"
+        return f"{json.dumps(payload)}\n".encode("utf-8")
 
     def _handle_openai_chat_completions(
         self,
@@ -343,6 +482,45 @@ class ModuloHTTPApp:
                     "type": "invalid_request_error",
                 }
             }
+        completion_id = f"chatcmpl-{int(time.time() * 1000)}"
+        created_at = int(time.time())
+        if stream_requested:
+            parsed_request = self._parse_chat_request(
+                {
+                    "model": model_id,
+                    "messages": messages,
+                    "stream": True,
+                }
+            )
+            if isinstance(parsed_request, tuple):
+                status, response = parsed_request
+                return status, {
+                    "error": {
+                        "message": str(response.get("error", "Unknown error")),
+                        "type": "invalid_request_error",
+                    }
+                }
+            stream = self._start_chat_event_stream(parsed_request)
+            if isinstance(stream, tuple):
+                status, response = stream
+                mapped_status = HTTPStatus.NOT_FOUND if status == HTTPStatus.BAD_GATEWAY else status
+                return mapped_status, {
+                    "error": {
+                        "message": str(response.get("error", "Unknown error")),
+                        "type": "invalid_request_error",
+                    }
+                }
+            return StreamHTTPResponse(
+                status=HTTPStatus.OK,
+                content_type="text/event-stream",
+                chunks=self._iter_openai_stream_chunks(
+                    model_id=model_id,
+                    completion_id=completion_id,
+                    created_at=created_at,
+                    events=stream.events,
+                ),
+            )
+
         status, response = self._handle_chat(
             {
                 "model": model_id,
@@ -362,64 +540,6 @@ class ModuloHTTPApp:
 
         assistant = response.get("message", {}) if isinstance(response, dict) else {}
         content = str(assistant.get("content", ""))
-        completion_id = f"chatcmpl-{int(time.time() * 1000)}"
-        created_at = int(time.time())
-        if stream_requested:
-            role_payload = {
-                "id": completion_id,
-                "object": "chat.completion.chunk",
-                "created": created_at,
-                "model": model_id,
-                "choices": [
-                    {
-                        "index": 0,
-                        "delta": {
-                            "role": "assistant",
-                        },
-                        "finish_reason": None,
-                    }
-                ],
-            }
-
-            content_payload = {
-                "id": completion_id,
-                "object": "chat.completion.chunk",
-                "created": created_at,
-                "model": model_id,
-                "choices": [
-                    {
-                        "index": 0,
-                        "delta": {
-                            "content": content,
-                        },
-                        "finish_reason": None,
-                    }
-                ],
-            }
-
-            final_payload = {
-                "id": completion_id,
-                "object": "chat.completion.chunk",
-                "created": created_at,
-                "model": model_id,
-                "choices": [
-                    {
-                        "index": 0,
-                        "delta": {},
-                        "finish_reason": "stop",
-                    }
-                ],
-            }
-            return StreamHTTPResponse(
-                status=HTTPStatus.OK,
-                content_type="text/event-stream",
-                events=(
-                    json.dumps(role_payload),
-                    json.dumps(content_payload),
-                    json.dumps(final_payload),
-                    "[DONE]",
-                ),
-            )
 
         return HTTPStatus.OK, {
             "id": completion_id,
@@ -442,6 +562,69 @@ class ModuloHTTPApp:
                 "total_tokens": 0,
             },
         }
+
+    def _iter_openai_stream_chunks(
+        self,
+        *,
+        model_id: str,
+        completion_id: str,
+        created_at: int,
+        events: Iterable[ChatStreamEvent],
+    ) -> Iterator[bytes]:
+        for event in events:
+            payload: dict[str, Any] | None = None
+            if event.event_type is ChatStreamEventType.START:
+                payload = {
+                    "id": completion_id,
+                    "object": "chat.completion.chunk",
+                    "created": created_at,
+                    "model": model_id,
+                    "choices": [
+                        {
+                            "index": 0,
+                            "delta": {"role": "assistant"},
+                            "finish_reason": None,
+                        }
+                    ],
+                }
+            elif event.event_type is ChatStreamEventType.TOKEN:
+                payload = {
+                    "id": completion_id,
+                    "object": "chat.completion.chunk",
+                    "created": created_at,
+                    "model": model_id,
+                    "choices": [
+                        {
+                            "index": 0,
+                            "delta": {"content": event.content},
+                            "finish_reason": None,
+                        }
+                    ],
+                }
+            elif event.event_type is ChatStreamEventType.END:
+                payload = {
+                    "id": completion_id,
+                    "object": "chat.completion.chunk",
+                    "created": created_at,
+                    "model": model_id,
+                    "choices": [
+                        {
+                            "index": 0,
+                            "delta": {},
+                            "finish_reason": "stop",
+                        }
+                    ],
+                }
+            elif event.event_type is ChatStreamEventType.ERROR:
+                payload = {
+                    "error": {
+                        "message": event.error or "stream failed",
+                        "type": "invalid_request_error",
+                    }
+                }
+            if payload is not None:
+                yield f"data: {json.dumps(payload)}\n\n".encode("utf-8")
+        yield b"data: [DONE]\n\n"
 
     def _wait_for_job(self, job_id: str):
         deadline = time.monotonic() + self.chat_wait_timeout_seconds
@@ -595,6 +778,43 @@ class ModuloHTTPApp:
 
         return HTTPStatus.OK, {"job_id": completed.job_id, "status": completed.status.value}
 
+    def _handle_worker_event(self, path: str, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+        job_id = self._job_id_from_path(path, "/events")
+        worker_id = payload.get("worker_id")
+        raw_event = payload.get("event")
+
+        if job_id is None:
+            return HTTPStatus.NOT_FOUND, {"error": "Invalid job event path"}
+        if not isinstance(worker_id, str) or not worker_id:
+            return HTTPStatus.BAD_REQUEST, {"error": "Missing required field: worker_id"}
+        if not isinstance(raw_event, dict):
+            return HTTPStatus.BAD_REQUEST, {"error": "Missing required field: event"}
+
+        event_type_name = raw_event.get("type")
+        if not isinstance(event_type_name, str):
+            return HTTPStatus.BAD_REQUEST, {"error": "Invalid field: event.type"}
+        try:
+            event_type = ChatStreamEventType(event_type_name)
+        except ValueError:
+            return HTTPStatus.BAD_REQUEST, {"error": f"Unsupported event type: {event_type_name}"}
+
+        content = raw_event.get("content", "")
+        model_id = raw_event.get("model_id", "")
+        error_message = raw_event.get("error", "")
+        if not isinstance(content, str) or not isinstance(model_id, str) or not isinstance(error_message, str):
+            return HTTPStatus.BAD_REQUEST, {"error": "Invalid stream event payload"}
+
+        self.service.publish_stream_event(
+            job_id,
+            ChatStreamEvent(
+                event_type=event_type,
+                content=content,
+                model_id=model_id,
+                error=error_message,
+            ),
+        )
+        return HTTPStatus.OK, {"job_id": job_id, "status": "accepted"}
+
     def _handle_worker_fail(self, path: str, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
         job_id = self._job_id_from_path(path, "/fail")
         worker_id = payload.get("worker_id")
@@ -666,8 +886,7 @@ class _ModuloRequestHandler(BaseHTTPRequestHandler):
             self.send_header("Cache-Control", "no-cache")
             self.send_header("Connection", "keep-alive")
             self.end_headers()
-            for event in response.events:
-                chunk = f"data: {event}\n\n".encode("utf-8")
+            for chunk in response.chunks:
                 self.wfile.write(chunk)
                 self.wfile.flush()
 

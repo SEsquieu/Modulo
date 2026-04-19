@@ -91,6 +91,60 @@ class PrivateNetworkFlowTests(unittest.TestCase):
         self.assertEqual("completed", trace.final_status)
         self.assertEqual("remote-worker-1", trace.selected_worker_id)
 
+    def test_cross_machine_style_private_flow_streams_over_http(self) -> None:
+        bridge = build_worker_bridge_runtime(
+            modulo_url=self.base_url,
+            worker_id="remote-worker-1",
+            model_id="llama3.1:8b",
+            serving_scope=RouteScope.PRIVATE,
+            private_network_id="org-a",
+            stub_response="hello from remote worker",
+        )
+        bridge.start()
+
+        stop_event = threading.Event()
+
+        def worker_loop() -> None:
+            while not stop_event.is_set():
+                bridge.run_cycle()
+                time.sleep(0.02)
+
+        worker_thread = threading.Thread(target=worker_loop, daemon=True)
+        worker_thread.start()
+        try:
+            req = request.Request(
+                f"{self.base_url}/api/chat",
+                data=json.dumps(
+                    {
+                        "model": "llama3.1:8b",
+                        "buyer_id": "buyer-a",
+                        "scope": "private",
+                        "private_network_id": "org-a",
+                        "messages": [{"role": "user", "content": "hello remote path"}],
+                        "stream": True,
+                    }
+                ).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with request.urlopen(req, timeout=10.0) as response:
+                payloads = [
+                    json.loads(line.decode("utf-8"))
+                    for line in response
+                    if line.strip()
+                ]
+        finally:
+            stop_event.set()
+            worker_thread.join(timeout=2.0)
+            bridge.stop()
+
+        self.assertEqual("llama3.1:8b", payloads[0]["model"])
+        self.assertEqual("hello from remote worker", payloads[1]["message"]["content"])
+        self.assertTrue(payloads[-1]["done"])
+        jobs = self.service.jobs.list_jobs()
+        self.assertEqual(1, len(jobs))
+        self.assertEqual("completed", jobs[0].status.value)
+
 
 if __name__ == "__main__":
     unittest.main()

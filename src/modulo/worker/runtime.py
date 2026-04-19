@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
-from typing import Protocol
+from typing import Iterable, Iterator, Protocol
 
 from modulo.common.contracts import (
     ChatRequest,
+    ChatStreamEvent,
+    ChatStreamEventType,
     JobFailure,
     JobResult,
     JobStatus,
@@ -21,6 +23,9 @@ from modulo.worker.transport import WorkerTransportError
 class WorkerExecutor(Protocol):
     def execute(self, worker_id: str, request: ChatRequest) -> str:
         """Execute a claimed job for a worker."""
+
+    def execute_stream(self, worker_id: str, request: ChatRequest) -> Iterable[ChatStreamEvent]:
+        """Execute a claimed job for a worker and yield stream events."""
 
 
 class WorkerTransport(Protocol):
@@ -41,6 +46,9 @@ class WorkerTransport(Protocol):
 
     def fail_job(self, failure: JobFailure) -> None:
         """Record a failed job result."""
+
+    def send_stream_event(self, job_id: str, worker_id: str, event: ChatStreamEvent) -> None:
+        """Forward one stream event for an active job."""
 
 
 class InMemoryWorkerRuntime(StubExecutor):
@@ -132,6 +140,9 @@ class WorkerBridgeRuntime:
         if not self._status.registered_with_cloud:
             return self.start()
 
+        if self._status.runtime_state is WorkerRuntimeState.ERROR:
+            return self._status
+
         try:
             self.transport.heartbeat_worker(
                 WorkerHeartbeat(
@@ -187,7 +198,13 @@ class WorkerBridgeRuntime:
             return self._status
 
         try:
-            response_text = self.executor.execute(self.config.worker_id, claim.request)
+            response_chunks: list[str] = []
+            for event in self._execute_stream(claim.request):
+                if event.content:
+                    response_chunks.append(event.content)
+                if claim.request.stream:
+                    self.transport.send_stream_event(claim.job_id, self.config.worker_id, event)
+            response_text = "".join(response_chunks)
             self.transport.complete_job(
                 JobResult(
                     job_id=claim.job_id,
@@ -237,6 +254,27 @@ class WorkerBridgeRuntime:
             completed_jobs=self._status.completed_jobs + 1,
         )
         return self._status
+
+    def _execute_stream(self, request: ChatRequest) -> Iterator[ChatStreamEvent]:
+        if hasattr(self.executor, "execute_stream"):
+            yield from self.executor.execute_stream(self.config.worker_id, request)
+            return
+
+        response_text = self.executor.execute(self.config.worker_id, request)
+        yield ChatStreamEvent(
+            event_type=ChatStreamEventType.START,
+            model_id=request.model_id,
+        )
+        if response_text:
+            yield ChatStreamEvent(
+                event_type=ChatStreamEventType.TOKEN,
+                model_id=request.model_id,
+                content=response_text,
+            )
+        yield ChatStreamEvent(
+            event_type=ChatStreamEventType.END,
+            model_id=request.model_id,
+        )
 
     def _handle_execution_failure(self, job_id: str, message: str) -> WorkerStatusSnapshot:
         try:

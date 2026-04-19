@@ -284,7 +284,7 @@ class TrustRouterTests(unittest.TestCase):
         self.assertEqual("network-qwen", decision.worker_id)
         self.assertEqual("qwen3.5:4b", decision.model_id)
 
-    def test_rejects_streaming_in_v1(self) -> None:
+    def test_allows_streaming_in_v1(self) -> None:
         self.service.register_worker(
             WorkerSnapshot(
                 worker_id="network-1",
@@ -300,15 +300,14 @@ class TrustRouterTests(unittest.TestCase):
                 )
             )
 
-        with self.assertRaises(RoutingError):
-            self.service.route_chat(
-                ChatRequest(
-                    model_id="llama3.1:8b",
-                    execution_mode=ExecutionMode.NETWORK,
-                    stream=True,
-                )
+        decision = self.service.route_chat(
+            ChatRequest(
+                model_id="llama3.1:8b",
+                execution_mode=ExecutionMode.NETWORK,
+                stream=True,
             )
-
+        )
+        self.assertEqual("network-1", decision.worker_id)
     def test_submit_claim_and_complete_job(self) -> None:
         self.service.register_worker(
             WorkerSnapshot(

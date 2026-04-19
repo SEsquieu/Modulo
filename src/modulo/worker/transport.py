@@ -10,6 +10,8 @@ from urllib import request as urllib_request
 from modulo.common.contracts import (
     ChatMessage,
     ChatRequest,
+    ChatStreamEvent,
+    ChatStreamEventType,
     ExecutionMode,
     JobClaim,
     JobFailure,
@@ -27,6 +29,36 @@ class WorkerTransportError(Exception):
 class WorkerTransportApp(Protocol):
     def handle(self, method: str, path: str, body: bytes | None = None) -> tuple[int, dict]:
         """Handle an HTTP-shaped request for worker transport calls."""
+
+
+def _stream_event_payload(event: ChatStreamEvent) -> dict:
+    return {
+        "type": event.event_type.value,
+        "content": event.content,
+        "model_id": event.model_id,
+        "error": event.error,
+    }
+
+
+def _stream_event_from_payload(payload: dict) -> ChatStreamEvent:
+    event_type = payload.get("type")
+    if not isinstance(event_type, str):
+        raise WorkerTransportError("Stream event payload missing type")
+    try:
+        parsed_type = ChatStreamEventType(event_type)
+    except ValueError as exc:
+        raise WorkerTransportError("Stream event payload has unsupported type") from exc
+    content = payload.get("content", "")
+    model_id = payload.get("model_id", "")
+    error = payload.get("error", "")
+    if not isinstance(content, str) or not isinstance(model_id, str) or not isinstance(error, str):
+        raise WorkerTransportError("Stream event payload has invalid fields")
+    return ChatStreamEvent(
+        event_type=parsed_type,
+        content=content,
+        model_id=model_id,
+        error=error,
+    )
 
 
 def _encode_json(payload: dict) -> bytes:
@@ -224,6 +256,19 @@ class InProcessWorkerHTTPTransport:
         )
         _require_ok(status, payload, "fail job")
 
+    def send_stream_event(self, job_id: str, worker_id: str, event: ChatStreamEvent) -> None:
+        status, payload = self.app.handle(
+            "POST",
+            f"/worker/jobs/{job_id}/events",
+            _encode_json(
+                {
+                    "worker_id": worker_id,
+                    "event": _stream_event_payload(event),
+                }
+            ),
+        )
+        _require_ok(status, payload, "send stream event")
+
 
 @dataclass(frozen=True)
 class UrllibWorkerHTTPTransport:
@@ -303,6 +348,17 @@ class UrllibWorkerHTTPTransport:
             action="fail job",
         )
         _require_ok(status, payload, "fail job")
+
+    def send_stream_event(self, job_id: str, worker_id: str, event: ChatStreamEvent) -> None:
+        status, payload = self._post(
+            f"/worker/jobs/{job_id}/events",
+            {
+                "worker_id": worker_id,
+                "event": _stream_event_payload(event),
+            },
+            action="send stream event",
+        )
+        _require_ok(status, payload, "send stream event")
 
     def _post(self, path: str, payload: dict, *, action: str) -> tuple[int, dict]:
         url = f"{self.config.modulo_url.rstrip('/')}{path}"

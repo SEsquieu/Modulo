@@ -26,6 +26,14 @@ class FakeOllamaHTTPClient:
             raise WorkerExecutionError(self.error_message)
         return self.response
 
+    def chat_stream(self, base_url: str, payload: dict):
+        self.last_payload = {"base_url": base_url, "payload": payload}
+        if self.error_message is not None:
+            raise WorkerExecutionError(self.error_message)
+        yield {"message": {"role": "assistant", "content": "hello "}, "done": False}
+        yield {"message": {"role": "assistant", "content": "from ollama"}, "done": False}
+        yield {"message": {"role": "assistant", "content": ""}, "done": True}
+
 
 class WorkerExecutorTests(unittest.TestCase):
     def test_stub_executor_returns_registered_response(self) -> None:
@@ -74,6 +82,28 @@ class WorkerExecutorTests(unittest.TestCase):
                     messages=(ChatMessage(role="user", content="say hi"),),
                 ),
             )
+
+    def test_ollama_executor_streams_incremental_content(self) -> None:
+        executor = OllamaExecutor(
+            base_url="http://127.0.0.1:11434",
+            http_client=FakeOllamaHTTPClient(),
+        )
+
+        events = list(
+            executor.execute_stream(
+                "worker-1",
+                ChatRequest(
+                    model_id="llama3.1:8b",
+                    execution_mode=ExecutionMode.NETWORK,
+                    messages=(ChatMessage(role="user", content="say hi"),),
+                ),
+            )
+        )
+
+        contents = [event.content for event in events if event.content]
+        self.assertEqual(["hello ", "from ollama"], contents)
+        self.assertEqual("start", events[0].event_type.value)
+        self.assertEqual("end", events[-1].event_type.value)
 
     def test_urllib_ollama_http_client_converts_timeout_error(self) -> None:
         client = UrllibOllamaHTTPClient(timeout_seconds=0.01)

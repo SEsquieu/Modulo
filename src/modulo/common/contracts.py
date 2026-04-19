@@ -50,6 +50,13 @@ class WorkerSupervisorCommand(str, Enum):
     RESTART = "restart"
 
 
+class ChatStreamEventType(str, Enum):
+    START = "start"
+    TOKEN = "token"
+    END = "end"
+    ERROR = "error"
+
+
 @dataclass(frozen=True)
 class CanonicalModel:
     model_id: str
@@ -123,6 +130,14 @@ class ChatRequest:
             ExecutionMode.NETWORK: RouteScope.PRIVATE,
             ExecutionMode.CLOUD: RouteScope.CLOUD,
         }[self.execution_mode]
+
+
+@dataclass(frozen=True)
+class ChatStreamEvent:
+    event_type: ChatStreamEventType
+    content: str = ""
+    model_id: str = ""
+    error: str = ""
 
 
 @dataclass(frozen=True)

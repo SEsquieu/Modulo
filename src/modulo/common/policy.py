@@ -10,7 +10,7 @@ class V1Policy:
     allow_cross_mode_fallback: bool = False
     allow_trusted_cloud_fallback_for_exact_match: bool = True
     require_curated_supported_model: bool = True
-    streaming_enabled: bool = False
+    streaming_enabled: bool = True
     tool_calling_enabled: bool = False
     allow_cpu_only_workers: bool = False
     max_supported_models_in_happy_path: int = 3

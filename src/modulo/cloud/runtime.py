@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+from queue import Empty, Queue
 from dataclasses import dataclass, field, replace
+from typing import Iterator
 
 from modulo.common.contracts import (
     ChatRequest,
+    ChatStreamEvent,
+    ChatStreamEventType,
     ExecutionMode,
     JobClaim,
     JobFailure,
@@ -177,12 +181,44 @@ class InMemoryRouteTraceStore:
 
 
 @dataclass
+class InMemoryJobStreamStore:
+    _streams: dict[str, Queue[ChatStreamEvent | None]] = field(default_factory=dict)
+
+    def create(self, job_id: str) -> None:
+        self._streams[job_id] = Queue()
+
+    def publish(self, job_id: str, event: ChatStreamEvent) -> None:
+        stream = self._streams.get(job_id)
+        if stream is not None:
+            stream.put(event)
+
+    def close(self, job_id: str) -> None:
+        stream = self._streams.get(job_id)
+        if stream is not None:
+            stream.put(None)
+
+    def iter_events(self, job_id: str, *, poll_timeout_seconds: float = 0.1) -> Iterator[ChatStreamEvent]:
+        stream = self._streams.get(job_id)
+        if stream is None:
+            return
+        while True:
+            try:
+                event = stream.get(timeout=poll_timeout_seconds)
+            except Empty:
+                continue
+            if event is None:
+                return
+            yield event
+
+
+@dataclass
 class InMemoryModuloService:
     router: TrustRouter
     registry: InMemoryWorkerRegistry = field(default_factory=InMemoryWorkerRegistry)
     jobs: InMemoryJobQueue = field(default_factory=InMemoryJobQueue)
     leases: InMemoryLeaseManager = field(default_factory=InMemoryLeaseManager)
     traces: InMemoryRouteTraceStore = field(default_factory=InMemoryRouteTraceStore)
+    streams: InMemoryJobStreamStore = field(default_factory=InMemoryJobStreamStore)
 
     def register_worker(self, worker: WorkerSnapshot) -> None:
         self.registry.register(worker)
@@ -218,6 +254,7 @@ class InMemoryModuloService:
         route, trace = self._route_with_trace(request=request, attempt_number=1, retry_count=0)
         self._refresh_lease(request, route)
         job = self.jobs.create_job(request=request, route=route, trace_id=trace.trace_id)
+        self.streams.create(job.job_id)
         self.traces.attach_job(trace.trace_id, job.job_id)
         return job
 
@@ -229,6 +266,7 @@ class InMemoryModuloService:
 
     def complete_job(self, result: JobResult) -> JobRecord:
         completed = self.jobs.complete(result)
+        self.streams.close(completed.job_id)
         if completed.trace_id:
             self.traces.mark_completed(completed.trace_id)
         self._refresh_lease(completed.request, completed.route)
@@ -236,6 +274,13 @@ class InMemoryModuloService:
 
     def fail_job(self, failure: JobFailure) -> JobRecord:
         reason = f"{failure.error_code}: {failure.message}"
+        self.publish_stream_event(
+            failure.job_id,
+            ChatStreamEvent(
+                event_type=ChatStreamEventType.ERROR,
+                error=reason,
+            ),
+        )
         self.registry.mark_unhealthy(failure.worker_id, reason)
         self.leases.break_for_worker(failure.worker_id)
 
@@ -243,7 +288,7 @@ class InMemoryModuloService:
         if job is None:
             raise JobQueueError(f"Unknown job id: {failure.job_id}")
 
-        should_retry = job.attempts < 2
+        should_retry = job.attempts < 2 and not job.request.stream
         if should_retry:
             try:
                 if job.trace_id:
@@ -257,7 +302,9 @@ class InMemoryModuloService:
             except RoutingError:
                 if job.trace_id:
                     self.traces.mark_failed(job.trace_id, reason)
-                return self.jobs.fail(failure)
+                failed = self.jobs.fail(failure)
+                self.streams.close(failed.job_id)
+                return failed
             self._refresh_lease(job.request, route)
             return self.jobs.retry(
                 job_id=failure.job_id,
@@ -268,7 +315,9 @@ class InMemoryModuloService:
 
         if job.trace_id:
             self.traces.mark_failed(job.trace_id, reason)
-        return self.jobs.fail(failure)
+        failed = self.jobs.fail(failure)
+        self.streams.close(failed.job_id)
+        return failed
 
     def timeout_job(self, job_id: str, worker_id: str) -> JobRecord:
         return self.fail_job(
@@ -298,6 +347,12 @@ class InMemoryModuloService:
 
     def list_traces(self) -> list[RouteTraceRecord]:
         return self.traces.list_traces()
+
+    def publish_stream_event(self, job_id: str, event: ChatStreamEvent) -> None:
+        self.streams.publish(job_id, event)
+
+    def iter_stream_events(self, job_id: str) -> Iterator[ChatStreamEvent]:
+        yield from self.streams.iter_events(job_id)
 
     def _route_via_lease(self, request: ChatRequest) -> RouteDecision | None:
         if not request.buyer_id:

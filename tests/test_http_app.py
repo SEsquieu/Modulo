@@ -6,7 +6,7 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from modulo.common.contracts import ChatRequest, ExecutionMode, JobStatus, RouteScope, WorkerKind, WorkerModelState, WorkerSnapshot
-from modulo.cloud.http import ModuloHTTPApp
+from modulo.cloud.http import ModuloHTTPApp, StreamHTTPResponse
 from modulo.cloud.router import TrustRouter
 from modulo.cloud.runtime import InMemoryModuloService
 from modulo.worker.runtime import InMemoryWorkerRuntime
@@ -160,7 +160,7 @@ class ModuloHTTPAppTests(unittest.TestCase):
         self.assertEqual("chat.completion", payload["object"])
 
     def test_post_openai_chat_completions_accepts_stream_flag_for_compatibility(self) -> None:
-        status, payload = self.app.handle(
+        response = self.app.handle(
             "POST",
             "/v1/chat/completions",
             json.dumps(
@@ -172,8 +172,50 @@ class ModuloHTTPAppTests(unittest.TestCase):
             ).encode("utf-8"),
         )
 
-        self.assertEqual(200, status)
-        self.assertEqual("chat.completion", payload["object"])
+        self.assertIsInstance(response, StreamHTTPResponse)
+        assert isinstance(response, StreamHTTPResponse)
+        chunks = [chunk.decode("utf-8") for chunk in response.chunks]
+        payloads = [
+            json.loads(chunk.removeprefix("data: ").strip())
+            for chunk in chunks[:-1]
+        ]
+        self.assertEqual("assistant", payloads[0]["choices"][0]["delta"]["role"])
+        self.assertEqual("hello from modulo", payloads[1]["choices"][0]["delta"]["content"])
+        self.assertEqual("stop", payloads[2]["choices"][0]["finish_reason"])
+        self.assertTrue(chunks[-1].startswith("data: [DONE]"))
+
+    def test_post_chat_stream_returns_ndjson_chunks(self) -> None:
+        response = self.app.handle(
+            "POST",
+            "/api/chat",
+            json.dumps(
+                {
+                    "model": "llama3.1:8b",
+                    "messages": [{"role": "user", "content": "hi"}],
+                    "stream": True,
+                }
+            ).encode("utf-8"),
+        )
+
+        self.assertIsInstance(response, StreamHTTPResponse)
+        assert isinstance(response, StreamHTTPResponse)
+        payloads = [
+            json.loads(chunk.decode("utf-8"))
+            for chunk in response.chunks
+        ]
+        self.assertEqual("start", payloads[0]["type"])
+        self.assertEqual("token", payloads[1]["type"])
+        self.assertEqual("end", payloads[2]["type"])
+        self.assertEqual("llama3.1:8b", payloads[0]["model"])
+        self.assertTrue(payloads[0]["job_id"].startswith("job-"))
+        self.assertTrue(payloads[0]["trace_id"].startswith("trace-"))
+        self.assertEqual(0, payloads[0]["sequence"])
+        self.assertEqual(1, payloads[1]["sequence"])
+        self.assertEqual(2, payloads[2]["sequence"])
+        self.assertEqual("hello from modulo", payloads[1]["message"]["content"])
+        self.assertIsNone(payloads[1]["done_reason"])
+        self.assertTrue(payloads[-1]["done"])
+        self.assertEqual("stop", payloads[-1]["done_reason"])
 
     def test_platform_status_uses_request_host_for_active_target_url(self) -> None:
         status, payload = self.app.handle(
