@@ -9,6 +9,10 @@ The current implementation uses [Ollama](https://ollama.com/) as its first execu
 > [!WARNING]
 > **Alpha software for trusted environments.** Modulo does not yet provide authentication, authorization, encrypted transport, persistent control-plane storage, or hostile-worker isolation. Do not expose the current server directly to the public Internet or route sensitive data through machines you do not trust. See [Security](./SECURITY.md).
 
+![Modulo desktop client showing an active local Ollama host and healthy worker](./docs/assets/modulo-client-host.jpg)
+
+*The current Windows engineering client hosting a warm `gemma4:e4b` model through Ollama, with the worker registered, healthy, and idle after a completed job.*
+
 ## What works today
 
 - centrally coordinated registration, heartbeat, claim, completion, failure, and unregister lifecycle for workers
