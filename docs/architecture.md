@@ -1,12 +1,16 @@
 # Architecture
 
+Modulo is a centrally coordinated distributed inference fabric. It is not a pure
+peer-to-peer mesh: workers execute inference, while the control plane owns
+registry, routing, job coordination, continuity, and trace state.
+
 ## Product shape
 
 Modulo is being organized around three product-facing runtime boundaries plus shared contracts:
 
 - `client`: the local tray-first user application
-- `worker`: the local background bridge that talks to Ollama and the cloud
-- `cloud`: the hosted routing and job control plane
+- `worker`: the background bridge that talks to an executor and the control plane
+- `cloud`: the routing and job control plane (currently in memory)
 - `common`: the shared contracts and policy surface used across all three
 
 This structure is intentional. It keeps the repository aligned with the eventual user experience:
@@ -21,7 +25,7 @@ That doc should guide what belongs in the tray, popup, utility windows, advanced
 
 ## Current implementation status
 
-Today the strongest part of the repo is the `cloud` package. It currently contains:
+The `cloud` package currently contains:
 
 - trust-based worker selection
 - in-memory worker registry
@@ -30,8 +34,12 @@ Today the strongest part of the repo is the `cloud` package. It currently contai
 - OpenAI-compatible ingress for mounted consumers through `GET /v1/models` and `POST /v1/chat/completions`
 - worker protocol endpoints for register, heartbeat, claim, result, and fail
 - a demo server for local end-to-end testing
+- structured route traces and filtered-worker reasons
+- short-lived buyer/model continuity leases
+- buffered and streaming result transport
 
-The `worker` package currently contains the beginnings of the worker runtime boundary and configuration surface.
+The `worker` package contains a real worker lifecycle, in-process and URL-backed
+transport, a stub executor, and the Ollama execution adapter.
 
 The `client` package now contains the real supervision, readiness, session-bridge, OpenClaw discovery, and local host-truth surfaces that the desktop shell is built on.
 
@@ -54,6 +62,14 @@ These rules should guide future development:
 - `client` owns onboarding, user-visible state, tray interactions, and local configuration.
 - `client` should not contain routing logic.
 - `worker` should report facts; `cloud` should make routing decisions.
+
+## Security and persistence boundary
+
+The alpha protocol is unauthenticated HTTP and is intended only for trusted
+local/private environments. A `private_network_id` constrains routing but does
+not authenticate a worker or consumer. The registry, queue, leases, and route
+traces are process-local memory. See [../SECURITY.md](../SECURITY.md) and
+[project-status.md](./project-status.md).
 
 ## Slice discipline
 

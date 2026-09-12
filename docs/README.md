@@ -1,48 +1,42 @@
-# Docs
+# Documentation
 
-Project documentation lives here as the repo grows.
+The public documentation path is intentionally short:
 
-Current source of truth:
+1. [Quick start](./quickstart.md) — prove two-machine routing with a stub, then use Ollama.
+2. [Architecture](./architecture.md) — understand runtime ownership and system boundaries.
+3. [Routing](./routing.md) — inspect eligibility, scoring, continuity, fallback, and traces.
+4. [Project status](./project-status.md) — separate implemented proof from reserved or incomplete work.
+5. [Security](../SECURITY.md) — understand the current trust boundary before exposing a service.
+6. [Public release checklist](./release-checklist.md) — finish the clean-clone, CI, and GitHub publication gates.
 
-- [handoff.md](./handoff.md): quick resume file for workstation handoff and current implementation context
-- [../modulo_v_1_design_doc.md](../modulo_v_1_design_doc.md): product and architecture direction for Modulo v1
-- [roadmap.md](./roadmap.md): current development phase, completed slices, and upcoming roadmap-aligned slices
-- [gui_roadmap.md](./gui_roadmap.md): GUI-client-specific build plan, phased slices, and UI guardrails
-- [gui_state_map.md](./gui_state_map.md): first GUI screens, view-model mapping, and command/event inventory
-- [phase_2_plan.md](./phase_2_plan.md): sequenced next-phase integration plan after the initial backend and GUI roadmaps
-- [ollama_discovery_roadmap.md](./ollama_discovery_roadmap.md): mini roadmap for truthful local Ollama discovery
-- [hosting_readiness_roadmap.md](./hosting_readiness_roadmap.md): mini roadmap for real hosting preflight and readiness
-- [session_bridge_roadmap.md](./session_bridge_roadmap.md): mini roadmap for the always-on client control-plane/session bridge
-- [openclaw_integration_roadmap.md](./openclaw_integration_roadmap.md): mini roadmap for real OpenClaw detection and connection flow
-- [real_execution_roadmap.md](./real_execution_roadmap.md): mini roadmap for real Ollama-backed execution
-- [host_warm_state_roadmap.md](./host_warm_state_roadmap.md): mini roadmap for host-side warm-state visibility and prewarm lifecycle
-- [productization_checklist.md](./productization_checklist.md): compact gated checklist for packaging and trust polish
-- [private_networks_design.md](./private_networks_design.md): architectural note for access-controlled private Modulo networks inside an org boundary
-- [platform_layering_spec.md](./platform_layering_spec.md): canonical product-shape doc for tray-first layering, progressive disclosure, and what belongs in each UI/system layer
-- [private_scope_mvp_design.md](./private_scope_mvp_design.md): implementation-narrowing doc for treating the first bounded remote-execution proof as `Private` scope
-- [private_mvp_roadmap.md](./private_mvp_roadmap.md): mini roadmap for the first private-scope remote execution proof
-- [route_trace_visibility_roadmap.md](./route_trace_visibility_roadmap.md): mini roadmap for surfacing routed execution truth after the private proof is real
-- [use_side_truth_roadmap.md](./use_side_truth_roadmap.md): mini roadmap for making the `Use` side truthful about `Local / Private / Public / Cloud` visibility and routing
-- [continue_consumer_roadmap.md](./continue_consumer_roadmap.md): mini roadmap for making `Continue (VSCode)` the first non-OpenClaw mounted consumer through the `OpenAI API` shape
-- [client_local_state_roadmap.md](./client_local_state_roadmap.md): prerequisite mini roadmap for Modulo-owned client storage for backups, rollback metadata, and lightweight local telemetry
+## Active engineering references
 
-Current emphasis:
+- [Platform layering](./platform_layering_spec.md)
+- [Private-scope design](./private_scope_mvp_design.md)
+- [Private-network design](./private_networks_design.md)
+- [Productization checklist](./productization_checklist.md)
 
-- the cross-network private execution proof is now real
-- route-trace visibility is now completed
-- the `Use`-side truth roadmap is now completed
-- the Continue consumer roadmap is now completed and validated as a real mounted-consumer path
-- the client-local state roadmap is now the prerequisite storage roadmap for any real consumer-side apply/rollback work
-- the Continue path now includes a real OpenAI-compatible shim and buffered streaming bridge, so Continue can execute through Modulo instead of stopping at staged config
-- productization is intentionally deferred while shared-path truth, second-layer GUI refinement, and policy harden
-- the current UI should be treated as a second-layer surface while the product continues to aim toward a tray-first release
-- the current live GUI cleanup is focused on:
-  - calmer `Use` and `Mount` semantics
-  - a more trustworthy `Active Route` summary
-  - a nested anchored `Use` model picker that respects `Local / Private / Public / Cloud` and real scope names
+## Development history and design archive
 
-Recommended next docs to add:
+The remaining documents preserve the implementation sequence and product reasoning. They are useful context, but they are not all descriptions of current behavior.
 
-- `api.md`: Ollama-facing and worker-facing HTTP contracts
-- `onboarding.md`: use-side and host-side flows from the tray client
-- `operations.md`: health, logging, and deployment expectations
+Historical roadmaps may contain older terminology such as a singular `network` pool, pre-streaming assumptions, or placeholder implementation state. When a historical document conflicts with the README, architecture guide, routing guide, project-status page, or code, prefer those current sources.
+
+- [Main roadmap](./roadmap.md)
+- [Phase 2 plan](./phase_2_plan.md)
+- [GUI roadmap](./gui_roadmap.md)
+- [GUI state map](./gui_state_map.md)
+- [Client local-state roadmap](./client_local_state_roadmap.md)
+- [Continue consumer roadmap](./continue_consumer_roadmap.md)
+- [Host warm-state roadmap](./host_warm_state_roadmap.md)
+- [Hosting readiness roadmap](./hosting_readiness_roadmap.md)
+- [Ollama discovery roadmap](./ollama_discovery_roadmap.md)
+- [OpenClaw integration roadmap](./openclaw_integration_roadmap.md)
+- [Private MVP roadmap](./private_mvp_roadmap.md)
+- [Real-execution roadmap](./real_execution_roadmap.md)
+- [Route-trace visibility roadmap](./route_trace_visibility_roadmap.md)
+- [Session-bridge roadmap](./session_bridge_roadmap.md)
+- [Use-side truth roadmap](./use_side_truth_roadmap.md)
+- [Future host-capacity intelligence](./future_host_capacity_intelligence.md)
+- [Workstation handoff notes](./handoff.md)
+- [Original v1 design document](../modulo_v_1_design_doc.md)

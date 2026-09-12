@@ -63,7 +63,7 @@ Summary:
 
 Proof added to repo:
 
-- [gui_state_map.md](/Users/16096/Desktop/Projects/Modulo/docs/gui_state_map.md)
+- [gui_state_map.md](./gui_state_map.md)
 - explicit mapping from current Python client state to GUI view-model concerns
 - explicit event/command map for the first GUI shell
 

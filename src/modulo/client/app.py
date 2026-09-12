@@ -704,7 +704,11 @@ class ModuloClientSupervisor:
             openclaw_configured=status.openclaw_configured,
             hosting_enabled=status.hosting_enabled,
             worker_registered=bool(worker and worker.registered_with_cloud),
-            worker_healthy=bool(worker and worker.healthy),
+            worker_healthy=bool(
+                worker
+                and worker.healthy
+                and not (smoke_test is not None and not smoke_test.ok)
+            ),
             last_worker_error=worker.last_error if worker else "",
             smoke_test_ok=bool(smoke_test and smoke_test.ok),
             smoke_test_error=smoke_test.error if smoke_test else "",

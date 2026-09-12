@@ -12,7 +12,7 @@ The purpose is simple:
 
 ## Current source surface
 
-The current GUI-relevant Python surface lives primarily in [app.py](/Users/16096/Desktop/Projects/Modulo/src/modulo/client/app.py).
+The current GUI-relevant Python surface lives primarily in [app.py](../src/modulo/client/app.py).
 
 Important current types:
 

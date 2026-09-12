@@ -1,157 +1,174 @@
 # Modulo
 
-Initial scaffold for the Modulo v1 platform.
+**Route inference across machines you already own.**
 
-This repo currently codifies the recommended v1 decisions from the design doc:
+Modulo is an experimental distributed inference fabric. It coordinates model capacity across local and private-network machines, then routes each request according to exact model availability, execution scope, worker health, capacity, and runtime confidence.
 
-- curated supported model list
-- exact model-name matching in v1
-- separate execution modes: `local`, `network`, `cloud`
-- network routing based on trust and health
-- exact-model trusted cloud fallback only
-- no model substitution in v1
+The current implementation uses [Ollama](https://ollama.com/) as its first execution backend and exposes both Ollama-shaped and OpenAI-compatible consumer APIs. Modulo is the coordination layer around inference; it is not a model runtime and does not replace Ollama.
 
-## Repo shape
+> [!WARNING]
+> **Alpha software for trusted environments.** Modulo does not yet provide authentication, authorization, encrypted transport, persistent control-plane storage, or hostile-worker isolation. Do not expose the current server directly to the public Internet or route sensitive data through machines you do not trust. See [Security](./SECURITY.md).
 
-The repository is organized around the product we actually want to ship:
+## What works today
 
-- `src/modulo/common`: shared contracts, catalog, and v1 policy defaults
-- `src/modulo/cloud`: hosted control plane, router, job system, and Ollama-shaped HTTP transport
-- `src/modulo/worker`: local worker bridge/runtime code
-- `src/modulo/client`: tray-first client and onboarding-facing client code
-- `tests`: contract and transport tests for the current scaffold
+- centrally coordinated registration, heartbeat, claim, completion, failure, and unregister lifecycle for workers
+- real Ollama-backed execution on another machine, plus a stub executor for transport-only testing
+- exact-model, scope-aware routing across `local`, `private`, `public`, and `cloud` scopes
+- health, capacity, confidence, success-rate, timeout-rate, and headroom-aware worker selection
+- private-network isolation through `private_network_id`
+- buffered and streaming execution
+- Ollama-shaped `GET /api/tags` and `POST /api/chat`
+- OpenAI-compatible `GET /v1/models` and `POST /v1/chat/completions`
+- route traces that record eligible workers, rejection reasons, selection, retries, and final status
+- short-lived buyer-to-worker continuity leases to reduce avoidable cold-path churn
+- desktop control surface for using, hosting, mounting, and diagnosing Modulo
+- Continue (VS Code) mounting with explicit backup and rollback metadata
 
-This keeps the codebase aligned with the intended UX:
+`Public` and `Cloud` exist in the scope and policy model, but the demonstrated multi-machine path is currently the trusted `Private` scope. The registry, job queue, leases, and traces are in memory.
 
-- users install the `client`
-- the `client` manages local worker behavior through the `worker` bridge
-- the hosted `cloud` layer owns routing, trust, and job coordination
+## System shape
 
-## Development posture
-
-This repo should grow through tight vertical slices that strengthen the roadmap-critical demo path.
-
-- build toward the one end-to-end proof, not side ideas in isolation
-- keep `client` thin and supervisory so `worker` remains the real runtime seam
-- only canonize new behavior when it clearly improves the core buyer-to-worker path
-- prefer clean continuity and shared contracts over duplicate logic or package drift
-
-Roadmap reference:
-
-- [docs/roadmap.md](./docs/roadmap.md)
-- [docs/gui_roadmap.md](./docs/gui_roadmap.md)
-- [docs/gui_state_map.md](./docs/gui_state_map.md)
-- [docs/phase_2_plan.md](./docs/phase_2_plan.md)
-- [docs/session_bridge_roadmap.md](./docs/session_bridge_roadmap.md)
-- [docs/host_warm_state_roadmap.md](./docs/host_warm_state_roadmap.md)
-- [docs/private_scope_mvp_design.md](./docs/private_scope_mvp_design.md)
-- [docs/private_mvp_roadmap.md](./docs/private_mvp_roadmap.md)
-- [docs/continue_consumer_roadmap.md](./docs/continue_consumer_roadmap.md)
-
-## Running the demo server
-
-```powershell
-python -m pip install -e .
-python -m modulo.cloud.demo_server
+```mermaid
+flowchart TD
+    C["Consumer API"] --> CP["Control plane"]
+    CP --> R["Scope-aware router"]
+    R --> W1["Local worker"]
+    R --> W2["Private-network worker"]
+    R -. reserved .-> W3["Cloud or public worker"]
+    W1 --> O1["Ollama"]
+    W2 --> O2["Ollama"]
 ```
 
-Then try:
+The boundaries are deliberate:
+
+| Package | Responsibility |
+| --- | --- |
+| `modulo.client` | Onboarding, supervision, local configuration, consumer mounts, user-visible state |
+| `modulo.worker` | Heartbeats, job claims, execution, result/failure reporting, Ollama adapter |
+| `modulo.cloud` | API ingress, registry, routing, job lifecycle, retries, continuity, route traces |
+| `modulo.common` | Contracts, model catalog, and policy shared across runtime boundaries |
+
+The worker reports facts; the control plane makes routing decisions. The client does not quietly become a second router.
+
+Read [the architecture guide](./docs/architecture.md) and [routing guide](./docs/routing.md) for the deeper design.
+
+## Why Modulo when Ollama already exists?
+
+Ollama runs models on a machine and provides an API to that runtime. Modulo starts where that boundary ends: coordinating multiple runtimes and deciding where a request should execute.
+
+| Ollama | Modulo |
+| --- | --- |
+| Loads and runs a model | Discovers and advertises available capacity |
+| Executes a request locally | Routes a request to an eligible worker |
+| Manages the local model runtime | Tracks distributed worker health and load |
+| Streams model output | Carries streams across the worker/control-plane boundary |
+| Exposes one runtime API | Presents compatible ingress over a pool of runtimes |
+
+Ollama is Modulo's first executor. The `WorkerExecutor` protocol leaves room for other runtimes without moving execution concerns into the router.
+
+## Quick start
+
+Requirements:
+
+- Windows 11 is the current tested client target
+- Python 3.11 or newer
+- Ollama only for real model execution; the stub proof does not require it
+
+Create an environment and install the package:
 
 ```powershell
-curl http://127.0.0.1:8000/api/tags
-curl -Method Post http://127.0.0.1:8000/api/chat -ContentType "application/json" -Body '{"model":"llama3.1:8b","messages":[{"role":"user","content":"hello"}],"stream":false}'
+git clone https://github.com/SEsquieu/Modulo.git
+cd Modulo
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e .
 ```
 
-## Running the local prototype
+For the complete two-machine proof, including a no-model stub path and real Ollama execution, follow [docs/quickstart.md](./docs/quickstart.md).
+
+### Run the in-process prototype
 
 ```powershell
-python -m pip install -e .
 python -m modulo.prototype
 ```
 
-This boots the in-process cloud control plane, starts a supervised worker through the client-facing path, and runs one buyer round trip through the local prototype harness.
+This exercises the control plane, client supervision, HTTP ingress, worker transport, execution, and response path in one process.
 
-The local prototype now also supports a client-facing smoke-test path through the same harness and worker/runtime seams.
-It now routes the buyer request through the real local `/api/chat` HTTP ingress while the hosted worker bridge claims and completes the job over the worker HTTP contract.
-
-## Running the private-network proof
-
-Primary machine:
+### Run the desktop control surface
 
 ```powershell
-python -m pip install -e .
-python -m modulo.cloud.server --host 0.0.0.0 --port 8000
-```
-
-Worker machine:
-
-```powershell
-python -m pip install -e .
-python -m modulo.worker.bridge_runner --modulo-url http://PRIMARY_MACHINE_IP:8000 --worker-id worker-laptop --model gemma4:e2b --scope private --private-network-id office-private
-```
-
-You can also use `--stub-response "hello from remote worker"` on the worker runner if you want to validate transport and routing before relying on a real local Ollama runtime on the second machine.
-
-## Running the GUI shell
-
-```powershell
-python -m pip install -e .[gui]
+python -m pip install -e ".[gui]"
 python -m modulo.gui_app
 ```
 
-To launch the GUI already pointed at a shared hosted backend target:
+The current PySide application is an engineering/proving surface, not a polished installer-backed desktop release.
+
+## Minimal private-network proof
+
+On the machine acting as the control plane:
 
 ```powershell
-python -m modulo.gui_app --platform-url https://modulo.grinningfrog.com
+python -m modulo.cloud.server --host 0.0.0.0 --port 8000
 ```
 
-You can also set `MODULO_PLATFORM_URL=https://modulo.grinningfrog.com` before launch if you want that target preloaded by default.
+On a second trusted machine:
 
-This launches the barebones PySide6 desktop shell against the current live client/prototype state.
+```powershell
+python -m modulo.worker.bridge_runner `
+  --modulo-url http://CONTROL_PLANE_IP:8000 `
+  --worker-id worker-laptop `
+  --model gemma4:e2b `
+  --scope private `
+  --private-network-id home-lab `
+  --stub-response "hello from the remote worker"
+```
 
-The GUI currently includes:
+Then send a request to the control plane from a third terminal:
 
-- a `Use / Host / Diagnostics` shell with consistent nested-tab navigation, plus a deeper `Debug` surface
-- a `Debug` tab with current platform URL plus ready-to-run worker and request commands for private-network validation
-- an interactive `Debug` probe surface that can target another workstation's platform URL and run a real `/api/chat` network test
-- lightweight shared-platform advertising visibility, so the `Use` tab can reflect another workstation's advertised network models when the Debug target points at that host
-- a `Use` tab with:
-  - an active route summary card
-  - a `Sources` section for `Local / Private / Public / Cloud`
-  - a `Mount` section that now behaves like a shape-first, consumer-second wizard
-  - an anchored nested model picker grouped by source and scope
-  - `Continue (VSCode)` as a real mounted consumer under the `OpenAI API` shape
-- a `Host` tab with local-only model selection, warm-state card, host toggle, and worker/runtime detail tabs
-- a `Diagnostics` tab with smoke-test summary, route-trace, activity, and error views
-- explicit execution-path truth in host and diagnostics views so `REAL` and `PROTOTYPE` runs are clearly labeled
-- async host actions and smoke tests so long Ollama calls do not freeze the UI
-- a split footer with left-side shell status and right-side transient notices
-- an OpenAI-compatible consumer edge for mounted clients, including `GET /v1/models` and `POST /v1/chat/completions`
+```powershell
+$body = @{
+  model = "gemma4:e2b"
+  messages = @(@{ role = "user"; content = "hello" })
+  stream = $false
+  scope = "private"
+  private_network_id = "home-lab"
+} | ConvertTo-Json -Depth 5
 
-Current next functional proof:
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://CONTROL_PLANE_IP:8000/api/chat `
+  -ContentType "application/json" `
+  -Body $body
+```
 
-- [docs/private_scope_mvp_design.md](./docs/private_scope_mvp_design.md) narrows the source/scope model so the next remote-execution work does not harden a singular `network` pool
-- [docs/private_mvp_roadmap.md](./docs/private_mvp_roadmap.md) defines the first bounded private-scope remote-execution MVP proof before packaging work resumes
-- [docs/route_trace_visibility_roadmap.md](./docs/route_trace_visibility_roadmap.md) defines the next post-proof slice so routed execution becomes explainable before packaging resumes
-- [docs/use_side_truth_roadmap.md](./docs/use_side_truth_roadmap.md) defines the next `Use`-side truth pass so model source visibility is clear before packaging resumes
-- [docs/continue_consumer_roadmap.md](./docs/continue_consumer_roadmap.md) now tracks the first non-OpenClaw external consumer path through `Mount -> OpenAI API -> Continue (VSCode)`
-- [docs/client_local_state_roadmap.md](./docs/client_local_state_roadmap.md) now tracks the prerequisite Modulo-owned client storage seam for backups, rollback metadata, and lightweight local telemetry before consumer apply/rollback work lands
-- [docs/platform_layering_spec.md](./docs/platform_layering_spec.md) captures the canonical tray-first layering model so the current GUI does not drift into a dashboard-shaped product
+This is intentionally a trusted-network development proof. `0.0.0.0` makes the service reachable on every interface; it does not make the service safe for Internet exposure.
 
-Recent milestone:
+## Routing in one pass
 
-- an end-to-end request/response has now been proven across separate real networks, with desktop hosting from a home network and a laptop requester running over a cell hotspot
-- this moves Modulo beyond local-only proof into real distributed validation
-- current next work should focus on truth, visibility, and policy around the shared path rather than packaging
-- the newest tracked emphasis after route-trace visibility is the `Use` side: making `Local / Private / Public / Cloud` visibility honest and easy to trust
-- the newest untracked GUI refinement work is making the second-layer `Use` and `Mount` flow feel calmer and more tray-first without losing truth
-- the `Mount` consumer list now includes `Continue (VSCode)` under the `OpenAI API` shape so a second external consumer can be staged without disturbing the existing OpenClaw path
-- the Continue path now also has an explicit config and file-ownership contract, real apply/rollback flow, and an OpenAI-compatible shim with buffered streaming compatibility so Continue can complete real prompts through Modulo
-- the guiding product rule is now explicit: the current GUI is the deeper proving surface, while the release product should stay shallow, tray-first, and Hamachi-simple
+For a request, the router:
 
-## Current platform surface
+1. resolves the requested execution scope;
+2. filters workers by kind, health, scope/private-network membership, exact model availability, exclusions, and capacity;
+3. scores eligible workers using model confidence, recent success rate, timeout rate, and available concurrency;
+4. records the selection and every filtered-worker reason in a route trace;
+5. may prefer a still-eligible worker from a short-lived buyer/model continuity lease;
+6. can use exact-model cloud fallback only when current policy permits it.
 
-The current scaffold includes these worker-facing HTTP routes:
+Modulo does not silently substitute a different model in the v1 policy.
+
+## API surface
+
+Consumer-facing:
+
+- `GET /api/tags`
+- `POST /api/chat`
+- `GET /v1/models`
+- `POST /v1/chat/completions`
+- `GET /api/platform/status`
+- `GET /api/platform/trace/latest`
+
+Worker-facing:
 
 - `POST /worker/register`
 - `POST /worker/unregister`
@@ -160,72 +177,62 @@ The current scaffold includes these worker-facing HTTP routes:
 - `POST /worker/jobs/{job_id}/result`
 - `POST /worker/jobs/{job_id}/fail`
 
-They currently use simple JSON payloads and map directly onto the in-memory control plane.
+These routes currently use unauthenticated JSON over HTTP. That is an explicit alpha limitation.
 
-The worker bridge now has both an in-process HTTP-shaped transport for local harness work and a real URL-backed transport for localhost or private-environment control-plane testing against `modulo_url`.
-
-The current HTTP ingress also exposes:
-
-- `GET /api/tags`
-- `GET /api/platform/status`
-- `POST /api/chat`
-- `GET /v1/models`
-- `POST /v1/chat/completions`
-
-### Native `/api/chat` streaming contract
-
-When `POST /api/chat` is called with `"stream": false`, Modulo returns the existing buffered Ollama-shaped JSON response.
-
-When `POST /api/chat` is called with `"stream": true`, Modulo returns `application/x-ndjson` and streams one JSON object per line. The native stream contract is:
-
-- `type`: one of `start`, `token`, `end`, or `error`
-- `job_id`: the Modulo job id for the execution
-- `trace_id`: the routed execution trace id
-- `model`: the resolved model id
-- `sequence`: zero-based event sequence number within the stream
-- `done`: whether the stream has finished
-- `done_reason`: `stop`, `error`, or `null`
-- `message`: assistant message fragment for `start`, `token`, and `end` events
-- `error`: present on `error` events
-
-Example native streamed response:
-
-```json
-{"type":"start","job_id":"job-00001","trace_id":"trace-00001","model":"gemma4:e2b","sequence":0,"done":false,"done_reason":null,"message":{"role":"assistant","content":""}}
-{"type":"token","job_id":"job-00001","trace_id":"trace-00001","model":"gemma4:e2b","sequence":1,"done":false,"done_reason":null,"message":{"role":"assistant","content":"Quantum "}}
-{"type":"token","job_id":"job-00001","trace_id":"trace-00001","model":"gemma4:e2b","sequence":2,"done":false,"done_reason":null,"message":{"role":"assistant","content":"mechanics "}}
-{"type":"end","job_id":"job-00001","trace_id":"trace-00001","model":"gemma4:e2b","sequence":3,"done":true,"done_reason":"stop","message":{"role":"assistant","content":""}}
-```
-
-## Current status
-
-This repo currently proves a tight Phase 0/1 backend slice:
-
-- trust-weighted routing over curated exact-match models
-- in-memory worker registry and job lifecycle
-- worker protocol endpoints for register, heartbeat, claim, complete, and fail
-- Ollama-shaped `/api/chat` and `/api/tags` transport
-- a seeded demo worker for local end-to-end testing
-
-High-value next routing behavior to add:
-
-- short-lived buyer-to-worker continuity leases to avoid repeated cold starts
-- lease break/timeout behavior driven by health, load, and execution failures
-
-The current prototype now includes short-lived buyer continuity leases in the cloud routing path so follow-up requests can prefer a recently warm eligible worker without moving routing logic into the client or worker.
-
-Recent functional proof highlights:
-
-- the GUI can target a hosted backend like `https://modulo.grinningfrog.com` from launch
-- the hosted path has been proven end to end through Cloudflare Tunnel for private-scope visibility and routed execution
-- the same private-scope request/response path has now been exercised across separate real networks
-- worker transport failures now surface HTTP status and edge/body detail instead of collapsing to `unknown error`
-- stopping hosting now explicitly unregisters the worker so stale advertised models drop out of platform visibility immediately
-
-The client and worker packages are intentionally light right now. They exist to keep the repository shaped correctly for the eventual tray app UX and local bridge architecture while the routing/control-plane core is being proven first.
-
-## Running tests
+## Tests
 
 ```powershell
-python -m unittest discover -s tests
+python -m unittest discover -s tests -v
 ```
+
+The suite currently contains 132 tests covering routing, worker transport and execution, HTTP ingress, client/worker integration, local state, Ollama discovery, private-network flow, the GUI controller, and the prototype harness. CI runs on Windows because the current client/local-state contract intentionally includes Windows path behavior.
+
+## Project status
+
+Modulo is a portfolio-grade engineering alpha, not a production service.
+
+Implemented and demonstrated:
+
+- local in-process end-to-end execution
+- real cross-machine private-scope execution
+- a hosted tunnel proof across separate physical networks
+- real Ollama execution and streaming
+- OpenAI-compatible consumer mounting through Continue
+
+Known limitations:
+
+- no authentication or authorization
+- no TLS termination inside Modulo
+- in-memory registry, jobs, leases, and traces
+- no adversarial worker isolation or sandboxing
+- no stable protocol/version compatibility guarantee
+- no packaged installer or background service lifecycle
+- `Public` and `Cloud` scopes are architectural/reserved surfaces, not a production marketplace
+- Windows is the only current tested client target
+
+See [docs/project-status.md](./docs/project-status.md) for the release boundary,
+[docs/release-checklist.md](./docs/release-checklist.md) for the remaining
+publication gates, and [docs/roadmap.md](./docs/roadmap.md) for development
+history and future work.
+
+## Documentation
+
+Start here:
+
+- [Quick start](./docs/quickstart.md)
+- [Architecture](./docs/architecture.md)
+- [Routing](./docs/routing.md)
+- [Project status](./docs/project-status.md)
+- [Public release checklist](./docs/release-checklist.md)
+- [Security model](./SECURITY.md)
+- [Documentation index](./docs/README.md)
+
+The repository retains detailed design notes and completed roadmaps because they show how the system evolved. They are supporting history, not all current product promises.
+
+## Contributing
+
+Issues and focused pull requests are welcome. Read [CONTRIBUTING.md](./CONTRIBUTING.md) before changing contracts or runtime boundaries.
+
+## License
+
+Licensed under the [Apache License 2.0](./LICENSE).

@@ -5,12 +5,32 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "modulo"
 version = "0.1.0"
-description = "Trust-weighted execution platform scaffold for Modulo v1."
+description = "Experimental distributed inference fabric for local and private-network model capacity."
 readme = "README.md"
 requires-python = ">=3.11"
+license = { file = "LICENSE" }
 authors = [
-  { name = "Seth" }
+  { name = "Seth Esquieu" }
 ]
+keywords = ["llm", "inference", "ollama", "distributed-systems", "routing"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: Microsoft :: Windows",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: System :: Distributed Computing",
+]
+
+[project.urls]
+Homepage = "https://github.com/SEsquieu/Modulo"
+Repository = "https://github.com/SEsquieu/Modulo"
+Issues = "https://github.com/SEsquieu/Modulo/issues"
+
+[project.scripts]
+modulo-server = "modulo.cloud.server:main"
+modulo-worker = "modulo.worker.bridge_runner:main"
+modulo-gui = "modulo.gui_app:main"
 
 [project.optional-dependencies]
 gui = [
